@@ -1,0 +1,163 @@
+:host {
+  display: block;
+}
+
+.perfil-page .perfil-skel {
+  max-width: 560px;
+  margin: 0 auto;
+  height: 220px;
+}
+
+.perfil-dl {
+  margin: 0;
+}
+
+.perfil-dl-row {
+  display: grid;
+  grid-template-columns: minmax(7rem, 38%) 1fr;
+  gap: 0.5rem 1rem;
+  padding: 0.55rem 0;
+  border-bottom: 1px solid #f2f4f7;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+.perfil-dl-row:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.perfil-dl-row:first-child {
+  padding-top: 0;
+}
+
+.perfil-dl dt {
+  margin: 0;
+  font-weight: 600;
+  color: #667085;
+}
+
+.perfil-dl dd {
+  margin: 0;
+  color: #101828;
+  word-break: break-word;
+}
+
+@media (max-width: 480px) {
+  .perfil-dl-row {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+}
+
+.perfil-acoes {
+  margin-top: 1.25rem;
+  padding: 0 0.35rem 1rem;
+  display: flex;
+  justify-content: center;
+}
+
+.perfil-btn-senha {
+  border: 1px solid #d0d5dd;
+  background: #fff;
+  color: #344054;
+  border-radius: 10px;
+  padding: 0.55rem 1rem;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.perfil-btn-senha:hover {
+  border-color: #1769ff;
+  color: #175cd3;
+}
+
+.perfil-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1100;
+}
+
+.perfil-dialog {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(92vw, 400px);
+  z-index: 1110;
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #eaecf0;
+  box-shadow: 0 20px 40px rgba(16, 24, 40, 0.28);
+  padding: 1rem 1.1rem;
+}
+
+.perfil-dialog-title {
+  margin: 0 0 0.85rem;
+  font-size: 1.05rem;
+  color: #101828;
+}
+
+.perfil-dialog-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.65rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.perfil-dialog-label input {
+  padding: 0.52rem 0.6rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  font-size: 0.9rem;
+}
+
+.perfil-dialog-erro {
+  margin: 0 0 0.5rem;
+  color: #b42318;
+  font-size: 0.84rem;
+}
+
+.perfil-dialog-ok {
+  margin: 0 0 0.5rem;
+  color: #067647;
+  font-size: 0.84rem;
+}
+
+.perfil-dialog-actions {
+  margin-top: 0.75rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.perfil-dialog-btn {
+  border-radius: 10px;
+  padding: 0.44rem 0.82rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.perfil-dialog-btn--ghost {
+  border-color: #d0d5dd;
+  background: #fff;
+  color: #344054;
+}
+
+.perfil-dialog-btn--primary {
+  border-color: #528bff;
+  background: #1769ff;
+  color: #fff;
+}
+
+.perfil-dialog-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

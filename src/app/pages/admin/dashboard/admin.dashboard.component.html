@@ -1,0 +1,19 @@
+<section class="ad-dash" aria-labelledby="ad-dash-title">
+  <header class="ad-dash-hero">
+    <p class="ad-dash-kicker">Painel</p>
+    <h1 id="ad-dash-title" class="ad-dash-title">Dashboard</h1>
+    <p class="ad-dash-welcome">
+      Bem-vindo, {{ auth.getUsuario().nome || auth.getUserLogin() }}.
+      <span class="ad-dash-perfil" *ngIf="auth.getPerfil()?.nome as perfilNome">· {{ perfilNome }}</span>
+    </p>
+  </header>
+
+  <div class="ad-dash-stack">
+    <section class="ad-card">
+      <h2 class="ad-card-title">Visão geral</h2>
+      <div class="ad-card-body">
+        <p class="ad-msg ad-msg--neutro">Dashboard inicial vazio.</p>
+      </div>
+    </section>
+  </div>
+</section>

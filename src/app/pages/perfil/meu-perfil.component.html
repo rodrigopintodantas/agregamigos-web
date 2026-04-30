@@ -1,0 +1,101 @@
+<section class="ad-dash perfil-page" aria-labelledby="perfil-title">
+  <header class="ad-dash-hero">
+    <p class="ad-dash-kicker">Conta</p>
+    <h1 id="perfil-title" class="ad-dash-title">Meu perfil</h1>
+    <p class="ad-dash-welcome">Informações do seu usuário neste dispositivo.</p>
+  </header>
+
+  <div class="ad-dash-stack">
+    <div class="ad-skel perfil-skel" *ngIf="carregando" aria-hidden="true"></div>
+
+    <p class="ad-msg ad-msg--neutro" *ngIf="erro && !carregando">{{ erro }}</p>
+
+    <section class="ad-card" *ngIf="!carregando" aria-labelledby="perfil-dados-heading">
+      <h2 id="perfil-dados-heading" class="ad-card-title">Dados do usuário</h2>
+      <div class="ad-card-body">
+        <dl class="perfil-dl">
+          <div class="perfil-dl-row">
+            <dt>Nome</dt>
+            <dd>{{ textoOuTraco(auth.getUsuario().nome || auth.getUserLogin()) }}</dd>
+          </div>
+          <div class="perfil-dl-row">
+            <dt>Login</dt>
+            <dd>{{ textoOuTraco(auth.getUsuario().login ?? auth.getUserLogin()) }}</dd>
+          </div>
+          <div class="perfil-dl-row">
+            <dt>E-mail</dt>
+            <dd>{{ textoOuTraco(auth.getUsuario().email) }}</dd>
+          </div>
+          <div class="perfil-dl-row">
+            <dt>Telefone</dt>
+            <dd>{{ textoOuTraco(auth.getUsuario().telefone) }}</dd>
+          </div>
+          <div class="perfil-dl-row">
+            <dt>Data de nascimento</dt>
+            <dd>
+              <ng-container *ngIf="(auth.getUsuario().data_nascimento || auth.getUsuario().dataNascimento) as dataNascimento; else semNasc">
+                {{ dataNascimento | date: 'dd/MM/yyyy' }}
+              </ng-container>
+              <ng-template #semNasc>—</ng-template>
+            </dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <section class="ad-card" *ngIf="!carregando" aria-labelledby="perfil-perfil-heading">
+      <h2 id="perfil-perfil-heading" class="ad-card-title">Perfil ativo</h2>
+      <div class="ad-card-body">
+        <dl class="perfil-dl">
+          <div class="perfil-dl-row">
+            <dt>Perfil</dt>
+            <dd>{{ textoOuTraco(auth.getPerfil()?.nome) }}</dd>
+          </div>
+        </dl>
+      </div>
+    </section>
+
+    <div class="perfil-acoes" *ngIf="!carregando">
+      <button type="button" class="perfil-btn-senha" (click)="abrirDialogSenha()">Alterar Senha</button>
+    </div>
+  </div>
+</section>
+
+<div class="perfil-dialog-backdrop" *ngIf="dialogSenhaAberto" (click)="fecharDialogSenha()"></div>
+<div
+  class="perfil-dialog"
+  *ngIf="dialogSenhaAberto"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="perfil-senha-title"
+  (click)="$event.stopPropagation()"
+>
+  <h2 id="perfil-senha-title" class="perfil-dialog-title">Alterar senha</h2>
+  <label class="perfil-dialog-label">
+    Senha atual
+    <input type="password" autocomplete="current-password" [(ngModel)]="senhaAtual" />
+  </label>
+  <label class="perfil-dialog-label">
+    Nova senha
+    <input type="password" autocomplete="new-password" [(ngModel)]="senhaNova" />
+  </label>
+  <label class="perfil-dialog-label">
+    Repetir nova senha
+    <input type="password" autocomplete="new-password" [(ngModel)]="senhaNovaRepetir" />
+  </label>
+  <p class="perfil-dialog-erro" *ngIf="erroSenha">{{ erroSenha }}</p>
+  <p class="perfil-dialog-ok" *ngIf="sucessoSenha">{{ sucessoSenha }}</p>
+  <div class="perfil-dialog-actions">
+    <button type="button" class="perfil-dialog-btn perfil-dialog-btn--ghost" [disabled]="salvandoSenha" (click)="fecharDialogSenha()">
+      Cancelar
+    </button>
+    <button
+      type="button"
+      class="perfil-dialog-btn perfil-dialog-btn--primary"
+      [disabled]="!podeConfirmarSenha() || salvandoSenha"
+      (click)="confirmarAlterarSenha()"
+    >
+      {{ salvandoSenha ? 'Salvando...' : 'Confirmar' }}
+    </button>
+  </div>
+</div>

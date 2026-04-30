@@ -1,0 +1,94 @@
+:host {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--color-brand-900);
+}
+
+.card {
+  width: min(100%, 560px);
+  background: #fff;
+  border: 1px solid #eaecf0;
+  border-radius: 14px;
+  padding: 1rem;
+  box-shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
+}
+
+h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.4rem;
+}
+
+.subtitulo {
+  margin: 0 0 1rem;
+  color: #475467;
+}
+
+label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin-bottom: 0.6rem;
+  font-size: 0.9rem;
+}
+
+input {
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 0.55rem 0.6rem;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.bloco-cep {
+  margin-top: 0.6rem;
+}
+
+.msg {
+  margin: 0.45rem 0;
+}
+
+.erro {
+  color: #b42318;
+}
+
+.sucesso {
+  color: #027a48;
+}
+
+button {
+  margin-top: 0.35rem;
+  width: 100%;
+  min-height: 48px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--color-brand-500);
+  color: #fff;
+  padding: 0.68rem 1rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.8;
+}
+
+@media (max-width: 640px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  button {
+    min-height: 54px;
+    font-size: 1rem;
+    padding: 0.9rem 1rem;
+    border-radius: 12px;
+  }
+}
