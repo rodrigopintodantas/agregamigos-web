@@ -39,6 +39,16 @@ export interface ImportarCsvPayload {
   registros: Record<string, string>[];
 }
 
+export interface BairroQuantidade {
+  bairro: string;
+  quantidade: number;
+}
+
+export interface DashboardEstatisticas {
+  total_cadastros: number;
+  bairros: BairroQuantidade[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class PessoaService {
   private http = inject(HttpClient);
@@ -66,5 +76,9 @@ export class PessoaService {
 
   importarCsv(payload: ImportarCsvPayload): Observable<{ message: string; total: number }> {
     return this.http.post<{ message: string; total: number }>(`${this.apiURL}/importar-csv`, payload);
+  }
+
+  estatisticas(): Observable<DashboardEstatisticas> {
+    return this.http.get<DashboardEstatisticas>(`${this.apiURL}/estatisticas`);
   }
 }

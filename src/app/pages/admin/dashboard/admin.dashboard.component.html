@@ -1,4 +1,4 @@
-<section class="ad-dash" aria-labelledby="ad-dash-title">
+<section class="ad-dash page-card" aria-labelledby="ad-dash-title">
   <header class="ad-dash-hero">
     <p class="ad-dash-kicker">Painel</p>
     <h1 id="ad-dash-title" class="ad-dash-title">Dashboard</h1>
@@ -8,12 +8,38 @@
     </p>
   </header>
 
-  <div class="ad-dash-stack">
-    <section class="ad-card">
-      <h2 class="ad-card-title">Visão geral</h2>
-      <div class="ad-card-body">
-        <p class="ad-msg ad-msg--neutro">Dashboard inicial vazio.</p>
-      </div>
-    </section>
+  <p class="ad-msg ad-msg--erro" *ngIf="erro">{{ erro }}</p>
+  <p class="ad-msg ad-msg--neutro" *ngIf="carregando && !erro">Carregando painel...</p>
+
+  <div class="ad-dash-grid" *ngIf="!carregando && !erro">
+    <div class="ad-dash-col ad-dash-col--stack">
+      <article class="ad-box ad-box--cadastros" aria-labelledby="box-cadastros-title">
+        <h2 id="box-cadastros-title" class="ad-box-title">Quantidade de Cadastros</h2>
+        <p class="ad-box-metric" aria-live="polite">{{ totalCadastros }}</p>
+        <p class="ad-box-hint">Total de pessoas cadastradas</p>
+      </article>
+
+      <article class="ad-box ad-box--alertas" aria-labelledby="box-alertas-title">
+        <h2 id="box-alertas-title" class="ad-box-title">Alertas</h2>
+        <div class="ad-alertas-vazio">
+          <p>Nenhum alerta no momento.</p>
+        </div>
+      </article>
+    </div>
+
+    <article class="ad-box ad-box--lista" aria-labelledby="box-bairros-title">
+      <h2 id="box-bairros-title" class="ad-box-title">Quantidade por Bairro</h2>
+      <p class="ad-box-subtitle">Os 6 bairros com mais cadastros</p>
+      <ul class="ad-bairros-lista" *ngIf="topBairros.length">
+        <li *ngFor="let item of topBairros; let i = index">
+          <span class="ad-bairros-pos">{{ i + 1 }}º</span>
+          <span class="ad-bairros-nome">{{ item.bairro }}</span>
+          <span class="ad-bairros-qtd">{{ item.quantidade }}</span>
+        </li>
+      </ul>
+      <p class="ad-msg ad-msg--neutro ad-msg--dentro" *ngIf="!topBairros.length">
+        Nenhum bairro informado nos endereços ainda.
+      </p>
+    </article>
   </div>
 </section>
