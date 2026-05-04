@@ -6,6 +6,8 @@
   <label>Data de nascimento <input type="date" [(ngModel)]="form.data_nascimento" /></label>
   <label>E-mail <input type="email" [(ngModel)]="form.email" /></label>
   <label>WhatsApp <input [(ngModel)]="form.whatsapp" (ngModelChange)="aplicarMascaraWhatsapp()" /></label>
+  <label>Instagram <input [(ngModel)]="form.instagram" /></label>
+  <label>Indicação <input [(ngModel)]="form.indicacao" /></label>
 
   <div class="grid bloco-cep">
     <label>CEP <input [(ngModel)]="form.endereco!.cep" (ngModelChange)="aplicarMascaraCep()" (blur)="buscarCep()" /></label>

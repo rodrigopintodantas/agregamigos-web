@@ -32,6 +32,8 @@ export class LinkCadastroComponent {
     data_nascimento: null,
     email: null,
     whatsapp: null,
+    instagram: null,
+    indicacao: null,
     endereco: {
       cep: null,
       logradouro: null,
@@ -126,6 +128,8 @@ export class LinkCadastroComponent {
           data_nascimento: null,
           email: null,
           whatsapp: null,
+          instagram: null,
+          indicacao: null,
           endereco: {
             cep: null,
             logradouro: null,

@@ -19,6 +19,8 @@ export interface PessoaPayload {
   data_nascimento?: string | null;
   email?: string | null;
   whatsapp?: string | null;
+  instagram?: string | null;
+  indicacao?: string | null;
   endereco?: EnderecoPayload;
 }
 
@@ -28,7 +30,13 @@ export interface PessoaItem {
   data_nascimento?: string | null;
   email?: string | null;
   whatsapp?: string | null;
+  instagram?: string | null;
+  indicacao?: string | null;
   endereco?: EnderecoPayload | null;
+}
+
+export interface ImportarCsvPayload {
+  registros: Record<string, string>[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -54,5 +62,9 @@ export class PessoaService {
 
   excluir(id: number): Observable<{ message: string }> {
     return this.http.delete<{ message: string }>(`${this.apiURL}/${id}`);
+  }
+
+  importarCsv(payload: ImportarCsvPayload): Observable<{ message: string; total: number }> {
+    return this.http.post<{ message: string; total: number }>(`${this.apiURL}/importar-csv`, payload);
   }
 }

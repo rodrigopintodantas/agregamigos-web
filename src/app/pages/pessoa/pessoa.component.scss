@@ -12,6 +12,11 @@
   margin-bottom: 0.75rem;
 }
 
+.head-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
 .head button,
 .actions button {
   border: 0;
@@ -26,8 +31,20 @@
   background: #344054;
 }
 
+.head .ghost {
+  background: #344054;
+}
+
 .msg {
   margin: 0.5rem 0;
+}
+
+.sucesso {
+  color: #027a48;
+}
+
+.input-csv {
+  display: none;
 }
 
 .search-wrap {
@@ -186,6 +203,10 @@ input {
     flex-direction: column;
     align-items: stretch;
     gap: 0.65rem;
+  }
+
+  .head-actions {
+    flex-direction: column;
   }
 
   .head h2 {
