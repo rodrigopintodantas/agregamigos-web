@@ -1,0 +1,70 @@
+<section class="page-card mm-page">
+  <header class="head">
+    <h2>Modelos de mensagem</h2>
+    <p class="head-desc">
+      Textos pré-definidos para enviar às pessoas cadastradas (gestão pelo administrador).
+    </p>
+  </header>
+
+  <div class="form-card">
+    <h3 class="form-title">{{ editandoId ? 'Editar modelo' : 'Novo modelo' }}</h3>
+    <label class="field">
+      <span>Título</span>
+      <input type="text" [(ngModel)]="titulo" name="titulo" maxlength="255" placeholder="Ex.: Modelo Campanha Asa Norte v1.0" />
+    </label>
+    <label class="field">
+      <span>Texto</span>
+      <textarea [(ngModel)]="corpo" name="corpo" rows="6" placeholder="Corpo da mensagem…"></textarea>
+    </label>
+    <div class="form-actions">
+      <button type="button" *ngIf="editandoId != null" class="ghost" (click)="limparForm()" [disabled]="salvando">
+        Cancelar
+      </button>
+      <button type="button" (click)="editandoId != null ? salvarEdicao() : criar()" [disabled]="salvando">
+        {{ salvando ? 'Salvando…' : editandoId != null ? 'Salvar alterações' : 'Criar modelo' }}
+      </button>
+    </div>
+  </div>
+
+  <p class="msg erro" *ngIf="erro">{{ erro }}</p>
+  <p class="msg sucesso" *ngIf="sucesso">{{ sucesso }}</p>
+  <p class="msg" *ngIf="carregando">Carregando…</p>
+
+  <div class="table-wrap" *ngIf="!carregando && !erro">
+    <table *ngIf="modelos.length">
+      <thead>
+        <tr>
+          <th>Título</th>
+          <th>Prévia</th>
+          <th>Atualizado</th>
+          <th>Ações</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let m of modelos">
+          <td class="td-titulo">{{ m.titulo }}</td>
+          <td class="td-previa">{{ preview(m.corpo) }}</td>
+          <td>{{ m.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+          <td>
+            <div class="acoes">
+              <button type="button" class="btn-acao editar" title="Editar" (click)="editar(m)">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M12 20h9"></path>
+                  <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                </svg>
+              </button>
+              <button type="button" class="btn-acao excluir" title="Excluir" (click)="excluir(m)">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <polyline points="3 6 5 6 21 6"></polyline>
+                  <path d="M8 6v-2a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"></path>
+                  <path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"></path>
+                </svg>
+              </button>
+            </div>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="msg vazio" *ngIf="!modelos.length">Nenhum modelo cadastrado. Crie o primeiro acima.</p>
+  </div>
+</section>

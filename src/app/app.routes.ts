@@ -3,6 +3,7 @@ import { canActivateAuthRole } from './autenticacao/auth.guard';
 import { AppLayout } from './layout/component/app.layout';
 import { AdminDashboardComponent } from './pages/admin/dashboard/admin.dashboard.component';
 import { LinkCadastroComponent } from './pages/link-cadastro/link-cadastro.component';
+import { ModeloMensagemComponent } from './pages/modelo-mensagem/modelo-mensagem.component';
 import { NaoEncontradoComponent } from './pages/nao-encontrado/nao-encontrado.component';
 import { PessoaComponent } from './pages/pessoa/pessoa.component';
 import { PrincipalComponent } from './pages/principal/principal.component';
@@ -29,6 +30,10 @@ export const routes: Routes = [
       {
         path: 'pessoas',
         component: PessoaComponent
+      },
+      {
+        path: 'modelos-mensagem',
+        component: ModeloMensagemComponent
       }
     ]
   },

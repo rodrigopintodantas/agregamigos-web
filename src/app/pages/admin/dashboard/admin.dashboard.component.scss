@@ -54,6 +54,12 @@
   gap: 1rem;
   grid-template-columns: 1fr 1fr;
   align-items: stretch;
+
+  > .ad-box--lista {
+    min-height: 0;
+    /* Mantém a altura “de antes” (~6 linhas), sem esticar até o fim da coluna esquerda */
+    align-self: start;
+  }
 }
 
 .ad-dash-col--stack {
@@ -116,6 +122,24 @@
   color: #667085;
 }
 
+.ad-bairros-scroll {
+  /* Viewport fixo: ~6 linhas visíveis; demais bairros via rolagem */
+  --ad-bairros-linhas: 6;
+  --ad-bairros-linha: 2.2rem;
+  --ad-bairros-gap: 0.5rem;
+  max-height: calc(
+    var(--ad-bairros-linhas) * var(--ad-bairros-linha) + (var(--ad-bairros-linhas) - 1) * var(--ad-bairros-gap)
+  );
+  flex: 0 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+  padding-right: 0.2rem;
+  margin-right: -0.2rem;
+}
+
 .ad-bairros-lista {
   list-style: none;
   margin: 0;
@@ -123,7 +147,6 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  flex: 1;
 }
 
 .ad-bairros-lista li {
@@ -190,5 +213,12 @@
 
   .ad-alertas-vazio {
     min-height: 3rem;
+  }
+
+  .ad-box--lista .ad-bairros-scroll {
+    max-height: min(
+      calc(var(--ad-bairros-linhas) * var(--ad-bairros-linha) + (var(--ad-bairros-linhas) - 1) * var(--ad-bairros-gap)),
+      55vh
+    );
   }
 }

@@ -47,6 +47,21 @@ import { LayoutUiService } from '../service/layout-ui.service';
       </li>
       <li *ngIf="auth.isAdmin()">
         <a
+          routerLink="/admin/modelos-mensagem"
+          routerLinkActive="active-route"
+          [attr.title]="ui.sidebarCollapsed() ? 'Modelos de mensagem' : null"
+          (click)="ui.closeMobileMenu()"
+        >
+          <span class="menu-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+            </svg>
+          </span>
+          <span class="menu-label">Modelos de mensagem</span>
+        </a>
+      </li>
+      <li *ngIf="auth.isAdmin()">
+        <a
           routerLink="/perfil"
           routerLinkActive="active-route"
           [attr.title]="ui.sidebarCollapsed() ? 'Meu Perfil' : null"

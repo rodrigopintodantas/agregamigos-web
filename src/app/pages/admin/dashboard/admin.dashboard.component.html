@@ -29,14 +29,16 @@
 
     <article class="ad-box ad-box--lista" aria-labelledby="box-bairros-title">
       <h2 id="box-bairros-title" class="ad-box-title">Quantidade por Bairro</h2>
-      <p class="ad-box-subtitle">Os 6 bairros com mais cadastros</p>
-      <ul class="ad-bairros-lista" *ngIf="topBairros.length">
-        <li *ngFor="let item of topBairros; let i = index">
-          <span class="ad-bairros-pos">{{ i + 1 }}º</span>
-          <span class="ad-bairros-nome">{{ item.bairro }}</span>
-          <span class="ad-bairros-qtd">{{ item.quantidade }}</span>
-        </li>
-      </ul>
+      <p class="ad-box-subtitle">Todos os bairros com cadastro (ordenados por quantidade)</p>
+      <div class="ad-bairros-scroll" *ngIf="topBairros.length">
+        <ul class="ad-bairros-lista">
+          <li *ngFor="let item of topBairros; let i = index">
+            <span class="ad-bairros-pos">{{ i + 1 }}º</span>
+            <span class="ad-bairros-nome">{{ item.bairro }}</span>
+            <span class="ad-bairros-qtd">{{ item.quantidade }}</span>
+          </li>
+        </ul>
+      </div>
       <p class="ad-msg ad-msg--neutro ad-msg--dentro" *ngIf="!topBairros.length">
         Nenhum bairro informado nos endereços ainda.
       </p>
