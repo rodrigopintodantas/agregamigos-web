@@ -1,0 +1,47 @@
+<section class="page-card cu-page">
+  <header class="head">
+    <h2>Criar usuário</h2>
+    <p class="head-desc">Cadastro de novos usuários do sistema (apenas administrador).</p>
+  </header>
+
+  <div class="form-card">
+    <label class="field">
+      <span>Nome</span>
+      <input type="text" [(ngModel)]="form.nome" placeholder="Nome completo" />
+    </label>
+
+    <div class="grid">
+      <label class="field">
+        <span>Login</span>
+        <input type="text" [(ngModel)]="form.login" placeholder="login do usuário" />
+      </label>
+      <label class="field">
+        <span>Perfil</span>
+        <select [(ngModel)]="form.papel_id" [disabled]="carregandoPapeis">
+          <option [ngValue]="null">Selecione</option>
+          <option *ngFor="let papel of papeis" [ngValue]="papel.id">{{ papel.nome }}</option>
+        </select>
+      </label>
+    </div>
+
+    <div class="grid">
+      <label class="field">
+        <span>E-mail (opcional)</span>
+        <input type="email" [(ngModel)]="form.email" placeholder="email@dominio.com" />
+      </label>
+      <label class="field">
+        <span>Senha</span>
+        <input type="password" [(ngModel)]="form.senha" placeholder="mínimo 6 caracteres" />
+      </label>
+    </div>
+
+    <div class="form-actions">
+      <button type="button" (click)="salvar()" [disabled]="salvando || carregandoPapeis">
+        {{ salvando ? 'Criando...' : 'Criar usuário' }}
+      </button>
+    </div>
+  </div>
+
+  <p class="msg erro" *ngIf="erro">{{ erro }}</p>
+  <p class="msg sucesso" *ngIf="sucesso">{{ sucesso }}</p>
+</section>

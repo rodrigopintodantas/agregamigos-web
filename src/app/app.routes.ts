@@ -2,6 +2,7 @@ import { Routes } from '@angular/router';
 import { canActivateAuthRole } from './autenticacao/auth.guard';
 import { AppLayout } from './layout/component/app.layout';
 import { AdminDashboardComponent } from './pages/admin/dashboard/admin.dashboard.component';
+import { CriarUsuarioComponent } from './pages/criar-usuario/criar-usuario.component';
 import { LinkCadastroComponent } from './pages/link-cadastro/link-cadastro.component';
 import { ModeloMensagemComponent } from './pages/modelo-mensagem/modelo-mensagem.component';
 import { NaoEncontradoComponent } from './pages/nao-encontrado/nao-encontrado.component';
@@ -34,6 +35,10 @@ export const routes: Routes = [
       {
         path: 'modelos-mensagem',
         component: ModeloMensagemComponent
+      },
+      {
+        path: 'criar-usuario',
+        component: CriarUsuarioComponent
       }
     ]
   },
