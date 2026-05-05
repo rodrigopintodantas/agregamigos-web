@@ -9,6 +9,13 @@
   <label>Instagram <input [(ngModel)]="form.instagram" /></label>
   <label>Indicação <input [(ngModel)]="form.indicacao" /></label>
 
+  <p class="cep-help">
+    Para descobrir o seu CEP,
+    <a href="https://buscacepinter.correios.com.br/app/endereco/index.php" target="_blank" rel="noopener noreferrer">
+      clique aqui!
+    </a>
+  </p>
+
   <div class="grid bloco-cep">
     <label>CEP <input [(ngModel)]="form.endereco!.cep" (ngModelChange)="aplicarMascaraCep()" (blur)="buscarCep()" /></label>
     <label>Número <input [(ngModel)]="form.endereco!.numero" /></label>
@@ -18,7 +25,14 @@
   <label>Complemento <input [(ngModel)]="form.endereco!.complemento" /></label>
 
   <div class="grid">
-    <label>Bairro <input [(ngModel)]="form.endereco!.bairro" /></label>
+    <label>
+      Bairro
+      <select [(ngModel)]="form.endereco!.bairro">
+        <option [ngValue]="null">Selecione um bairro</option>
+        <option *ngIf="bairroDetectadoCep" [value]="bairroDetectadoCep">{{ bairroDetectadoCep }}</option>
+        <option *ngFor="let bairro of bairrosDistritoFederal" [value]="bairro">{{ bairro }}</option>
+      </select>
+    </label>
     <label>Cidade <input [(ngModel)]="form.endereco!.cidade" /></label>
   </div>
 

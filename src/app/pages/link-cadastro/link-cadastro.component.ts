@@ -26,6 +26,44 @@ export class LinkCadastroComponent {
   salvando = false;
   sucesso = '';
   erro = '';
+  bairroDetectadoCep: string | null = null;
+  readonly bairrosDistritoFederal: string[] = [
+    'Aguas Claras',
+    'Arniqueira',
+    'Asa Norte',
+    'Asa Sul',
+    'Brasilia',
+    'Brazlandia',
+    'Candangolandia',
+    'Ceilandia',
+    'Cruzeiro',
+    'Fercal',
+    'Gama',
+    'Guara',
+    'Itapoa',
+    'Jardim Botanico',
+    'Lago Norte',
+    'Lago Sul',
+    'Nucleo Bandeirante',
+    'Park Way',
+    'Paranoa',
+    'Planaltina',
+    'Recanto das Emas',
+    'Riacho Fundo',
+    'Riacho Fundo II',
+    'Samambaia',
+    'Santa Maria',
+    'Sao Sebastiao',
+    'SCIA/Estrutural',
+    'SIA',
+    'Sobradinho',
+    'Sobradinho II',
+    'Sol Nascente/Por do Sol',
+    'Sudoeste/Octogonal',
+    'Taguatinga',
+    'Varjao',
+    'Vicente Pires',
+  ];
 
   form: PessoaPayload = {
     nome: '',
@@ -62,7 +100,7 @@ export class LinkCadastroComponent {
         cep,
         logradouro: data.logradouro ?? null,
         complemento: data.complemento ?? null,
-        bairro: data.bairro ?? null,
+        bairro: this.mapearBairroCepParaLista(data.bairro ?? null),
         cidade: data.localidade ?? null,
         uf: data.uf ?? null,
         ibge: data.ibge ?? null,
@@ -141,11 +179,34 @@ export class LinkCadastroComponent {
             ibge: null,
           },
         };
+        this.bairroDetectadoCep = null;
       },
       error: (err) => {
         this.salvando = false;
         this.erro = err?.error?.message ?? 'Não foi possível concluir o cadastro.';
       },
     });
+  }
+
+  private normalizar(value: string): string {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  private mapearBairroCepParaLista(bairro: string | null): string | null {
+    const normalizado = this.normalizar(bairro ?? '');
+    if (!normalizado) return null;
+    const encontrado = this.bairrosDistritoFederal.find((item) => this.normalizar(item) === normalizado);
+    if (encontrado) {
+      this.bairroDetectadoCep = null;
+      return encontrado;
+    }
+
+    const valorOriginal = String(bairro ?? '').trim();
+    this.bairroDetectadoCep = valorOriginal || null;
+    return this.bairroDetectadoCep;
   }
 }
