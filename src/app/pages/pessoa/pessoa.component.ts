@@ -34,6 +34,11 @@ export class PessoaComponent implements OnInit {
   editandoId: number | null = null;
   importandoCsv = false;
   mensagemImportacao = '';
+  dialogDuplicadosAberto = false;
+  nomesDuplicadosImportacao: string[] = [];
+  paginaAtual = 1;
+  itensPorPagina = 10;
+  readonly opcoesItensPorPagina = [10, 20, 50, 100];
 
   form: PessoaPayload = {
     nome: '',
@@ -77,12 +82,46 @@ export class PessoaComponent implements OnInit {
     });
   }
 
+  get totalPaginas(): number {
+    const total = Math.ceil(this.pessoasFiltradas.length / this.itensPorPagina);
+    return Math.max(total, 1);
+  }
+
+  get pessoasPaginadas(): PessoaItem[] {
+    const inicio = (this.paginaAtual - 1) * this.itensPorPagina;
+    const fim = inicio + this.itensPorPagina;
+    return this.pessoasFiltradas.slice(inicio, fim);
+  }
+
+  get paginasVisiveis(): number[] {
+    const maxBotoes = 5;
+    const total = this.totalPaginas;
+    if (total <= maxBotoes) {
+      return Array.from({ length: total }, (_, index) => index + 1);
+    }
+
+    const metade = Math.floor(maxBotoes / 2);
+    let inicio = this.paginaAtual - metade;
+    let fim = this.paginaAtual + metade;
+
+    if (inicio < 1) {
+      inicio = 1;
+      fim = maxBotoes;
+    } else if (fim > total) {
+      fim = total;
+      inicio = total - maxBotoes + 1;
+    }
+
+    return Array.from({ length: fim - inicio + 1 }, (_, index) => inicio + index);
+  }
+
   carregarPessoas(): void {
     this.carregando = true;
     this.erro = '';
     this.pessoaService.listar().subscribe({
       next: (pessoas) => {
         this.pessoas = pessoas;
+        this.paginaAtual = 1;
         this.carregando = false;
       },
       error: (err) => {
@@ -118,6 +157,8 @@ export class PessoaComponent implements OnInit {
 
   abrirSeletorCsv(input: HTMLInputElement): void {
     this.mensagemImportacao = '';
+    this.dialogDuplicadosAberto = false;
+    this.nomesDuplicadosImportacao = [];
     input.click();
   }
 
@@ -161,6 +202,8 @@ export class PessoaComponent implements OnInit {
         next: (resp) => {
           this.importandoCsv = false;
           this.mensagemImportacao = resp.message ?? 'CSV importado com sucesso.';
+          this.nomesDuplicadosImportacao = Array.isArray(resp.nomes_duplicados) ? resp.nomes_duplicados : [];
+          this.dialogDuplicadosAberto = this.nomesDuplicadosImportacao.length > 0;
           this.carregarPessoas();
           input.value = '';
         },
@@ -204,6 +247,35 @@ export class PessoaComponent implements OnInit {
   fecharDialog(): void {
     this.dialogAberto = false;
     this.editandoId = null;
+  }
+
+  fecharDialogDuplicados(): void {
+    this.dialogDuplicadosAberto = false;
+  }
+
+  aoAlterarPesquisa(): void {
+    this.paginaAtual = 1;
+  }
+
+  aoAlterarItensPorPagina(): void {
+    this.paginaAtual = 1;
+  }
+
+  paginaAnterior(): void {
+    if (this.paginaAtual > 1) {
+      this.paginaAtual -= 1;
+    }
+  }
+
+  proximaPagina(): void {
+    if (this.paginaAtual < this.totalPaginas) {
+      this.paginaAtual += 1;
+    }
+  }
+
+  irParaPagina(pagina: number): void {
+    if (pagina < 1 || pagina > this.totalPaginas) return;
+    this.paginaAtual = pagina;
   }
 
   async buscarCep(): Promise<void> {

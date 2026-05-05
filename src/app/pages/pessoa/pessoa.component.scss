@@ -98,6 +98,94 @@
   overflow: auto;
 }
 
+.paginacao {
+  margin-top: 1.1rem;
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px solid #eaecf0;
+  border-radius: 12px;
+  background: #f8fafc;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+
+.paginacao-seletor {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: #475467;
+}
+
+.paginacao-seletor select {
+  border: 1px solid #d0d5dd;
+  border-radius: 999px;
+  background: #fff;
+  color: #344054;
+  padding: 0.24rem 0.58rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.paginacao-info {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475467;
+  text-align: center;
+  background: #fff;
+  border: 1px solid #e4e7ec;
+  border-radius: 999px;
+  padding: 0.24rem 0.62rem;
+}
+
+.paginacao-acoes {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: center;
+  flex-wrap: nowrap;
+}
+
+.pagina-nav,
+.pagina-numero {
+  border: 1px solid #d0d5dd;
+  background: #fff;
+  color: #344054;
+  min-width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 0.7rem;
+}
+
+.pagina-nav:hover:not(:disabled),
+.pagina-numero:hover:not(.ativa):not(:disabled) {
+  border-color: #98a2b3;
+  background: #f9fafb;
+}
+
+.pagina-numero.ativa {
+  background: var(--color-brand-500);
+  border-color: var(--color-brand-500);
+  color: #fff;
+}
+
+.paginacao-acoes button:disabled,
+.head button:disabled,
+.actions button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -221,6 +309,16 @@ input {
   .table-wrap {
     margin-inline: -0.15rem;
     max-width: calc(100% + 0.3rem);
+  }
+
+  .paginacao {
+    justify-content: flex-start;
+    padding: 0.72rem 0.6rem;
+    flex-wrap: wrap;
+  }
+
+  .paginacao-info {
+    text-align: left;
   }
 
   th,

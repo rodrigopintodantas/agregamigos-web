@@ -39,6 +39,12 @@ export interface ImportarCsvPayload {
   registros: Record<string, string>[];
 }
 
+export interface ImportarCsvResponse {
+  message: string;
+  total: number;
+  nomes_duplicados?: string[];
+}
+
 export interface BairroQuantidade {
   bairro: string;
   quantidade: number;
@@ -74,8 +80,8 @@ export class PessoaService {
     return this.http.delete<{ message: string }>(`${this.apiURL}/${id}`);
   }
 
-  importarCsv(payload: ImportarCsvPayload): Observable<{ message: string; total: number }> {
-    return this.http.post<{ message: string; total: number }>(`${this.apiURL}/importar-csv`, payload);
+  importarCsv(payload: ImportarCsvPayload): Observable<ImportarCsvResponse> {
+    return this.http.post<ImportarCsvResponse>(`${this.apiURL}/importar-csv`, payload);
   }
 
   estatisticas(): Observable<DashboardEstatisticas> {

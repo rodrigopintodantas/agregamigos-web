@@ -23,6 +23,7 @@
         type="text"
         placeholder="Nome, e-mail, WhatsApp ou bairro"
         [(ngModel)]="termoPesquisa"
+        (ngModelChange)="aoAlterarPesquisa()"
       />
     </div>
   </div>
@@ -44,7 +45,7 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let p of pessoasFiltradas">
+        <tr *ngFor="let p of pessoasPaginadas">
           <td>{{ p.nome }}</td>
           <td>{{ p.data_nascimento ? (p.data_nascimento | date: 'dd/MM/yyyy') : '—' }}</td>
           <td>{{ p.email || '—' }}</td>
@@ -86,9 +87,45 @@
       </tbody>
     </table>
   </div>
+
+  <div class="paginacao" *ngIf="!carregando && !erro && pessoasFiltradas.length > 0">
+    <label class="paginacao-seletor">
+      <span>Por página</span>
+      <select [(ngModel)]="itensPorPagina" (ngModelChange)="aoAlterarItensPorPagina()">
+        <option *ngFor="let opcao of opcoesItensPorPagina" [ngValue]="opcao">{{ opcao }}</option>
+      </select>
+    </label>
+
+    <span class="paginacao-info">
+      {{ (paginaAtual - 1) * itensPorPagina + 1 }}-{{ paginaAtual * itensPorPagina > pessoasFiltradas.length ? pessoasFiltradas.length : paginaAtual * itensPorPagina }}
+      de {{ pessoasFiltradas.length }}
+    </span>
+
+    <nav class="paginacao-acoes" aria-label="Paginação de pessoas">
+      <button type="button" class="pagina-nav" [disabled]="paginaAtual === 1" (click)="paginaAnterior()">
+        Anterior
+      </button>
+      <button
+        type="button"
+        class="pagina-numero"
+        *ngFor="let pagina of paginasVisiveis"
+        [class.ativa]="pagina === paginaAtual"
+        (click)="irParaPagina(pagina)"
+      >
+        {{ pagina }}
+      </button>
+      <button type="button" class="pagina-nav" [disabled]="paginaAtual === totalPaginas" (click)="proximaPagina()">
+        Próxima
+      </button>
+    </nav>
+  </div>
 </section>
 
-<div class="backdrop" *ngIf="dialogAberto" (click)="fecharDialog()"></div>
+<div
+  class="backdrop"
+  *ngIf="dialogAberto || dialogDuplicadosAberto"
+  (click)="dialogAberto ? fecharDialog() : fecharDialogDuplicados()"
+></div>
 <section class="dialog" *ngIf="dialogAberto" (click)="$event.stopPropagation()">
   <h3>{{ editandoId ? 'Editar Pessoa' : 'Adicionar Pessoa' }}</h3>
 
@@ -121,5 +158,16 @@
   <div class="actions">
     <button type="button" class="ghost" (click)="fecharDialog()">Cancelar</button>
     <button type="button" [disabled]="salvando" (click)="salvar()">{{ salvando ? 'Salvando...' : 'Salvar' }}</button>
+  </div>
+</section>
+
+<section class="dialog" *ngIf="dialogDuplicadosAberto" (click)="$event.stopPropagation()">
+  <h3>Nomes repetidos na importação</h3>
+  <p class="msg">Os nomes abaixo já existiam (ou estavam repetidos no CSV) e foram ignorados:</p>
+  <ul>
+    <li *ngFor="let nome of nomesDuplicadosImportacao">{{ nome }}</li>
+  </ul>
+  <div class="actions">
+    <button type="button" (click)="fecharDialogDuplicados()">Fechar</button>
   </div>
 </section>
