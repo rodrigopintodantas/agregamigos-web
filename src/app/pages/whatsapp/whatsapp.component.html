@@ -1,0 +1,43 @@
+<section class="page-card div-page">
+  <header class="head">
+    <h2>Conexão WhatsApp</h2>
+    <p class="head-desc">Gerencie o estado da conexão para envio de campanhas.</p>
+  </header>
+
+  <p class="msg" *ngIf="carregando">Carregando status...</p>
+  <p class="msg erro" *ngIf="erro">{{ erro }}</p>
+  <p class="msg sucesso" *ngIf="sucesso">{{ sucesso }}</p>
+
+  <article class="bloco" *ngIf="!carregando">
+    <h3>Status atual</h3>
+    <p class="contador">
+      Estado:
+      <strong>{{ status?.conectado ? 'Conectado' : 'Desconectado' }}</strong>
+      ({{ status?.status || 'desconhecido' }})
+      · Atualizado em: {{ status?.ultimaAtualizacao | date: 'dd/MM/yyyy HH:mm:ss' }}
+    </p>
+    <p class="contador">Número ativo: {{ status?.numero || '—' }}</p>
+    <p class="contador">Perfil: {{ status?.nomePerfil || '—' }}</p>
+    <div *ngIf="status?.qrCode" style="margin-top: 12px">
+      <p class="contador">Escaneie o QR Code no WhatsApp para concluir a conexão:</p>
+      <img [src]="status?.qrCode || ''" alt="QR Code de conexão do WhatsApp" width="280" height="280" />
+    </div>
+  </article>
+
+  <article class="bloco">
+    <h3>Conectar canal</h3>
+    <label class="campo">
+      <span>Nome do perfil</span>
+      <input [(ngModel)]="nomePerfil" placeholder="Ex.: Atendimento AgregaAmigos" />
+    </label>
+    <div class="top-actions">
+      <button type="button" class="btn-montar" [disabled]="conectando" (click)="conectar()">
+        {{ conectando ? 'Conectando...' : 'Conectar' }}
+      </button>
+      <button type="button" class="btn-sec" [disabled]="desconectando" (click)="desconectar()">
+        {{ desconectando ? 'Desconectando...' : 'Desconectar' }}
+      </button>
+      <button type="button" class="btn-sec" (click)="carregarStatus()">Atualizar status</button>
+    </div>
+  </article>
+</section>

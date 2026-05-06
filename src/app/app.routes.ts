@@ -10,6 +10,7 @@ import { NaoEncontradoComponent } from './pages/nao-encontrado/nao-encontrado.co
 import { PessoaComponent } from './pages/pessoa/pessoa.component';
 import { PrincipalComponent } from './pages/principal/principal.component';
 import { TermoConsentimentoComponent } from './pages/termo-consentimento/termo-consentimento.component';
+import { WhatsappComponent } from './pages/whatsapp/whatsapp.component';
 
 export const routes: Routes = [
   {
@@ -49,6 +50,10 @@ export const routes: Routes = [
       {
         path: 'divulgacao',
         component: DivulgacaoComponent
+      },
+      {
+        path: 'whatsapp',
+        component: WhatsappComponent
       }
     ]
   },

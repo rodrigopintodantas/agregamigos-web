@@ -80,6 +80,24 @@ import { LayoutUiService } from '../service/layout-ui.service';
       </li>
       <li *ngIf="auth.isAdmin() && isAdminLogin()">
         <a
+          routerLink="/admin/whatsapp"
+          routerLinkActive="active-route"
+          [attr.title]="ui.sidebarCollapsed() ? 'Conexão WhatsApp' : null"
+          (click)="ui.closeMobileMenu()"
+        >
+          <span class="menu-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path
+                d="M12 2a10 10 0 0 0-8.62 15.07L2 22l5.08-1.33A10 10 0 1 0 12 2zm0 18a7.9 7.9 0 0 1-4.03-1.1l-.29-.17-3.02.79.8-2.95-.19-.3A8 8 0 1 1 12 20z"
+              ></path>
+              <path d="M16.5 14.27c-.25-.12-1.48-.73-1.7-.81s-.38-.12-.54.12-.62.81-.76.97-.29.18-.54.06a6.46 6.46 0 0 1-1.9-1.17 7.1 7.1 0 0 1-1.3-1.62c-.14-.24 0-.37.1-.49.11-.11.25-.29.37-.44a1.7 1.7 0 0 0 .25-.42.47.47 0 0 0-.02-.44c-.06-.12-.54-1.3-.74-1.78-.19-.46-.38-.4-.54-.4h-.46a.88.88 0 0 0-.64.3 2.67 2.67 0 0 0-.84 1.98 4.68 4.68 0 0 0 .98 2.47 10.7 10.7 0 0 0 4.09 3.62c.58.25 1.03.4 1.38.52a3.3 3.3 0 0 0 1.5.09 2.44 2.44 0 0 0 1.6-1.12 1.95 1.95 0 0 0 .14-1.12c-.06-.1-.22-.16-.47-.28z"></path>
+            </svg>
+          </span>
+          <span class="menu-label">Conexão WhatsApp</span>
+        </a>
+      </li>
+      <li *ngIf="auth.isAdmin() && isAdminLogin()">
+        <a
           routerLink="/admin/divulgacao"
           routerLinkActive="active-route"
           [attr.title]="ui.sidebarCollapsed() ? 'Divulgação' : null"

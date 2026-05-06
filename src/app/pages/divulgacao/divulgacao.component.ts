@@ -35,6 +35,7 @@ export class DivulgacaoComponent implements OnInit {
   carregandoDetalhe: Record<number, boolean> = {};
   exibindoCriacao = false;
   nomeCampanha = '';
+  mensagensPorTurno = 2;
   filtroNome = '';
   filtroBairro = '';
 
@@ -51,6 +52,8 @@ export class DivulgacaoComponent implements OnInit {
   montando = false;
   salvandoCampanha = false;
   excluindoCampanhaId: number | null = null;
+  cancelandoCampanhaId: number | null = null;
+  processandoCampanhaId: number | null = null;
   erro = '';
   sucesso = '';
 
@@ -87,6 +90,7 @@ export class DivulgacaoComponent implements OnInit {
     this.selecionadosModelos.clear();
     this.filtroNome = '';
     this.filtroBairro = '';
+    this.mensagensPorTurno = 2;
 
     let pessoasOk = false;
     let modelosOk = false;
@@ -124,6 +128,7 @@ export class DivulgacaoComponent implements OnInit {
     this.nomeCampanha = '';
     this.filtroNome = '';
     this.filtroBairro = '';
+    this.mensagensPorTurno = 2;
     this.selecionadosPessoas.clear();
     this.selecionadosModelos.clear();
     this.campanhaMontada = [];
@@ -188,6 +193,10 @@ export class DivulgacaoComponent implements OnInit {
       this.erro = 'Selecione obrigatoriamente 2 ou mais modelos diferentes.';
       return;
     }
+    if (!Number.isInteger(this.mensagensPorTurno) || this.mensagensPorTurno < 1) {
+      this.erro = 'Mensagens por turno deve ser um número inteiro maior ou igual a 1.';
+      return;
+    }
 
     const pessoasSelecionadas = this.pessoas
       .filter((p) => this.selecionadosPessoas.has(p.id))
@@ -227,6 +236,7 @@ export class DivulgacaoComponent implements OnInit {
         nome: this.nomeCampanha.trim(),
         pessoa_ids: [...this.selecionadosPessoas],
         modelo_ids: [...this.selecionadosModelos],
+        mensagens_por_turno: this.mensagensPorTurno,
       })
       .subscribe({
         next: () => {
@@ -260,6 +270,14 @@ export class DivulgacaoComponent implements OnInit {
     return c.status === 'montada';
   }
 
+  podeIniciarCampanha(c: CampanhaDivulgacaoItem): boolean {
+    return c.status === 'montada' || c.status === 'em_andamento';
+  }
+
+  podeCancelarCampanha(c: CampanhaDivulgacaoItem): boolean {
+    return c.status === 'montada' || c.status === 'em_andamento';
+  }
+
   excluirCampanha(c: CampanhaDivulgacaoItem): void {
     this.erro = '';
     this.sucesso = '';
@@ -279,6 +297,68 @@ export class DivulgacaoComponent implements OnInit {
       error: (err) => {
         this.excluindoCampanhaId = null;
         this.erro = err?.error?.message ?? 'Não foi possível excluir a campanha.';
+      },
+    });
+  }
+
+  iniciarCampanha(c: CampanhaDivulgacaoItem): void {
+    this.erro = '';
+    this.sucesso = '';
+    if (!this.podeIniciarCampanha(c)) {
+      this.erro = 'A campanha só pode ser iniciada quando estiver montada ou em andamento.';
+      return;
+    }
+
+    this.processandoCampanhaId = c.id;
+    this.campanhaService.iniciar(c.id).subscribe({
+      next: (ret) => {
+        this.processandoCampanhaId = null;
+        this.sucesso = ret?.message ?? 'Campanha processada com sucesso.';
+        this.carregarCampanhas();
+      },
+      error: (err) => {
+        this.processandoCampanhaId = null;
+        this.erro = err?.error?.message ?? 'Não foi possível iniciar o envio da campanha.';
+      },
+    });
+  }
+
+  reprocessarErros(c: CampanhaDivulgacaoItem): void {
+    this.erro = '';
+    this.sucesso = '';
+    this.processandoCampanhaId = c.id;
+    this.campanhaService.reprocessarErros(c.id).subscribe({
+      next: (ret) => {
+        this.processandoCampanhaId = null;
+        this.sucesso = ret?.message ?? 'Reprocessamento concluído.';
+        this.carregarCampanhas();
+      },
+      error: (err) => {
+        this.processandoCampanhaId = null;
+        this.erro = err?.error?.message ?? 'Não foi possível reprocessar os erros da campanha.';
+      },
+    });
+  }
+
+  cancelarCampanha(c: CampanhaDivulgacaoItem): void {
+    this.erro = '';
+    this.sucesso = '';
+    if (!this.podeCancelarCampanha(c)) {
+      this.erro = 'A campanha só pode ser cancelada quando estiver montada ou em andamento.';
+      return;
+    }
+    if (!window.confirm(`Deseja cancelar a campanha "${c.nome}"?`)) return;
+
+    this.cancelandoCampanhaId = c.id;
+    this.campanhaService.cancelar(c.id).subscribe({
+      next: (ret) => {
+        this.cancelandoCampanhaId = null;
+        this.sucesso = ret?.message ?? 'Campanha cancelada com sucesso.';
+        this.carregarCampanhas();
+      },
+      error: (err) => {
+        this.cancelandoCampanhaId = null;
+        this.erro = err?.error?.message ?? 'Não foi possível cancelar a campanha.';
       },
     });
   }

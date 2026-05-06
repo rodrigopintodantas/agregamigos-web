@@ -21,6 +21,7 @@
           <tr>
             <th>Campanha</th>
             <th>Status</th>
+            <th>Msgs/turno</th>
             <th>Destinatários</th>
             <th>Enviados</th>
             <th>Pendentes</th>
@@ -40,6 +41,7 @@
               <td>
                 <span class="status-badge status-{{ c.status }}">{{ labelStatus(c.status) }}</span>
               </td>
+              <td>{{ c.mensagens_por_turno }}</td>
               <td>{{ c.total_destinatarios }}</td>
               <td>{{ c.total_enviados }}</td>
               <td>{{ c.total_pendentes }}</td>
@@ -58,9 +60,40 @@
                       <rect x="4" y="4" width="11" height="11" rx="2"></rect>
                     </svg>
                   </button>
-                  <button type="button" class="btn-acao iniciar" title="Iniciar" disabled>
+                  <button
+                    type="button"
+                    class="btn-acao iniciar"
+                    title="Iniciar envio"
+                    [disabled]="!podeIniciarCampanha(c) || processandoCampanhaId === c.id"
+                    (click)="iniciarCampanha(c)"
+                  >
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <polygon points="8,5 19,12 8,19"></polygon>
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-acao ver"
+                    title="Reprocessar erros"
+                    [disabled]="processandoCampanhaId === c.id"
+                    (click)="reprocessarErros(c)"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M21 12a9 9 0 1 1-2.64-6.36"></path>
+                      <polyline points="21 3 21 9 15 9"></polyline>
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    class="btn-acao duplicar"
+                    title="Cancelar campanha"
+                    [disabled]="!podeCancelarCampanha(c) || cancelandoCampanhaId === c.id"
+                    (click)="cancelarCampanha(c)"
+                  >
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <circle cx="12" cy="12" r="9"></circle>
+                      <line x1="8" y1="8" x2="16" y2="16"></line>
+                      <line x1="16" y1="8" x2="8" y2="16"></line>
                     </svg>
                   </button>
                   <button
@@ -80,7 +113,7 @@
               </td>
             </tr>
             <tr class="campanha-dropdown-row" *ngIf="campanhaAbertaId === c.id">
-              <td colspan="7">
+              <td colspan="8">
                 <div class="campanha-dropdown">
                   <p class="contador" *ngIf="carregandoDetalhe[c.id]">Carregando destinatários...</p>
                   <div class="table-wrap" *ngIf="!carregandoDetalhe[c.id]">
@@ -91,6 +124,8 @@
                           <th>Pessoa</th>
                           <th>WhatsApp</th>
                           <th>Modelo</th>
+                          <th>Turno</th>
+                          <th>Agendado para</th>
                           <th>Status envio</th>
                           <th>Enviado em</th>
                         </tr>
@@ -101,6 +136,8 @@
                           <td>{{ d.pessoa?.nome || '—' }}</td>
                           <td>{{ d.pessoa?.whatsapp || '—' }}</td>
                           <td>{{ d.modelo?.titulo || '—' }}</td>
+                          <td>{{ d.turno || '—' }}</td>
+                          <td>{{ d.agendado_para ? (d.agendado_para | date: 'dd/MM/yyyy HH:mm') : '—' }}</td>
                           <td>
                             <span class="status-badge status-envio-{{ d.status }}">{{ labelStatusDestinatario(d.status) }}</span>
                           </td>
@@ -124,6 +161,10 @@
     <label class="campo">
       <span>Nome da campanha</span>
       <input [(ngModel)]="nomeCampanha" placeholder="Ex.: Campanha Maio - Convites" />
+    </label>
+    <label class="campo">
+      <span>Mensagens por turno (manhã/tarde/noite)</span>
+      <input type="number" min="1" step="1" [(ngModel)]="mensagensPorTurno" />
     </label>
 
     <p class="msg" *ngIf="carregandoCriacao">Carregando dados da criação...</p>
