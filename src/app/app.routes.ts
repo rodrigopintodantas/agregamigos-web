@@ -8,6 +8,7 @@ import { ModeloMensagemComponent } from './pages/modelo-mensagem/modelo-mensagem
 import { NaoEncontradoComponent } from './pages/nao-encontrado/nao-encontrado.component';
 import { PessoaComponent } from './pages/pessoa/pessoa.component';
 import { PrincipalComponent } from './pages/principal/principal.component';
+import { TermoConsentimentoComponent } from './pages/termo-consentimento/termo-consentimento.component';
 
 export const routes: Routes = [
   {
@@ -17,6 +18,10 @@ export const routes: Routes = [
   {
     path: 'link-cadastro',
     component: LinkCadastroComponent
+  },
+  {
+    path: 'termo-consentimento',
+    component: TermoConsentimentoComponent
   },
   {
     path: 'admin',

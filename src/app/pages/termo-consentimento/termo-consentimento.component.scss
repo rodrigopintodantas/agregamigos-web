@@ -1,0 +1,53 @@
+:host {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: var(--color-brand-900);
+}
+
+.card {
+  width: min(100%, 760px);
+  background: #fff;
+  border: 1px solid #eaecf0;
+  border-radius: 14px;
+  padding: 1rem 1.1rem;
+  box-shadow: 0 10px 26px rgba(16, 24, 40, 0.08);
+}
+
+h1 {
+  margin: 0 0 0.35rem;
+  font-size: 1.35rem;
+}
+
+.versao {
+  margin: 0 0 0.9rem;
+  color: #667085;
+  font-size: 0.82rem;
+}
+
+h2 {
+  margin: 0.85rem 0 0.35rem;
+  font-size: 1rem;
+}
+
+p,
+li {
+  color: #344054;
+  font-size: 0.92rem;
+  line-height: 1.45;
+}
+
+ul {
+  margin: 0.2rem 0 0.2rem 1rem;
+  padding: 0;
+}
+
+.voltar {
+  display: inline-block;
+  margin-top: 0.9rem;
+  color: var(--color-brand-500);
+  font-weight: 600;
+  text-decoration: underline;
+}

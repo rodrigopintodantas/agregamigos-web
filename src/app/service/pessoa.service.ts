@@ -22,6 +22,10 @@ export interface PessoaPayload {
   instagram?: string | null;
   indicacao?: string | null;
   endereco?: EnderecoPayload;
+  consentimento?: {
+    aceito: boolean;
+    termo_versao: string;
+  };
 }
 
 export interface PessoaItem {

@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { RouterLink } from '@angular/router';
 import { PessoaPayload, PessoaService } from '../../service/pessoa.service';
 
 type ViaCepResponse = {
@@ -16,12 +17,16 @@ type ViaCepResponse = {
 @Component({
   selector: 'app-link-cadastro',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, RouterLink],
   templateUrl: './link-cadastro.component.html',
   styleUrl: './link-cadastro.component.scss',
 })
 export class LinkCadastroComponent {
   private pessoaService = inject(PessoaService);
+  readonly termoConsentimentoVersao = '2026-05-06-v1';
+  readonly termoConsentimentoTexto =
+    'Autorizo o tratamento dos meus dados pessoais para fins de cadastro, contato e gestão do relacionamento, nos termos da LGPD.';
+  concordaTermo = false;
 
   salvando = false;
   sucesso = '';
@@ -146,7 +151,10 @@ export class LinkCadastroComponent {
       this.erro = 'Informe nome com pelo menos 3 caracteres.';
       return;
     }
-
+    if (!this.concordaTermo) {
+      this.erro = 'É necessário concordar com o termo de consentimento para continuar.';
+      return;
+    }
     this.salvando = true;
     const payload: PessoaPayload = {
       ...this.form,
@@ -154,6 +162,10 @@ export class LinkCadastroComponent {
       endereco: {
         ...this.form.endereco,
         cep: this.form.endereco?.cep ? this.form.endereco.cep.replace(/\D/g, '') : null,
+      },
+      consentimento: {
+        aceito: true,
+        termo_versao: this.termoConsentimentoVersao,
       },
     };
 
@@ -179,6 +191,7 @@ export class LinkCadastroComponent {
             ibge: null,
           },
         };
+        this.concordaTermo = false;
         this.bairroDetectadoCep = null;
       },
       error: (err) => {
