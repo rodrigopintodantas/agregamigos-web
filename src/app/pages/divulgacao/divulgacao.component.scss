@@ -257,8 +257,8 @@ th {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  cursor: not-allowed;
-  opacity: 0.6;
+  cursor: pointer;
+  opacity: 1;
 }
 
 .btn-acao svg {
@@ -283,9 +283,18 @@ th {
   background: #12b76a;
 }
 
+.btn-acao.excluir {
+  background: #b42318;
+}
+
 .btn-acao.iniciar svg polygon {
   fill: currentColor;
   stroke: none;
+}
+
+.btn-acao:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .status-badge {

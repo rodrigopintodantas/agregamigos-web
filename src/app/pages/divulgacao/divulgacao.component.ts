@@ -50,6 +50,7 @@ export class DivulgacaoComponent implements OnInit {
   carregandoCriacao = false;
   montando = false;
   salvandoCampanha = false;
+  excluindoCampanhaId: number | null = null;
   erro = '';
   sucesso = '';
 
@@ -253,6 +254,33 @@ export class DivulgacaoComponent implements OnInit {
       default:
         return 'Rascunho';
     }
+  }
+
+  podeExcluirCampanha(c: CampanhaDivulgacaoItem): boolean {
+    return c.status === 'montada';
+  }
+
+  excluirCampanha(c: CampanhaDivulgacaoItem): void {
+    this.erro = '';
+    this.sucesso = '';
+    if (!this.podeExcluirCampanha(c)) {
+      this.erro = 'A campanha só pode ser excluída quando estiver no status Montada.';
+      return;
+    }
+    if (!window.confirm(`Deseja excluir a campanha "${c.nome}"?`)) return;
+
+    this.excluindoCampanhaId = c.id;
+    this.campanhaService.excluir(c.id).subscribe({
+      next: (ret) => {
+        this.excluindoCampanhaId = null;
+        this.sucesso = ret?.message ?? 'Campanha excluída com sucesso.';
+        this.carregarCampanhas();
+      },
+      error: (err) => {
+        this.excluindoCampanhaId = null;
+        this.erro = err?.error?.message ?? 'Não foi possível excluir a campanha.';
+      },
+    });
   }
 
   labelStatusDestinatario(status: string): string {

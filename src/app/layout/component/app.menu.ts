@@ -45,14 +45,14 @@ import { LayoutUiService } from '../service/layout-ui.service';
           <span class="menu-label">Pessoas</span>
         </a>
       </li>
-      <li *ngIf="auth.isAdmin()">
+      <li *ngIf="auth.isAdmin() && isAdminLogin()">
         <a
           routerLink="/admin/modelos-mensagem"
           routerLinkActive="active-route"
           [attr.title]="ui.sidebarCollapsed() ? 'Modelos de mensagem' : null"
           (click)="ui.closeMobileMenu()"
         >
-          <span class="menu-icon" aria-hidden="true" *ngIf="isAdminLogin()">
+          <span class="menu-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24">
               <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
               <path d="M14 2v6h6"></path>
@@ -78,7 +78,7 @@ import { LayoutUiService } from '../service/layout-ui.service';
           <span class="menu-label">Criar usuário</span>
         </a>
       </li>
-      <li *ngIf="auth.isAdmin()">
+      <li *ngIf="auth.isAdmin() && isAdminLogin()">
         <a
           routerLink="/admin/divulgacao"
           routerLinkActive="active-route"

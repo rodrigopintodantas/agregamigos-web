@@ -29,6 +29,10 @@ export interface CriarCampanhaResponse {
   total_destinatarios: number;
 }
 
+export interface ExcluirCampanhaResponse {
+  message: string;
+}
+
 export interface CampanhaDestinatarioDetalhe {
   id: number;
   ordem: number;
@@ -73,5 +77,9 @@ export class CampanhaDivulgacaoService {
 
   detalhe(id: number): Observable<CampanhaDivulgacaoDetalhe> {
     return this.http.get<CampanhaDivulgacaoDetalhe>(`${this.base}/${id}`);
+  }
+
+  excluir(id: number): Observable<ExcluirCampanhaResponse> {
+    return this.http.delete<ExcluirCampanhaResponse>(`${this.base}/${id}`);
   }
 }
