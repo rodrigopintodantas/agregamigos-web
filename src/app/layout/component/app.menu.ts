@@ -78,6 +78,23 @@ import { LayoutUiService } from '../service/layout-ui.service';
           <span class="menu-label">Criar usuário</span>
         </a>
       </li>
+      <li *ngIf="auth.isAdmin()">
+        <a
+          routerLink="/admin/divulgacao"
+          routerLinkActive="active-route"
+          [attr.title]="ui.sidebarCollapsed() ? 'Divulgação' : null"
+          (click)="ui.closeMobileMenu()"
+        >
+          <span class="menu-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M2 10v4a2 2 0 0 0 2 2h3l5 4V4L7 8H4a2 2 0 0 0-2 2z"></path>
+              <path d="M16 9a4 4 0 0 1 0 6"></path>
+              <path d="M19 6a8 8 0 0 1 0 12"></path>
+            </svg>
+          </span>
+          <span class="menu-label">Divulgação</span>
+        </a>
+      </li>
     </ul>
   `
 })

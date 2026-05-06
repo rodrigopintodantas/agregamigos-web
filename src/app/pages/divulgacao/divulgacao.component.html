@@ -1,0 +1,219 @@
+<section class="page-card div-page">
+  <header class="head">
+    <h2>Divulgação</h2>
+    <p class="head-desc">Gerencie campanhas e acompanhe status de envio por destinatário.</p>
+  </header>
+
+  <div class="top-actions">
+    <button type="button" class="btn-montar" *ngIf="!exibindoCriacao" (click)="abrirCriacao()">Criar Campanha</button>
+    <button type="button" class="btn-sec" *ngIf="exibindoCriacao" (click)="cancelarCriacao()">Voltar para lista</button>
+  </div>
+
+  <p class="msg" *ngIf="carregando && !exibindoCriacao">Carregando campanhas...</p>
+  <p class="msg erro" *ngIf="erro">{{ erro }}</p>
+  <p class="msg sucesso" *ngIf="sucesso">{{ sucesso }}</p>
+
+  <article class="bloco resultado" *ngIf="!exibindoCriacao && !carregando">
+    <h3>Campanhas cadastradas</h3>
+    <div class="table-wrap">
+      <table *ngIf="campanhas.length">
+        <thead>
+          <tr>
+            <th>Campanha</th>
+            <th>Status</th>
+            <th>Destinatários</th>
+            <th>Enviados</th>
+            <th>Pendentes</th>
+            <th>Criada em</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <ng-container *ngFor="let c of campanhas">
+            <tr>
+              <td>
+                <button type="button" class="drop-toggle" (click)="toggleCampanha(c.id)">
+                  <span>{{ c.nome }}</span>
+                  <span class="drop-icon">{{ campanhaAbertaId === c.id ? '▾' : '▸' }}</span>
+                </button>
+              </td>
+              <td>
+                <span class="status-badge status-{{ c.status }}">{{ labelStatus(c.status) }}</span>
+              </td>
+              <td>{{ c.total_destinatarios }}</td>
+              <td>{{ c.total_enviados }}</td>
+              <td>{{ c.total_pendentes }}</td>
+              <td>{{ c.createdAt | date: 'dd/MM/yyyy HH:mm' }}</td>
+              <td>
+                <div class="acoes-campanha">
+                  <button type="button" class="btn-acao ver" title="Ver" disabled>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path d="M1.5 12s3.8-6.5 10.5-6.5S22.5 12 22.5 12 18.7 18.5 12 18.5 1.5 12 1.5 12z"></path>
+                      <circle cx="12" cy="12" r="3"></circle>
+                    </svg>
+                  </button>
+                  <button type="button" class="btn-acao duplicar" title="Duplicar" disabled>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <rect x="9" y="9" width="11" height="11" rx="2"></rect>
+                      <rect x="4" y="4" width="11" height="11" rx="2"></rect>
+                    </svg>
+                  </button>
+                  <button type="button" class="btn-acao iniciar" title="Iniciar" disabled>
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <polygon points="8,5 19,12 8,19"></polygon>
+                    </svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            <tr class="campanha-dropdown-row" *ngIf="campanhaAbertaId === c.id">
+              <td colspan="7">
+                <div class="campanha-dropdown">
+                  <p class="contador" *ngIf="carregandoDetalhe[c.id]">Carregando destinatários...</p>
+                  <div class="table-wrap" *ngIf="!carregandoDetalhe[c.id]">
+                    <table *ngIf="detalhesCampanha[c.id]?.length">
+                      <thead>
+                        <tr>
+                          <th>Ordem</th>
+                          <th>Pessoa</th>
+                          <th>WhatsApp</th>
+                          <th>Modelo</th>
+                          <th>Status envio</th>
+                          <th>Enviado em</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr *ngFor="let d of detalhesCampanha[c.id]">
+                          <td>{{ d.ordem }}</td>
+                          <td>{{ d.pessoa?.nome || '—' }}</td>
+                          <td>{{ d.pessoa?.whatsapp || '—' }}</td>
+                          <td>{{ d.modelo?.titulo || '—' }}</td>
+                          <td>
+                            <span class="status-badge status-envio-{{ d.status }}">{{ labelStatusDestinatario(d.status) }}</span>
+                          </td>
+                          <td>{{ d.enviado_em ? (d.enviado_em | date: 'dd/MM/yyyy HH:mm') : '—' }}</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                    <p class="vazio" *ngIf="!detalhesCampanha[c.id]?.length">Campanha sem destinatários.</p>
+                  </div>
+                </div>
+              </td>
+            </tr>
+          </ng-container>
+        </tbody>
+      </table>
+      <p class="vazio" *ngIf="!campanhas.length">Nenhuma campanha criada ainda.</p>
+    </div>
+  </article>
+
+  <section *ngIf="exibindoCriacao">
+    <label class="campo">
+      <span>Nome da campanha</span>
+      <input [(ngModel)]="nomeCampanha" placeholder="Ex.: Campanha Maio - Convites" />
+    </label>
+
+    <p class="msg" *ngIf="carregandoCriacao">Carregando dados da criação...</p>
+
+    <div class="grid" *ngIf="!carregandoCriacao">
+    <article class="bloco">
+      <div class="bloco-head">
+        <h3>Pessoas com WhatsApp</h3>
+        <label class="check-all">
+          <input
+            type="checkbox"
+            [checked]="todasPessoasFiltradasSelecionadas()"
+            (change)="selecionarTodasPessoas($any($event.target).checked)"
+          />
+          Selecionar filtradas
+        </label>
+      </div>
+      <div class="filtros">
+        <input [(ngModel)]="filtroNome" placeholder="Filtrar por nome" />
+        <select [(ngModel)]="filtroBairro">
+          <option value="">Todos os bairros</option>
+          <option *ngFor="let b of bairrosDisponiveis" [value]="b">{{ b }}</option>
+        </select>
+      </div>
+      <p class="contador">{{ selecionadosPessoas.size }} selecionada(s)</p>
+
+      <div class="lista-scroll">
+        <label class="item-check" *ngFor="let p of pessoasFiltradas">
+          <input
+            type="checkbox"
+            [checked]="selecionadosPessoas.has(p.id)"
+            (change)="togglePessoa(p.id, $any($event.target).checked)"
+          />
+          <span class="item-main">{{ p.nome }}</span>
+          <span class="item-sub">{{ p.whatsapp || '—' }} · {{ p.endereco?.bairro || 'Sem bairro' }}</span>
+        </label>
+        <p class="vazio" *ngIf="!pessoasFiltradas.length">Nenhuma pessoa para os filtros informados.</p>
+      </div>
+    </article>
+
+    <article class="bloco">
+      <div class="bloco-head">
+        <h3>Modelos de mensagem</h3>
+      </div>
+      <p class="contador">{{ selecionadosModelos.size }} selecionado(s) · obrigatório: 2 ou mais</p>
+
+      <div class="lista-scroll">
+        <label class="item-check" *ngFor="let m of modelos">
+          <input
+            type="checkbox"
+            [checked]="selecionadosModelos.has(m.id)"
+            (change)="toggleModelo(m.id, $any($event.target).checked)"
+          />
+          <span class="item-main">{{ m.titulo }}</span>
+          <span class="item-sub">{{ m.corpo }}</span>
+        </label>
+        <p class="vazio" *ngIf="!modelos.length">
+          Nenhum modelo encontrado. Cadastre em <code>/admin/modelos-mensagem</code>.
+        </p>
+      </div>
+    </article>
+    </div>
+
+    <div class="top-actions">
+      <button type="button" class="btn-montar" [disabled]="montando" (click)="montarCampanha()">
+        {{ montando ? 'Montando campanha...' : 'Montar campanha' }}
+      </button>
+      <button
+        type="button"
+        class="btn-montar"
+        [disabled]="salvandoCampanha || !campanhaMontada.length"
+        (click)="criarCampanha()"
+      >
+        {{ salvandoCampanha ? 'Salvando campanha...' : 'Salvar campanha' }}
+      </button>
+    </div>
+
+    <article class="bloco resultado" *ngIf="campanhaMontada.length">
+      <h3>Fila da campanha</h3>
+      <p class="contador">
+        Ordem prevista com alternância de modelos (round-robin): A(1), B(2), C(1), D(2)...
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Pessoa</th>
+              <th>WhatsApp</th>
+              <th>Modelo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let item of campanhaMontada; let i = index">
+              <td>{{ i + 1 }}</td>
+              <td>{{ item.pessoaNome }}</td>
+              <td>{{ item.whatsapp }}</td>
+              <td>{{ item.modeloTitulo }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </article>
+  </section>
+</section>

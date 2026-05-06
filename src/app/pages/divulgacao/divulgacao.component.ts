@@ -1,0 +1,301 @@
+import { CommonModule } from '@angular/common';
+import { Component, OnInit, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import {
+  CampanhaDestinatarioDetalhe,
+  CampanhaDivulgacaoItem,
+  CampanhaDivulgacaoService,
+} from '../../service/campanha-divulgacao.service';
+import { ModeloMensagem, ModeloMensagemService } from '../../service/modelo-mensagem.service';
+import { PessoaItem, PessoaService } from '../../service/pessoa.service';
+
+type ItemCampanha = {
+  pessoaId: number;
+  pessoaNome: string;
+  whatsapp: string;
+  modeloId: number;
+  modeloTitulo: string;
+};
+
+@Component({
+  selector: 'app-divulgacao',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './divulgacao.component.html',
+  styleUrl: './divulgacao.component.scss',
+})
+export class DivulgacaoComponent implements OnInit {
+  private pessoaService = inject(PessoaService);
+  private modeloService = inject(ModeloMensagemService);
+  private campanhaService = inject(CampanhaDivulgacaoService);
+
+  campanhas: CampanhaDivulgacaoItem[] = [];
+  campanhaAbertaId: number | null = null;
+  detalhesCampanha: Record<number, CampanhaDestinatarioDetalhe[]> = {};
+  carregandoDetalhe: Record<number, boolean> = {};
+  exibindoCriacao = false;
+  nomeCampanha = '';
+  filtroNome = '';
+  filtroBairro = '';
+
+  pessoas: PessoaItem[] = [];
+  modelos: ModeloMensagem[] = [];
+
+  selecionadosPessoas = new Set<number>();
+  selecionadosModelos = new Set<number>();
+
+  campanhaMontada: ItemCampanha[] = [];
+
+  carregando = true;
+  carregandoCriacao = false;
+  montando = false;
+  salvandoCampanha = false;
+  erro = '';
+  sucesso = '';
+
+  ngOnInit(): void {
+    this.carregarCampanhas();
+  }
+
+  carregarCampanhas(): void {
+    this.carregando = true;
+    this.erro = '';
+    this.sucesso = '';
+    this.campanhaService.listar().subscribe({
+      next: (lista) => {
+        this.campanhas = lista;
+        this.campanhaAbertaId = null;
+        this.detalhesCampanha = {};
+        this.carregandoDetalhe = {};
+        this.carregando = false;
+      },
+      error: (err) => {
+        this.erro = err?.error?.message ?? 'Não foi possível carregar as campanhas.';
+        this.carregando = false;
+      },
+    });
+  }
+
+  abrirCriacao(): void {
+    this.exibindoCriacao = true;
+    this.carregandoCriacao = true;
+    this.erro = '';
+    this.sucesso = '';
+    this.campanhaMontada = [];
+    this.selecionadosPessoas.clear();
+    this.selecionadosModelos.clear();
+    this.filtroNome = '';
+    this.filtroBairro = '';
+
+    let pessoasOk = false;
+    let modelosOk = false;
+    const finalizar = () => {
+      if (pessoasOk && modelosOk) this.carregandoCriacao = false;
+    };
+
+    this.pessoaService.listar().subscribe({
+      next: (lista) => {
+        this.pessoas = lista.filter((p) => this.normalizarWhatsapp(p.whatsapp).length > 0);
+        pessoasOk = true;
+        finalizar();
+      },
+      error: (err) => {
+        this.erro = err?.error?.message ?? 'Não foi possível carregar as pessoas.';
+        this.carregandoCriacao = false;
+      },
+    });
+
+    this.modeloService.listar().subscribe({
+      next: (lista) => {
+        this.modelos = lista;
+        modelosOk = true;
+        finalizar();
+      },
+      error: (err) => {
+        this.erro = err?.error?.message ?? 'Não foi possível carregar os modelos.';
+        this.carregandoCriacao = false;
+      },
+    });
+  }
+
+  cancelarCriacao(): void {
+    this.exibindoCriacao = false;
+    this.nomeCampanha = '';
+    this.filtroNome = '';
+    this.filtroBairro = '';
+    this.selecionadosPessoas.clear();
+    this.selecionadosModelos.clear();
+    this.campanhaMontada = [];
+    this.erro = '';
+    this.sucesso = '';
+  }
+
+  get pessoasFiltradas(): PessoaItem[] {
+    const nome = this.filtroNome.trim().toLowerCase();
+    const bairro = this.filtroBairro.trim().toLowerCase();
+    return this.pessoas.filter((p) => {
+      const nomeOk = !nome || String(p.nome ?? '').toLowerCase().includes(nome);
+      const bairroPessoa = String(p.endereco?.bairro ?? '').toLowerCase();
+      const bairroOk = !bairro || bairroPessoa === bairro;
+      return nomeOk && bairroOk;
+    });
+  }
+
+  get bairrosDisponiveis(): string[] {
+    return [...new Set(this.pessoas.map((p) => String(p.endereco?.bairro ?? '').trim()).filter(Boolean))].sort(
+      (a, b) => a.localeCompare(b, 'pt-BR'),
+    );
+  }
+
+  togglePessoa(id: number, checked: boolean): void {
+    if (checked) this.selecionadosPessoas.add(id);
+    else this.selecionadosPessoas.delete(id);
+    this.sucesso = '';
+  }
+
+  toggleModelo(id: number, checked: boolean): void {
+    if (checked) this.selecionadosModelos.add(id);
+    else this.selecionadosModelos.delete(id);
+    this.sucesso = '';
+  }
+
+  selecionarTodasPessoas(checked: boolean): void {
+    this.pessoasFiltradas.forEach((p) => {
+      if (checked) this.selecionadosPessoas.add(p.id);
+      else this.selecionadosPessoas.delete(p.id);
+    });
+  }
+
+  todasPessoasFiltradasSelecionadas(): boolean {
+    return this.pessoasFiltradas.length > 0 && this.pessoasFiltradas.every((p) => this.selecionadosPessoas.has(p.id));
+  }
+
+  montarCampanha(): void {
+    this.erro = '';
+    this.sucesso = '';
+    this.campanhaMontada = [];
+
+    if (!this.nomeCampanha.trim()) {
+      this.erro = 'Informe um nome para a campanha.';
+      return;
+    }
+    if (this.selecionadosPessoas.size === 0) {
+      this.erro = 'Selecione pelo menos uma pessoa.';
+      return;
+    }
+    if (this.selecionadosModelos.size < 2) {
+      this.erro = 'Selecione obrigatoriamente 2 ou mais modelos diferentes.';
+      return;
+    }
+
+    const pessoasSelecionadas = this.pessoas
+      .filter((p) => this.selecionadosPessoas.has(p.id))
+      .sort((a, b) => String(a.nome ?? '').localeCompare(String(b.nome ?? ''), 'pt-BR'));
+
+    const modelosSelecionados = this.modelos
+      .filter((m) => this.selecionadosModelos.has(m.id))
+      .sort((a, b) => String(a.titulo ?? '').localeCompare(String(b.titulo ?? ''), 'pt-BR'));
+
+    this.montando = true;
+
+    this.campanhaMontada = pessoasSelecionadas.map((pessoa, index) => {
+      const modelo = modelosSelecionados[index % modelosSelecionados.length];
+      return {
+        pessoaId: pessoa.id,
+        pessoaNome: pessoa.nome,
+        whatsapp: this.formatarWhatsapp(this.normalizarWhatsapp(pessoa.whatsapp)),
+        modeloId: modelo.id,
+        modeloTitulo: modelo.titulo,
+      };
+    });
+
+    this.montando = false;
+    this.sucesso = `Campanha "${this.nomeCampanha.trim()}" montada com ${this.campanhaMontada.length} destinatário(s).`;
+  }
+
+  criarCampanha(): void {
+    this.erro = '';
+    this.sucesso = '';
+    if (!this.campanhaMontada.length) {
+      this.erro = 'Monte a campanha antes de salvar.';
+      return;
+    }
+    this.salvandoCampanha = true;
+    this.campanhaService
+      .criar({
+        nome: this.nomeCampanha.trim(),
+        pessoa_ids: [...this.selecionadosPessoas],
+        modelo_ids: [...this.selecionadosModelos],
+      })
+      .subscribe({
+        next: () => {
+          this.salvandoCampanha = false;
+          this.cancelarCriacao();
+          this.carregarCampanhas();
+        },
+        error: (err) => {
+          this.salvandoCampanha = false;
+          this.erro = err?.error?.message ?? 'Não foi possível criar a campanha.';
+        },
+      });
+  }
+
+  labelStatus(status: string): string {
+    switch (status) {
+      case 'montada':
+        return 'Montada';
+      case 'em_andamento':
+        return 'Em andamento';
+      case 'finalizada':
+        return 'Finalizada';
+      case 'cancelada':
+        return 'Cancelada';
+      default:
+        return 'Rascunho';
+    }
+  }
+
+  labelStatusDestinatario(status: string): string {
+    switch (status) {
+      case 'enviado':
+        return 'Enviado';
+      case 'erro':
+        return 'Erro';
+      case 'cancelado':
+        return 'Cancelado';
+      default:
+        return 'Pendente';
+    }
+  }
+
+  toggleCampanha(campanhaId: number): void {
+    if (this.campanhaAbertaId === campanhaId) {
+      this.campanhaAbertaId = null;
+      return;
+    }
+    this.campanhaAbertaId = campanhaId;
+    if (this.detalhesCampanha[campanhaId]) return;
+    this.carregandoDetalhe[campanhaId] = true;
+    this.campanhaService.detalhe(campanhaId).subscribe({
+      next: (detalhe) => {
+        this.detalhesCampanha[campanhaId] = detalhe.destinatarios ?? [];
+        this.carregandoDetalhe[campanhaId] = false;
+      },
+      error: (err) => {
+        this.carregandoDetalhe[campanhaId] = false;
+        this.erro = err?.error?.message ?? 'Não foi possível carregar os destinatários da campanha.';
+      },
+    });
+  }
+
+  private normalizarWhatsapp(value?: string | null): string {
+    return String(value ?? '').replace(/\D/g, '');
+  }
+
+  private formatarWhatsapp(digits: string): string {
+    if (!digits) return '—';
+    if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    return digits;
+  }
+}
