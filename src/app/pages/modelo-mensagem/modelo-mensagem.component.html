@@ -14,7 +14,30 @@
     </label>
     <label class="field">
       <span>Texto</span>
-      <textarea [(ngModel)]="corpo" name="corpo" rows="6" placeholder="Corpo da mensagem…"></textarea>
+      <textarea
+        #corpoInput
+        [(ngModel)]="corpo"
+        name="corpo"
+        rows="6"
+        placeholder="Corpo da mensagem…"
+      ></textarea>
+      <div class="variaveis-wrap">
+        <span>Variáveis disponíveis:</span>
+        <button type="button" class="tag-var" (click)="inserirVariavel(corpoInput, '{{nome}}')">{{ '{' }}{{ '{' }}nome{{ '}' }}{{ '}' }}</button>
+        <button type="button" class="tag-var" (click)="inserirVariavel(corpoInput, '{{primeiro_nome}}')">
+          {{ '{' }}{{ '{' }}primeiro_nome{{ '}' }}{{ '}' }}
+        </button>
+        <button type="button" class="tag-var" (click)="inserirVariavel(corpoInput, '{{bairro}}')">
+          {{ '{' }}{{ '{' }}bairro{{ '}' }}{{ '}' }}
+        </button>
+        <button type="button" class="tag-var" (click)="inserirVariavel(corpoInput, '{{nome_coordenador}}')">
+          {{ '{' }}{{ '{' }}nome_coordenador{{ '}' }}{{ '}' }}
+        </button>
+      </div>
+      <p class="var-help">
+        Ex.: <code>Bom dia, {{ '{' }}{{ '{' }}nome{{ '}' }}{{ '}' }}! hoje nosso encontro será no {{ '{' }}{{ '{' }}bairro{{ '}' }}{{ '}' }}!</code>
+
+      </p>
     </label>
     <div class="form-actions">
       <button type="button" *ngIf="editandoId != null" class="ghost" (click)="limparForm()" [disabled]="salvando">

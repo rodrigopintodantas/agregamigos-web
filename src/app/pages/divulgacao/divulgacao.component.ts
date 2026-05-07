@@ -54,6 +54,10 @@ export class DivulgacaoComponent implements OnInit {
   excluindoCampanhaId: number | null = null;
   cancelandoCampanhaId: number | null = null;
   processandoCampanhaId: number | null = null;
+  dialogMensagemAberto = false;
+  dialogMensagemTitulo = '';
+  dialogMensagemDestinatario = '';
+  dialogMensagemCorpo = '';
   erro = '';
   sucesso = '';
 
@@ -275,7 +279,7 @@ export class DivulgacaoComponent implements OnInit {
   }
 
   podeCancelarCampanha(c: CampanhaDivulgacaoItem): boolean {
-    return c.status === 'montada' || c.status === 'em_andamento';
+    return c.status === 'em_andamento';
   }
 
   excluirCampanha(c: CampanhaDivulgacaoItem): void {
@@ -344,7 +348,7 @@ export class DivulgacaoComponent implements OnInit {
     this.erro = '';
     this.sucesso = '';
     if (!this.podeCancelarCampanha(c)) {
-      this.erro = 'A campanha só pode ser cancelada quando estiver montada ou em andamento.';
+      this.erro = 'A campanha só pode ser cancelada quando estiver em andamento.';
       return;
     }
     if (!window.confirm(`Deseja cancelar a campanha "${c.nome}"?`)) return;
@@ -376,6 +380,19 @@ export class DivulgacaoComponent implements OnInit {
     }
   }
 
+  visualizarCorpoMensagem(d: CampanhaDestinatarioDetalhe): void {
+    this.dialogMensagemTitulo = d.modelo?.titulo ? `Modelo: ${d.modelo.titulo}` : 'Modelo da mensagem';
+    this.dialogMensagemDestinatario = d.pessoa?.nome ?? 'Destinatário não identificado';
+    const template = String(d.modelo?.corpo ?? '');
+    this.dialogMensagemCorpo =
+      this.aplicarVariaveisMensagem(template, d.pessoa) || 'Corpo da mensagem não disponível para este destinatário.';
+    this.dialogMensagemAberto = true;
+  }
+
+  fecharDialogMensagem(): void {
+    this.dialogMensagemAberto = false;
+  }
+
   toggleCampanha(campanhaId: number): void {
     if (this.campanhaAbertaId === campanhaId) {
       this.campanhaAbertaId = null;
@@ -405,5 +422,22 @@ export class DivulgacaoComponent implements OnInit {
     if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
     if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
     return digits;
+  }
+
+  private aplicarVariaveisMensagem(
+    template: string,
+    pessoa?: { nome?: string | null; bairro?: string | null; nome_coordenador?: string | null } | null,
+  ): string {
+    const nomeCompleto = String(pessoa?.nome ?? '').trim();
+    const primeiroNome = nomeCompleto ? nomeCompleto.split(/\s+/)[0] : '';
+    const bairro = String(pessoa?.bairro ?? '').trim();
+    const nomeCoordenador = String(pessoa?.nome_coordenador ?? '').trim();
+    return template
+      .replace(/\{\{\s*nome\s*\}\}/gi, nomeCompleto)
+      .replace(/\{\{\s*primeiro_nome\s*\}\}/gi, primeiroNome)
+      .replace(/\{\{\s*bairro\s*\}\}/gi, bairro)
+      .replace(/\{\{\s*nome_coordenador\s*\}\}/gi, nomeCoordenador)
+      .replace(/XXXX/g, nomeCompleto)
+      .trim();
   }
 }

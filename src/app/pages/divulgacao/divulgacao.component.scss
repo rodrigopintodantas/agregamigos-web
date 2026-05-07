@@ -350,6 +350,45 @@ th {
   color: #b54708;
 }
 
+.backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  z-index: 1000;
+}
+
+.dialog {
+  position: fixed;
+  z-index: 1010;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(92vw, 620px);
+  background: #fff;
+  border-radius: 12px;
+  padding: 1rem;
+  border: 1px solid #eaecf0;
+}
+
+.dialog-mensagem .actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 0.8rem;
+}
+
+.mensagem-dialog-corpo {
+  margin: 0;
+  background: #f9fafb;
+  border: 1px solid #eaecf0;
+  border-radius: 8px;
+  padding: 0.7rem;
+  white-space: pre-wrap;
+  font-family: inherit;
+  color: #344054;
+  max-height: 50vh;
+  overflow: auto;
+}
+
 @media (max-width: 920px) {
   .grid {
     grid-template-columns: 1fr;
@@ -357,5 +396,12 @@ th {
 
   .filtros {
     grid-template-columns: 1fr;
+  }
+
+  .dialog {
+    width: min(calc(100vw - 1.25rem), 620px);
+    max-height: min(90dvh, 92vh);
+    overflow: auto;
+    box-sizing: border-box;
   }
 }

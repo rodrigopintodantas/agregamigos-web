@@ -55,10 +55,13 @@ export interface CampanhaDestinatarioDetalhe {
     id: number;
     nome: string;
     whatsapp: string | null;
+    bairro?: string | null;
+    nome_coordenador?: string | null;
   } | null;
   modelo: {
     id: number;
     titulo: string;
+    corpo?: string | null;
   } | null;
 }
 

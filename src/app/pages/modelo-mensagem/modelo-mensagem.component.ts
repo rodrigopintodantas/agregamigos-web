@@ -131,4 +131,16 @@ export class ModeloMensagemComponent implements OnInit {
     const t = texto.replace(/\s+/g, ' ').trim();
     return t.length <= max ? t : `${t.slice(0, max)}…`;
   }
+
+  inserirVariavel(alvo: HTMLTextAreaElement, token: string): void {
+    const inicio = alvo.selectionStart ?? this.corpo.length;
+    const fim = alvo.selectionEnd ?? inicio;
+    this.corpo = `${this.corpo.slice(0, inicio)}${token}${this.corpo.slice(fim)}`;
+
+    queueMicrotask(() => {
+      alvo.focus();
+      const cursor = inicio + token.length;
+      alvo.setSelectionRange(cursor, cursor);
+    });
+  }
 }
