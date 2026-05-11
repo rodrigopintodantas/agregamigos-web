@@ -45,24 +45,6 @@ import { LayoutUiService } from '../service/layout-ui.service';
           <span class="menu-label">Pessoas</span>
         </a>
       </li>
-      <li *ngIf="auth.isAdmin() && isAdminLogin()">
-        <a
-          routerLink="/admin/modelos-mensagem"
-          routerLinkActive="active-route"
-          [attr.title]="ui.sidebarCollapsed() ? 'Modelos de mensagem' : null"
-          (click)="ui.closeMobileMenu()"
-        >
-          <span class="menu-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
-              <path d="M14 2v6h6"></path>
-              <path d="M8 13h8"></path>
-              <path d="M8 17h5"></path>
-            </svg>
-          </span>
-          <span class="menu-label">Modelos de mensagem</span>
-        </a>
-      </li>
       <li *ngIf="auth.isAdmin()">
         <a
           routerLink="/admin/criar-usuario"
@@ -78,6 +60,7 @@ import { LayoutUiService } from '../service/layout-ui.service';
           <span class="menu-label">Criar usuário</span>
         </a>
       </li>
+      <li *ngIf="auth.isAdmin() && isAdminLogin()" class="menu-section">Campanha</li>
       <li *ngIf="auth.isAdmin() && isAdminLogin()">
         <a
           routerLink="/admin/whatsapp"
@@ -94,6 +77,24 @@ import { LayoutUiService } from '../service/layout-ui.service';
             </svg>
           </span>
           <span class="menu-label">Conexão WhatsApp</span>
+        </a>
+      </li>
+      <li *ngIf="auth.isAdmin() && isAdminLogin()">
+        <a
+          routerLink="/admin/modelos-mensagem"
+          routerLinkActive="active-route"
+          [attr.title]="ui.sidebarCollapsed() ? 'Modelos de mensagem' : null"
+          (click)="ui.closeMobileMenu()"
+        >
+          <span class="menu-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <path d="M14 2v6h6"></path>
+              <path d="M8 13h8"></path>
+              <path d="M8 17h5"></path>
+            </svg>
+          </span>
+          <span class="menu-label">Modelos de mensagem</span>
         </a>
       </li>
       <li *ngIf="auth.isAdmin() && isAdminLogin()">

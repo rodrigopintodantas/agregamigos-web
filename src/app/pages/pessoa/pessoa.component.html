@@ -37,20 +37,28 @@
       <thead>
         <tr>
           <th>Nome</th>
-          <th>Data Nascimento</th>
           <th>E-mail</th>
           <th>WhatsApp</th>
           <th>Bairro</th>
+          <th>Erro Whatsapp?</th>
           <th>Ações</th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let p of pessoasPaginadas">
           <td>{{ p.nome }}</td>
-          <td>{{ p.data_nascimento ? (p.data_nascimento | date: 'dd/MM/yyyy') : '—' }}</td>
           <td>{{ p.email || '—' }}</td>
           <td>{{ formatarWhatsapp(p.whatsapp) }}</td>
           <td>{{ p.endereco?.bairro || '—' }}</td>
+          <td>
+            <span
+              class="tag"
+              [class.tag-erro-whatsapp]="p.erro_whatsapp"
+              [class.tag-sem-erro-whatsapp]="!p.erro_whatsapp"
+            >
+              {{ p.erro_whatsapp ? 'Erro WhatsApp' : 'Sem erro' }}
+            </span>
+          </td>
           <td>
             <div class="acoes">
               <button

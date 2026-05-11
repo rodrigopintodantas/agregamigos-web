@@ -34,6 +34,7 @@ export interface PessoaItem {
   data_nascimento?: string | null;
   email?: string | null;
   whatsapp?: string | null;
+  erro_whatsapp?: boolean;
   instagram?: string | null;
   indicacao?: string | null;
   endereco?: EnderecoPayload | null;

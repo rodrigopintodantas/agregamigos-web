@@ -199,6 +199,31 @@ td {
   font-size: 0.92rem;
 }
 
+.tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.22rem 0.62rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.tag-erro-whatsapp {
+  background: #fef3f2;
+  color: #b42318;
+  border: 1px solid #fecdca;
+}
+
+.tag-sem-erro-whatsapp {
+  background: #f9fafb;
+  color: #475467;
+  border: 1px solid #e4e7ec;
+}
+
 .acoes {
   display: flex;
   gap: 0.45rem;
