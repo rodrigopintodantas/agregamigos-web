@@ -224,6 +224,36 @@ td {
   border: 1px solid #e4e7ec;
 }
 
+.tag-eng {
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.01em;
+}
+
+.tag-eng-pos {
+  background: #ecfdf3;
+  color: #027a48;
+  border: 1px solid #abefc6;
+}
+
+.tag-eng-neg {
+  background: #fef3f2;
+  color: #b42318;
+  border: 1px solid #fecdca;
+}
+
+.tag-eng-neu {
+  background: #fffaeb;
+  color: #b54708;
+  border: 1px solid #fedf89;
+}
+
+.tag-eng-sem {
+  background: #f9fafb;
+  color: #475467;
+  border: 1px solid #e4e7ec;
+}
+
 .acoes {
   display: flex;
   gap: 0.45rem;

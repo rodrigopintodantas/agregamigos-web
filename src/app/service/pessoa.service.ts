@@ -28,6 +28,8 @@ export interface PessoaPayload {
   };
 }
 
+export type EngajamentoWhatsapp = 'sem_resposta' | 'positivo' | 'negativo' | 'neutro';
+
 export interface PessoaItem {
   id: number;
   nome: string;
@@ -35,6 +37,7 @@ export interface PessoaItem {
   email?: string | null;
   whatsapp?: string | null;
   erro_whatsapp?: boolean;
+  engajamento_whatsapp?: EngajamentoWhatsapp | string;
   instagram?: string | null;
   indicacao?: string | null;
   endereco?: EnderecoPayload | null;

@@ -393,6 +393,27 @@ export class PessoaComponent implements OnInit {
     return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
   }
 
+  engajamentoKey(p: PessoaItem): 'sem_resposta' | 'positivo' | 'negativo' | 'neutro' {
+    const v = String(p.engajamento_whatsapp ?? 'sem_resposta').toLowerCase();
+    if (v === 'positivo') return 'positivo';
+    if (v === 'negativo') return 'negativo';
+    if (v === 'neutro') return 'neutro';
+    return 'sem_resposta';
+  }
+
+  labelEngajamento(p: PessoaItem): string {
+    switch (this.engajamentoKey(p)) {
+      case 'positivo':
+        return 'Positivo';
+      case 'negativo':
+        return 'Negativo';
+      case 'neutro':
+        return 'Neutro';
+      default:
+        return 'Sem resposta';
+    }
+  }
+
   private parseCsv(content: string): Record<string, string>[] {
     const lines = content
       .replace(/^\uFEFF/, '')

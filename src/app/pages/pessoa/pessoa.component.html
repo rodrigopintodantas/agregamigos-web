@@ -41,6 +41,7 @@
           <th>WhatsApp</th>
           <th>Bairro</th>
           <th>Erro Whatsapp?</th>
+          <th>Engajamento</th>
           <th>Ações</th>
         </tr>
       </thead>
@@ -58,6 +59,16 @@
             >
               {{ p.erro_whatsapp ? 'Erro WhatsApp' : 'Sem erro' }}
             </span>
+          </td>
+          <td>
+            <span
+              class="tag tag-eng"
+              [class.tag-eng-pos]="engajamentoKey(p) === 'positivo'"
+              [class.tag-eng-neg]="engajamentoKey(p) === 'negativo'"
+              [class.tag-eng-neu]="engajamentoKey(p) === 'neutro'"
+              [class.tag-eng-sem]="engajamentoKey(p) === 'sem_resposta'"
+              >{{ labelEngajamento(p) }}</span
+            >
           </td>
           <td>
             <div class="acoes">
@@ -90,7 +101,7 @@
           </td>
         </tr>
         <tr *ngIf="pessoasFiltradas.length === 0">
-          <td colspan="6">Nenhuma pessoa encontrada.</td>
+          <td colspan="7">Nenhuma pessoa encontrada.</td>
         </tr>
       </tbody>
     </table>

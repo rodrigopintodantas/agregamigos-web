@@ -380,6 +380,37 @@ export class DivulgacaoComponent implements OnInit {
     }
   }
 
+  labelSentimento(s: string | null | undefined): string {
+    switch (String(s || '').toLowerCase()) {
+      case 'positivo':
+        return 'Positivo';
+      case 'negativo':
+        return 'Negativo';
+      case 'neutro':
+        return 'Neutro';
+      case 'desconhecido':
+        return 'Indefinido';
+      default:
+        return '—';
+    }
+  }
+
+  resumoResposta(texto: string | null | undefined, max = 72): string {
+    const t = String(texto ?? '').trim();
+    if (!t) return '—';
+    if (t.length <= max) return t;
+    return `${t.slice(0, max - 1)}…`;
+  }
+
+  /** Texto da 1ª/2ª resposta com trim (evita string só com espaço). */
+  temResposta1(d: CampanhaDestinatarioDetalhe): boolean {
+    return String(d.resposta_1_texto ?? '').trim().length > 0;
+  }
+
+  temResposta2(d: CampanhaDestinatarioDetalhe): boolean {
+    return String(d.resposta_2_texto ?? '').trim().length > 0;
+  }
+
   visualizarCorpoMensagem(d: CampanhaDestinatarioDetalhe): void {
     this.dialogMensagemTitulo = d.modelo?.titulo ? `Modelo: ${d.modelo.titulo}` : 'Modelo da mensagem';
     this.dialogMensagemDestinatario = d.pessoa?.nome ?? 'Destinatário não identificado';
@@ -399,7 +430,7 @@ export class DivulgacaoComponent implements OnInit {
       return;
     }
     this.campanhaAbertaId = campanhaId;
-    if (this.detalhesCampanha[campanhaId]) return;
+    // Sempre buscar de novo: respostas chegam depois do primeiro carregamento; cache antigo escondia os dados.
     this.carregandoDetalhe[campanhaId] = true;
     this.campanhaService.detalhe(campanhaId).subscribe({
       next: (detalhe) => {

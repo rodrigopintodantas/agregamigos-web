@@ -1,6 +1,7 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../environments/environment';
 
 export type CampanhaStatus = 'rascunho' | 'montada' | 'em_andamento' | 'finalizada' | 'cancelada';
@@ -42,6 +43,8 @@ export interface AcaoCampanhaResponse {
   message: string;
 }
 
+export type RespostaSentimento = 'positivo' | 'negativo' | 'neutro' | 'desconhecido';
+
 export interface CampanhaDestinatarioDetalhe {
   id: number;
   ordem: number;
@@ -51,6 +54,13 @@ export interface CampanhaDestinatarioDetalhe {
   tentativas: number;
   enviado_em: string | null;
   erro_ultimo: string | null;
+  wa_message_id_envio?: string | null;
+  resposta_1_texto?: string | null;
+  resposta_1_em?: string | null;
+  resposta_1_sentimento?: RespostaSentimento | string | null;
+  resposta_2_texto?: string | null;
+  resposta_2_em?: string | null;
+  resposta_2_sentimento?: RespostaSentimento | string | null;
   pessoa: {
     id: number;
     nome: string;
@@ -77,10 +87,49 @@ export interface CampanhaDivulgacaoDetalhe {
   destinatarios: CampanhaDestinatarioDetalhe[];
 }
 
+function pickCampo(o: Record<string, unknown>, ...keys: string[]): unknown {
+  for (const k of keys) {
+    if (Object.prototype.hasOwnProperty.call(o, k) && o[k] !== undefined && o[k] !== null) {
+      return o[k];
+    }
+  }
+  return undefined;
+}
+
+/** Garante chaves esperadas pelo front, mesmo se o JSON vier só em camelCase ou só em snake_case. */
+function normalizarDestinatarioDetalheApi(raw: Record<string, unknown>): CampanhaDestinatarioDetalhe {
+  const d = { ...raw } as CampanhaDestinatarioDetalhe & Record<string, unknown>;
+  d.resposta_1_texto = (pickCampo(raw, 'resposta_1_texto', 'resposta1Texto') as string | null | undefined) ?? null;
+  d.resposta_1_em = (pickCampo(raw, 'resposta_1_em', 'resposta1Em') as string | null | undefined) ?? null;
+  d.resposta_1_sentimento =
+    (pickCampo(raw, 'resposta_1_sentimento', 'resposta1Sentimento') as string | null | undefined) ?? null;
+  d.resposta_2_texto = (pickCampo(raw, 'resposta_2_texto', 'resposta2Texto') as string | null | undefined) ?? null;
+  d.resposta_2_em = (pickCampo(raw, 'resposta_2_em', 'resposta2Em') as string | null | undefined) ?? null;
+  d.resposta_2_sentimento =
+    (pickCampo(raw, 'resposta_2_sentimento', 'resposta2Sentimento') as string | null | undefined) ?? null;
+  d.wa_message_id_envio =
+    (pickCampo(raw, 'wa_message_id_envio', 'waMessageIdEnvio') as string | null | undefined) ?? null;
+  return d as CampanhaDestinatarioDetalhe;
+}
+
+function normalizarDetalheCampanhaApi(body: CampanhaDivulgacaoDetalhe): CampanhaDivulgacaoDetalhe {
+  const rawList = (body as unknown as { destinatarios?: unknown[] }).destinatarios ?? [];
+  return {
+    ...body,
+    destinatarios: rawList
+      .filter((x): x is Record<string, unknown> => x != null && typeof x === 'object')
+      .map((x) => normalizarDestinatarioDetalheApi(x)),
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class CampanhaDivulgacaoService {
   private http = inject(HttpClient);
   private base = `${environment.apiUrl}/campanhas-divulgacao`;
+  private noCacheHeaders = new HttpHeaders({
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    Pragma: 'no-cache',
+  });
 
   listar(): Observable<CampanhaDivulgacaoItem[]> {
     return this.http.get<CampanhaDivulgacaoItem[]>(this.base);
@@ -91,7 +140,9 @@ export class CampanhaDivulgacaoService {
   }
 
   detalhe(id: number): Observable<CampanhaDivulgacaoDetalhe> {
-    return this.http.get<CampanhaDivulgacaoDetalhe>(`${this.base}/${id}`);
+    return this.http
+      .get<CampanhaDivulgacaoDetalhe>(`${this.base}/${id}`, { headers: this.noCacheHeaders })
+      .pipe(map((body) => normalizarDetalheCampanhaApi(body)));
   }
 
   excluir(id: number): Observable<ExcluirCampanhaResponse> {

@@ -121,6 +121,8 @@
                           <th>Status envio</th>
                           <th>Enviado em</th>
                           <th>Mensagem</th>
+                          <th>1ª resposta (48h)</th>
+                          <th>2ª resposta (48h)</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -147,6 +149,38 @@
                                 <circle cx="12" cy="12" r="3"></circle>
                               </svg>
                             </button>
+                          </td>
+                          <td class="resposta-cell">
+                            <span *ngIf="!temResposta1(d)">—</span>
+                            <ng-container *ngIf="temResposta1(d)">
+                              <span
+                                class="sent-chip"
+                                [class.sent-neg]="d.resposta_1_sentimento === 'negativo'"
+                                [class.sent-pos]="d.resposta_1_sentimento === 'positivo'"
+                                [class.sent-neu]="d.resposta_1_sentimento === 'neutro' || d.resposta_1_sentimento === 'desconhecido'"
+                                >{{ labelSentimento(d.resposta_1_sentimento) }}</span
+                              >
+                              <span class="resposta-meta" *ngIf="d.resposta_1_em">{{
+                                d.resposta_1_em | date: 'dd/MM HH:mm'
+                              }}</span>
+                              <div class="resposta-txt">{{ resumoResposta(d.resposta_1_texto) }}</div>
+                            </ng-container>
+                          </td>
+                          <td class="resposta-cell">
+                            <span *ngIf="!temResposta2(d)">—</span>
+                            <ng-container *ngIf="temResposta2(d)">
+                              <span
+                                class="sent-chip"
+                                [class.sent-neg]="d.resposta_2_sentimento === 'negativo'"
+                                [class.sent-pos]="d.resposta_2_sentimento === 'positivo'"
+                                [class.sent-neu]="d.resposta_2_sentimento === 'neutro' || d.resposta_2_sentimento === 'desconhecido'"
+                                >{{ labelSentimento(d.resposta_2_sentimento) }}</span
+                              >
+                              <span class="resposta-meta" *ngIf="d.resposta_2_em">{{
+                                d.resposta_2_em | date: 'dd/MM HH:mm'
+                              }}</span>
+                              <div class="resposta-txt">{{ resumoResposta(d.resposta_2_texto) }}</div>
+                            </ng-container>
                           </td>
                         </tr>
                       </tbody>
