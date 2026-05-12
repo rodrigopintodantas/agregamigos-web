@@ -1,7 +1,9 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { forkJoin } from 'rxjs';
 import { VotacaoItem, VotacaoService } from '../../service/votacao.service';
+import { ZonasEleitoraisService } from '../../service/zonas-eleitorais.service';
 
 /** Cabeçalhos esperados no CSV (iguais às colunas da tabela `votacao`, exceto id e timestamps). */
 export const CABECALHOS_CSV_VOTACAO = [
@@ -24,10 +26,26 @@ export const CABECALHOS_CSV_VOTACAO = [
 ] as const;
 
 const COLUNAS_OCULTAS_NA_TABELA = new Set([
+  'sg_uf',
+  'cd_cargo',
   'dt_ult_totalizacao',
   'pc_votos_validos',
   'nm_candidato',
 ]);
+
+/** Colunas ordenadas numericamente (demais: texto). */
+const COLUNAS_ORDENACAO_NUMERICA = new Set([
+  'nr_candidato',
+  'nr_turno',
+  'qt_votos_nom_validos',
+  'qt_votos_concorrentes',
+]);
+
+/** Ordenação inicial ao carregar / após novo CSV. */
+const ORDENACAO_PADRAO = { col: 'qt_votos_nom_validos', dir: 'desc' as const };
+
+/** Valor sintético para células vazias nos filtros por coluna. */
+const CHAVE_VAZIO = '__vazio__';
 
 @Component({
   selector: 'app-votacao',
@@ -36,8 +54,22 @@ const COLUNAS_OCULTAS_NA_TABELA = new Set([
   templateUrl: './votacao.component.html',
   styleUrl: './votacao.component.scss',
 })
-export class VotacaoComponent implements OnInit {
+export class VotacaoComponent implements OnInit, OnDestroy {
   private votacaoService = inject(VotacaoService);
+  private zonasEleitoraisService = inject(ZonasEleitoraisService);
+
+  /** nr_zona → nm_zona (tabela zonas_eleitorais). */
+  private mapaNmZonaPorNr = new Map<number, string>();
+
+  /** Estilos inline do painel de filtro ancorado na viewport (fora do overflow da tabela). */
+  painelFiltroEstilo: Record<string, string> | null = null;
+  /** Botão que abriu o painel (para recalcular posição em scroll/resize). */
+  private filtroTriggerEl: HTMLElement | null = null;
+  private readonly reposicionarPainel = (): void => {
+    if (this.colunaFiltroAberta && this.filtroTriggerEl) {
+      this.posicionarPainelFiltro();
+    }
+  };
 
   /** Colunas exibidas na grade (CSV continua exigindo o cabeçalho completo). */
   readonly colunasExibicao = (CABECALHOS_CSV_VOTACAO as readonly string[]).filter(
@@ -45,25 +77,56 @@ export class VotacaoComponent implements OnInit {
   );
 
   votacoes: VotacaoItem[] = [];
+  /** Opções distintas por coluna (chaves normalizadas), atualizadas ao carregar dados. */
+  opcoesDistintasPorColuna: Record<string, string[]> = {};
+  /** Por coluna: valores selecionados no filtro; vazio ou ausente = sem filtro nessa coluna. */
+  filtrosColuna: Record<string, string[]> = {};
+  /** Qual painel de filtro está aberto (nome da coluna). */
+  colunaFiltroAberta: string | null = null;
+
+  /** Ordenação aplicada sobre os registros filtrados; null = ordem original da API. */
+  ordenacao: { col: string; dir: 'asc' | 'desc' } | null = {
+    col: ORDENACAO_PADRAO.col,
+    dir: ORDENACAO_PADRAO.dir,
+  };
+
   termoPesquisa = '';
   carregando = true;
   erro = '';
   importandoCsv = false;
   mensagemImportacao = '';
   paginaAtual = 1;
-  itensPorPagina = 10;
+  itensPorPagina = 20;
   readonly opcoesItensPorPagina = [10, 20, 50, 100];
 
   ngOnInit(): void {
     this.carregar();
+    window.addEventListener('scroll', this.reposicionarPainel, true);
+    window.addEventListener('resize', this.reposicionarPainel);
+  }
+
+  ngOnDestroy(): void {
+    this.fecharPainelFiltro();
+    window.removeEventListener('scroll', this.reposicionarPainel, true);
+    window.removeEventListener('resize', this.reposicionarPainel);
   }
 
   get votacoesFiltradas(): VotacaoItem[] {
+    let lista = this.votacoes.filter((v) => this.passouFiltrosColuna(v));
     const termo = this.termoPesquisa.trim().toLowerCase();
-    if (!termo) {
-      return this.votacoes;
+    if (termo) {
+      lista = lista.filter((item) => this.textoLinha(item).includes(termo));
     }
-    return this.votacoes.filter((v) => this.textoLinha(v).includes(termo));
+    return lista;
+  }
+
+  /** Lista já filtrada + ordenação opcional (usada na paginação). */
+  get votacoesFiltradasOrdenadas(): VotacaoItem[] {
+    const base = this.votacoesFiltradas;
+    if (!this.ordenacao) {
+      return base;
+    }
+    return [...base].sort((a, b) => this.compararOrdenacao(a, b));
   }
 
   get totalPaginas(): number {
@@ -74,7 +137,7 @@ export class VotacaoComponent implements OnInit {
   get votacoesPaginadas(): VotacaoItem[] {
     const inicio = (this.paginaAtual - 1) * this.itensPorPagina;
     const fim = inicio + this.itensPorPagina;
-    return this.votacoesFiltradas.slice(inicio, fim);
+    return this.votacoesFiltradasOrdenadas.slice(inicio, fim);
   }
 
   get paginasVisiveis(): number[] {
@@ -102,17 +165,32 @@ export class VotacaoComponent implements OnInit {
   carregar(): void {
     this.carregando = true;
     this.erro = '';
-    this.votacaoService.listar().subscribe({
-      next: (lista) => {
-        this.votacoes = lista;
+    forkJoin({
+      votos: this.votacaoService.listar(),
+      zonas: this.zonasEleitoraisService.listar(),
+    }).subscribe({
+      next: ({ votos, zonas }) => {
+        this.votacoes = votos;
+        this.mapaNmZonaPorNr = new Map(zonas.map((z) => [z.nr_zona, z.nm_zona]));
+        this.filtrosColuna = {};
+        this.ordenacao = { col: ORDENACAO_PADRAO.col, dir: ORDENACAO_PADRAO.dir };
+        this.fecharPainelFiltro();
+        this.atualizarOpcoesDistintas();
         this.paginaAtual = 1;
         this.carregando = false;
       },
       error: (err) => {
-        this.erro = err?.error?.message ?? 'Não foi possível carregar os dados de votação.';
+        this.erro =
+          err?.error?.message ??
+          'Não foi possível carregar os dados de votação ou as zonas eleitorais.';
         this.carregando = false;
       },
     });
+  }
+
+  /** Título da coluna na grade (nr_zona exibe como nm_zona). */
+  tituloColuna(col: string): string {
+    return col === 'nr_zona' ? 'nm_zona' : col;
   }
 
   abrirSeletorCsv(input: HTMLInputElement): void {
@@ -172,6 +250,286 @@ export class VotacaoComponent implements OnInit {
     this.paginaAtual = 1;
   }
 
+  alternarOrdenacao(col: string): void {
+    if (!this.ordenacao || this.ordenacao.col !== col) {
+      this.ordenacao = { col, dir: 'asc' };
+    } else if (this.ordenacao.dir === 'asc') {
+      this.ordenacao = { col, dir: 'desc' };
+    } else {
+      this.ordenacao = null;
+    }
+    this.paginaAtual = 1;
+  }
+
+  ordenacaoAriaSort(col: string): 'ascending' | 'descending' | 'none' {
+    if (this.ordenacao?.col !== col) return 'none';
+    return this.ordenacao.dir === 'asc' ? 'ascending' : 'descending';
+  }
+
+  tituloOrdenacaoColuna(col: string): string {
+    const titulo = this.tituloColuna(col);
+    if (this.ordenacao?.col !== col) {
+      return `Ordenar por ${titulo}: crescente`;
+    }
+    if (this.ordenacao.dir === 'asc') {
+      return `Ordenar por ${titulo}: decrescente`;
+    }
+    return 'Voltar à ordem original dos dados';
+  }
+
+  ordenacaoAtivaPara(col: string, dir: 'asc' | 'desc'): boolean {
+    return this.ordenacao !== null && this.ordenacao.col === col && this.ordenacao.dir === dir;
+  }
+
+  private compararOrdenacao(a: VotacaoItem, b: VotacaoItem): number {
+    const col = this.ordenacao!.col;
+    const dir = this.ordenacao!.dir === 'asc' ? 1 : -1;
+
+    if (COLUNAS_ORDENACAO_NUMERICA.has(col)) {
+      const na = this.parseNumeroOrdenacao(a, col);
+      const nb = this.parseNumeroOrdenacao(b, col);
+      const vazioA = na === null;
+      const vazioB = nb === null;
+      if (vazioA && vazioB) return this.desempateOrdenacaoPorId(a, b);
+      if (vazioA) return 1;
+      if (vazioB) return -1;
+      if (na !== nb) {
+        return na < nb ? -dir : dir;
+      }
+      return this.desempateOrdenacaoPorId(a, b);
+    }
+
+    const ta = this.textoOrdenacao(a, col);
+    const tb = this.textoOrdenacao(b, col);
+    const cmp = ta.localeCompare(tb, 'pt-BR', { numeric: true, sensitivity: 'base' });
+    if (cmp !== 0) {
+      return cmp * dir;
+    }
+    return this.desempateOrdenacaoPorId(a, b);
+  }
+
+  private parseNumeroOrdenacao(v: VotacaoItem, col: string): number | null {
+    const row = v as unknown as Record<string, unknown>;
+    const raw = row[col];
+    if (raw === undefined || raw === null) return null;
+    if (typeof raw === 'number') {
+      return Number.isFinite(raw) ? raw : null;
+    }
+    const s = String(raw).trim().replace(/\s/g, '').replace(',', '.');
+    if (!s) return null;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : null;
+  }
+
+  private textoOrdenacao(v: VotacaoItem, col: string): string {
+    if (col === 'nr_zona') {
+      return this.nmZonaExibicao(v);
+    }
+    const row = v as unknown as Record<string, unknown>;
+    const raw = row[col];
+    if (raw === undefined || raw === null) return '';
+    return String(raw).trim();
+  }
+
+  /** Texto da zona para exibição / ordenação / filtro (nome oficial ou número). */
+  private nmZonaExibicao(v: VotacaoItem): string {
+    const nz = v.nr_zona;
+    if (nz == null) return '';
+    return this.mapaNmZonaPorNr.get(nz) ?? String(nz);
+  }
+
+  private desempateOrdenacaoPorId(a: VotacaoItem, b: VotacaoItem): number {
+    return (a.id ?? 0) - (b.id ?? 0);
+  }
+
+  @HostListener('document:click', ['$event'])
+  fecharPainelFiltroSeFora(ev: MouseEvent): void {
+    const alvo = ev.target as HTMLElement | null;
+    if (
+      !alvo?.closest?.('.filtro-col-wrap') &&
+      !alvo?.closest?.('.filtro-dropdown-panel--portal')
+    ) {
+      this.fecharPainelFiltro();
+    }
+  }
+
+  private fecharPainelFiltro(): void {
+    this.colunaFiltroAberta = null;
+    this.painelFiltroEstilo = null;
+    this.filtroTriggerEl = null;
+  }
+
+  private posicionarPainelFiltro(): void {
+    const trigger = this.filtroTriggerEl;
+    if (!trigger || !this.colunaFiltroAberta) {
+      return;
+    }
+    const r = trigger.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const margem = 8;
+    const panelWidth = Math.min(288, vw - margem * 2);
+    let left = r.left;
+    if (left + panelWidth > vw - margem) {
+      left = vw - margem - panelWidth;
+    }
+    if (left < margem) {
+      left = margem;
+    }
+
+    const espacoAbaixo = vh - r.bottom - margem;
+    const espacoAcima = r.top - margem;
+    let top: number;
+    let maxPainel: number;
+
+    if (espacoAbaixo >= 150 || espacoAbaixo >= espacoAcima) {
+      top = r.bottom + 4;
+      maxPainel = Math.min(280, Math.max(100, espacoAbaixo - 4));
+    } else {
+      maxPainel = Math.min(280, Math.max(100, espacoAcima - 4));
+      top = r.top - 4 - maxPainel;
+    }
+
+    if (top < margem) {
+      maxPainel = Math.max(80, maxPainel - (margem - top));
+      top = margem;
+    }
+
+    this.painelFiltroEstilo = {
+      position: 'fixed',
+      top: `${top}px`,
+      left: `${left}px`,
+      width: `${panelWidth}px`,
+      maxHeight: `${maxPainel}px`,
+      zIndex: '5000',
+    };
+  }
+
+  rotuloOpcaoFiltro(chave: string): string {
+    return chave === CHAVE_VAZIO ? '(vazio)' : chave;
+  }
+
+  opcoesFiltroParaColuna(col: string): string[] {
+    return this.opcoesDistintasPorColuna[col] ?? [];
+  }
+
+  painelFiltroAbertoPara(col: string): boolean {
+    return this.colunaFiltroAberta === col;
+  }
+
+  alternarPainelFiltro(col: string, ev: MouseEvent): void {
+    ev.stopPropagation();
+    const btn = ev.currentTarget as HTMLElement;
+    if (this.colunaFiltroAberta === col) {
+      this.fecharPainelFiltro();
+      return;
+    }
+    this.colunaFiltroAberta = col;
+    this.filtroTriggerEl = btn;
+    setTimeout(() => {
+      this.posicionarPainelFiltro();
+      requestAnimationFrame(() => this.posicionarPainelFiltro());
+    });
+  }
+
+  colunaComFiltroAtivo(col: string): boolean {
+    return (this.filtrosColuna[col]?.length ?? 0) > 0;
+  }
+
+  resumoFiltroColuna(col: string): string {
+    const sel = this.filtrosColuna[col];
+    const total = this.opcoesFiltroParaColuna(col).length;
+    if (!sel?.length) {
+      return 'Todos';
+    }
+    if (sel.length === total) {
+      return 'Todos';
+    }
+    return `${sel.length} selec.`;
+  }
+
+  opcaoFiltroMarcada(col: string, chave: string): boolean {
+    return this.filtrosColuna[col]?.includes(chave) ?? false;
+  }
+
+  alternarOpcaoFiltro(col: string, chave: string): void {
+    const atual = [...(this.filtrosColuna[col] ?? [])];
+    const i = atual.indexOf(chave);
+    if (i >= 0) {
+      atual.splice(i, 1);
+    } else {
+      atual.push(chave);
+    }
+    const todas = this.opcoesFiltroParaColuna(col);
+    if (atual.length === 0 || atual.length === todas.length) {
+      delete this.filtrosColuna[col];
+    } else {
+      this.filtrosColuna[col] = atual;
+    }
+    this.paginaAtual = 1;
+  }
+
+  limparFiltroColuna(col: string, ev: MouseEvent): void {
+    ev.stopPropagation();
+    delete this.filtrosColuna[col];
+    this.paginaAtual = 1;
+  }
+
+  private atualizarOpcoesDistintas(): void {
+    const map: Record<string, Set<string>> = {};
+    for (const col of this.colunasExibicao) {
+      map[col] = new Set<string>();
+    }
+    for (const v of this.votacoes) {
+      for (const col of this.colunasExibicao) {
+        map[col].add(this.valorChaveFiltro(v, col));
+      }
+    }
+    const next: Record<string, string[]> = {};
+    for (const col of this.colunasExibicao) {
+      const vals = Array.from(map[col]).sort((a, b) => {
+        if (a === CHAVE_VAZIO) return -1;
+        if (b === CHAVE_VAZIO) return 1;
+        return a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
+      });
+      next[col] = vals;
+    }
+    this.opcoesDistintasPorColuna = next;
+  }
+
+  private passouFiltrosColuna(v: VotacaoItem): boolean {
+    for (const col of this.colunasExibicao) {
+      const selecionados = this.filtrosColuna[col];
+      if (!selecionados?.length) continue;
+      const chave = this.valorChaveFiltro(v, col);
+      if (!selecionados.includes(chave)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /** Chave estável do valor da célula para agrupar / filtrar (alinha à lógica de exibição). */
+  valorChaveFiltro(v: VotacaoItem, col: string): string {
+    if (col === 'nr_zona') {
+      const nz = v.nr_zona;
+      if (nz == null) return CHAVE_VAZIO;
+      const nm = this.mapaNmZonaPorNr.get(nz);
+      return nm ?? String(nz);
+    }
+    const row = v as unknown as Record<string, unknown>;
+    const raw = row[col];
+    if (raw === undefined || raw === null) return CHAVE_VAZIO;
+    if (typeof raw === 'string' && !raw.trim()) return CHAVE_VAZIO;
+    if (col === 'dt_ult_totalizacao' && typeof raw === 'string') {
+      const d = new Date(raw);
+      return Number.isNaN(d.getTime()) ? raw : d.toLocaleString('pt-BR');
+    }
+    if (typeof raw === 'number') return String(raw);
+    const s = String(raw).trim();
+    return s.length ? s : CHAVE_VAZIO;
+  }
+
   aoAlterarItensPorPagina(): void {
     this.paginaAtual = 1;
   }
@@ -194,6 +552,11 @@ export class VotacaoComponent implements OnInit {
   }
 
   valorCelula(v: VotacaoItem, col: string): string | number | null {
+    if (col === 'nr_zona') {
+      const nz = v.nr_zona;
+      if (nz == null) return '—';
+      return this.mapaNmZonaPorNr.get(nz) ?? String(nz);
+    }
     const row = v as unknown as Record<string, unknown>;
     const raw = row[col];
     if (raw === undefined || raw === null) return '—';
@@ -212,6 +575,10 @@ export class VotacaoComponent implements OnInit {
     for (const c of CABECALHOS_CSV_VOTACAO as readonly string[]) {
       const val = row[c];
       partes.push(val != null ? String(val) : '');
+    }
+    const nm = this.nmZonaExibicao(v);
+    if (nm) {
+      partes.push(nm);
     }
     return partes.join(' ').toLowerCase();
   }

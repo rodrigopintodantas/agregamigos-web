@@ -120,6 +120,190 @@
   background: #f9fafb;
 }
 
+.th-titulo-col {
+  padding: 0.25rem 0.35rem;
+  vertical-align: bottom;
+}
+
+.btn-ordenar-col {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 0.35rem;
+  width: 100%;
+  margin: 0;
+  padding: 0.28rem 0.32rem;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.btn-ordenar-col:hover {
+  background: rgba(124, 58, 237, 0.06);
+}
+
+.btn-ordenar-col:focus-visible {
+  outline: 2px solid var(--color-brand-500, #7c3aed);
+  outline-offset: 1px;
+}
+
+.titulo-col-texto {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ordenacao-setas {
+  display: inline-flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  gap: 0;
+  line-height: 0.65;
+  font-size: 0.55rem;
+  color: #98a2b3;
+}
+
+.ordenacao-setas .seta {
+  opacity: 0.45;
+}
+
+.ordenacao-setas .seta.ativa {
+  opacity: 1;
+  color: var(--color-brand-500, #7c3aed);
+}
+
+.filtros-linha th {
+  vertical-align: top;
+  padding: 0.28rem 0.35rem;
+  font-weight: 500;
+  background: #fcfcfd;
+}
+
+.filtro-col-wrap {
+  min-width: 5.5rem;
+}
+
+.filtro-dropdown-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.25rem;
+  width: 100%;
+  max-width: 10rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  background: #fff;
+  color: #475467;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.18rem 0.35rem;
+  cursor: pointer;
+  text-align: left;
+}
+
+.filtro-dropdown-trigger:hover {
+  border-color: #98a2b3;
+  background: #f9fafb;
+}
+
+.filtro-dropdown-trigger.ativo {
+  border-color: var(--color-brand-500, #7c3aed);
+  background: #f5f3ff;
+  color: #344054;
+}
+
+.filtro-resumo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.filtro-caret {
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid #667085;
+  margin-top: 2px;
+}
+
+/** Painel ancorado na viewport (fora do overflow da .table-wrap). Posição via [ngStyle]. */
+.filtro-dropdown-panel--portal {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  min-width: 12rem;
+  max-width: min(18rem, 85vw);
+  border: 1px solid #eaecf0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.filtro-dropdown-panel--portal .filtro-dropdown-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 0.35rem 0.45rem;
+}
+
+.filtro-opcao {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #344054;
+  padding: 0.22rem 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.filtro-opcao input {
+  margin-top: 0.12rem;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.filtro-opcao span {
+  word-break: break-word;
+  white-space: normal;
+}
+
+.filtro-dropdown-rodape {
+  border-top: 1px solid #eaecf0;
+  padding: 0.35rem 0.45rem;
+}
+
+.filtro-dropdown-panel--portal .filtro-dropdown-rodape {
+  flex-shrink: 0;
+}
+
+.filtro-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--color-brand-500, #7c3aed);
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.filtro-link:hover {
+  color: #5b21b6;
+}
+
 .tabela-votacao .celula-texto-longo {
   white-space: normal;
   max-width: 14rem;

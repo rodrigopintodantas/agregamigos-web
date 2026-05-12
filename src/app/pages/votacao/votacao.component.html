@@ -35,12 +35,51 @@
     <table class="tabela-votacao">
       <thead>
         <tr>
-          <th *ngFor="let col of colunasExibicao">{{ col }}</th>
+          <th
+            *ngFor="let col of colunasExibicao"
+            class="th-titulo-col"
+            scope="col"
+            [attr.aria-sort]="ordenacaoAriaSort(col)"
+          >
+            <button
+              type="button"
+              class="btn-ordenar-col"
+              (click)="alternarOrdenacao(col)"
+              [attr.title]="tituloOrdenacaoColuna(col)"
+              [attr.aria-label]="tituloOrdenacaoColuna(col)"
+            >
+              <span class="titulo-col-texto">{{ tituloColuna(col) }}</span>
+              <span class="ordenacao-setas" aria-hidden="true">
+                <span class="seta seta-cima" [class.ativa]="ordenacaoAtivaPara(col, 'asc')">▲</span>
+                <span class="seta seta-baixo" [class.ativa]="ordenacaoAtivaPara(col, 'desc')">▼</span>
+              </span>
+            </button>
+          </th>
+        </tr>
+        <tr class="filtros-linha">
+          <th *ngFor="let col of colunasExibicao" class="th-filtro">
+            <div class="filtro-col-wrap">
+              <button
+                type="button"
+                class="filtro-dropdown-trigger"
+                [class.ativo]="colunaComFiltroAtivo(col)"
+                [attr.aria-expanded]="painelFiltroAbertoPara(col)"
+                [attr.aria-haspopup]="true"
+                (click)="alternarPainelFiltro(col, $event)"
+              >
+                <span class="filtro-resumo">{{ resumoFiltroColuna(col) }}</span>
+                <span class="filtro-caret" aria-hidden="true"></span>
+              </button>
+            </div>
+          </th>
         </tr>
       </thead>
       <tbody>
         <tr *ngFor="let v of votacoesPaginadas">
-          <td *ngFor="let col of colunasExibicao" [class.celula-texto-longo]="col === 'ds_composicao_coligacao'">
+          <td
+            *ngFor="let col of colunasExibicao"
+            [class.celula-texto-longo]="col === 'ds_composicao_coligacao' || col === 'nr_zona'"
+          >
             {{ valorCelula(v, col) }}
           </td>
         </tr>
@@ -50,6 +89,33 @@
       </tbody>
     </table>
   </div>
+
+  <ng-container *ngIf="colunaFiltroAberta as colunaPainel">
+    <div
+      *ngIf="painelFiltroEstilo"
+      class="filtro-dropdown-panel filtro-dropdown-panel--portal"
+      [ngStyle]="painelFiltroEstilo"
+      (click)="$event.stopPropagation()"
+      role="listbox"
+      [attr.aria-label]="'Filtro: ' + tituloColuna(colunaPainel)"
+    >
+      <div class="filtro-dropdown-scroll">
+        <label *ngFor="let chave of opcoesFiltroParaColuna(colunaPainel)" class="filtro-opcao">
+          <input
+            type="checkbox"
+            [checked]="opcaoFiltroMarcada(colunaPainel, chave)"
+            (change)="alternarOpcaoFiltro(colunaPainel, chave)"
+          />
+          <span>{{ rotuloOpcaoFiltro(chave) }}</span>
+        </label>
+      </div>
+      <div class="filtro-dropdown-rodape">
+        <button type="button" class="filtro-link" (click)="limparFiltroColuna(colunaPainel, $event)">
+          Limpar filtro
+        </button>
+      </div>
+    </div>
+  </ng-container>
 
   <div class="paginacao" *ngIf="!carregando && !erro && votacoesFiltradas.length > 0">
     <label class="paginacao-seletor">

@@ -60,6 +60,25 @@ import { LayoutUiService } from '../service/layout-ui.service';
           <span class="menu-label">Criar usuário</span>
         </a>
       </li>
+      <li *ngIf="auth.isAdmin()">
+        <a
+          routerLink="/admin/votacao"
+          routerLinkActive="active-route"
+          [attr.title]="ui.sidebarCollapsed() ? 'Votação' : null"
+          (click)="ui.closeMobileMenu()"
+        >
+          <span class="menu-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M9 12l2 2 4-4"></path>
+              <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"></path>
+              <path d="M3 12c1 0 3-1 3-3S4 6 3 6 0 7 0 10s2 3 3 3"></path>
+              <path d="M12 3c0 1-1 3-3 3S6 4 6 3s1-3 3-3 3 2 3 3"></path>
+              <path d="M12 21c0-1 1-3 3-3s3 2 3 3-1 3-3 3-3-2-3-3"></path>
+            </svg>
+          </span>
+          <span class="menu-label">Votação</span>
+        </a>
+      </li>
       <li *ngIf="auth.isAdmin() && isAdminLogin()" class="menu-section">Campanha</li>
       <li *ngIf="auth.isAdmin() && isAdminLogin()">
         <a
@@ -112,25 +131,6 @@ import { LayoutUiService } from '../service/layout-ui.service';
             </svg>
           </span>
           <span class="menu-label">Divulgação</span>
-        </a>
-      </li>
-      <li *ngIf="auth.isAdmin() && isAdminLogin()">
-        <a
-          routerLink="/admin/votacao"
-          routerLinkActive="active-route"
-          [attr.title]="ui.sidebarCollapsed() ? 'Votação' : null"
-          (click)="ui.closeMobileMenu()"
-        >
-          <span class="menu-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24">
-              <path d="M9 12l2 2 4-4"></path>
-              <path d="M21 12c-1 0-3-1-3-3s2-3 3-3 3 1 3 3-2 3-3 3"></path>
-              <path d="M3 12c1 0 3-1 3-3S4 6 3 6 0 7 0 10s2 3 3 3"></path>
-              <path d="M12 3c0 1-1 3-3 3S6 4 6 3s1-3 3-3 3 2 3 3"></path>
-              <path d="M12 21c0-1 1-3 3-3s3 2 3 3-1 3-3 3-3-2-3-3"></path>
-            </svg>
-          </span>
-          <span class="menu-label">Votação</span>
         </a>
       </li>
     </ul>
