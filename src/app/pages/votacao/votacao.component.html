@@ -1,7 +1,41 @@
 <section class="page-card vot-page">
   <header class="head">
     <h2>Votação</h2>
-    <div class="head-actions">
+  </header>
+
+  <nav class="vot-tabs" role="tablist" aria-label="Visualização da votação">
+    <button
+      type="button"
+      class="vot-tab"
+      role="tab"
+      id="tab-votacao-completa"
+      [attr.aria-selected]="abaVotacao === 'completa'"
+      [attr.tabindex]="abaVotacao === 'completa' ? 0 : -1"
+      [class.ativa]="abaVotacao === 'completa'"
+      (click)="definirAba('completa')"
+    >
+      Visão Completa
+    </button>
+    <button
+      type="button"
+      class="vot-tab"
+      role="tab"
+      id="tab-votacao-por-zona"
+      [attr.aria-selected]="abaVotacao === 'por-zona'"
+      [attr.tabindex]="abaVotacao === 'por-zona' ? 0 : -1"
+      [class.ativa]="abaVotacao === 'por-zona'"
+      (click)="definirAba('por-zona')"
+    >
+      Por Zona
+    </button>
+  </nav>
+
+  <p class="msg" *ngIf="carregando">Carregando...</p>
+  <p class="msg erro" *ngIf="erro">{{ erro }}</p>
+  <p class="msg sucesso" *ngIf="mensagemImportacao">{{ mensagemImportacao }}</p>
+
+  <div *ngIf="abaVotacao === 'completa'" class="vot-tab-panel" role="tabpanel" aria-labelledby="tab-votacao-completa">
+    <div class="head-actions visao-completa-acoes">
       <input #csvInput type="file" accept=".csv,text/csv" class="input-csv" (change)="importarCsv($event)" />
       <button type="button" class="ghost" [disabled]="importandoCsv" (click)="abrirSeletorCsv(csvInput)">
         {{ importandoCsv ? 'Importando CSV...' : 'Carregar CSV' }}
@@ -33,9 +67,8 @@
         </div>
       </div>
     </div>
-  </header>
 
-  <div class="search-wrap">
+    <div class="search-wrap">
     <div class="search-box">
       <span class="search-icon" aria-hidden="true">
         <svg viewBox="0 0 24 24" focusable="false">
@@ -51,13 +84,9 @@
         (ngModelChange)="aoAlterarPesquisa()"
       />
     </div>
-  </div>
+    </div>
 
-  <p class="msg" *ngIf="carregando">Carregando...</p>
-  <p class="msg erro" *ngIf="erro">{{ erro }}</p>
-  <p class="msg sucesso" *ngIf="mensagemImportacao">{{ mensagemImportacao }}</p>
-
-  <div class="table-wrap" *ngIf="!carregando && !erro">
+    <div class="table-wrap" *ngIf="!carregando && !erro">
     <table class="tabela-votacao">
       <thead>
         <tr>
@@ -114,9 +143,9 @@
         </tr>
       </tbody>
     </table>
-  </div>
+    </div>
 
-  <ng-container *ngIf="colunaFiltroAberta as colunaPainel">
+    <ng-container *ngIf="colunaFiltroAberta as colunaPainel">
     <div
       *ngIf="painelFiltroEstilo"
       class="filtro-dropdown-panel filtro-dropdown-panel--portal"
@@ -141,9 +170,9 @@
         </button>
       </div>
     </div>
-  </ng-container>
+    </ng-container>
 
-  <div class="paginacao" *ngIf="!carregando && !erro && votacoesFiltradas.length > 0">
+    <div class="paginacao" *ngIf="!carregando && !erro && votacoesFiltradas.length > 0">
     <label class="paginacao-seletor">
       <span>Por página</span>
       <select [(ngModel)]="itensPorPagina" (ngModelChange)="aoAlterarItensPorPagina()">
@@ -177,5 +206,141 @@
         Próxima
       </button>
     </nav>
+    </div>
+  </div>
+
+  <div
+    *ngIf="abaVotacao === 'por-zona'"
+    class="vot-tab-panel por-zona-panel"
+    role="tabpanel"
+    aria-labelledby="tab-votacao-por-zona"
+  >
+    <div class="por-zona-toolbar">
+      <label class="por-zona-select-label" for="por-zona-zona">
+        Zona eleitoral
+      </label>
+      <select
+        id="por-zona-zona"
+        class="por-zona-select"
+        [disabled]="carregando || !!erro || zonasEleitoraisLista.length === 0"
+        [ngModel]="nrZonaSelecionadaPorZona"
+        (ngModelChange)="definirZonaPorZona($event)"
+      >
+        <option *ngFor="let z of zonasEleitoraisLista" [ngValue]="z.nr_zona">{{ z.nm_zona }}</option>
+      </select>
+    </div>
+
+    <div
+      class="por-zona-boxes-row"
+      *ngIf="!carregando && !erro && nrZonaSelecionadaPorZona != null"
+    >
+      <div class="por-zona-box">
+        <h3 class="por-zona-box-titulo">Candidatos (nome de urna)</h3>
+        <p class="por-zona-box-sub" *ngIf="votacoesDaZonaSelecionada.length === 0">
+          Nenhum registro de votação nesta zona.
+        </p>
+        <div class="por-zona-table-wrap" *ngIf="votacoesDaZonaSelecionada.length > 0">
+          <table class="por-zona-tabela">
+            <thead>
+              <tr>
+                <th scope="col">nm_urna_candidato</th>
+                <th scope="col" class="col-num">qt_votos_nom_validos</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let v of candidatosZonaPaginados">
+                <td class="celula-texto-longo-pz">{{ textoUrnaPorZona(v) }}</td>
+                <td class="col-num">{{ formatarNumeroPtBr(parseQtVotosNom(v)) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <nav
+          class="por-zona-paginacao"
+          *ngIf="votacoesDaZonaSelecionada.length > 0"
+          aria-label="Paginação candidatos na zona"
+        >
+          <button
+            type="button"
+            class="pagina-nav"
+            [disabled]="paginaPorZonaCandidatos === 1"
+            (click)="paginaAnteriorPorZonaCandidatos()"
+          >
+            Anterior
+          </button>
+          <button
+            type="button"
+            class="pagina-numero"
+            *ngFor="let pagina of paginasVisiveisPorZonaCandidatos"
+            [class.ativa]="pagina === paginaPorZonaCandidatos"
+            (click)="irPaginaPorZonaCandidatos(pagina)"
+          >
+            {{ pagina }}
+          </button>
+          <button
+            type="button"
+            class="pagina-nav"
+            [disabled]="paginaPorZonaCandidatos === totalPaginasPorZonaCandidatos"
+            (click)="proximaPaginaPorZonaCandidatos()"
+          >
+            Próxima
+          </button>
+        </nav>
+      </div>
+
+      <div class="por-zona-box">
+        <h3 class="por-zona-box-titulo">Coligações (somatório de votos)</h3>
+        <p class="por-zona-box-sub" *ngIf="agregadoColigacoesPorZona.length === 0">
+          Nenhuma composição registrada nesta zona.
+        </p>
+        <div class="por-zona-table-wrap" *ngIf="agregadoColigacoesPorZona.length > 0">
+          <table class="por-zona-tabela">
+            <thead>
+              <tr>
+                <th scope="col">ds_composicao_coligacao</th>
+                <th scope="col" class="col-num">Σ qt_votos_nom_validos</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let linha of coligacoesZonaPaginadas">
+                <td class="celula-texto-longo-pz">{{ linha.ds }}</td>
+                <td class="col-num">{{ formatarNumeroPtBr(linha.total) }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <nav
+          class="por-zona-paginacao"
+          *ngIf="agregadoColigacoesPorZona.length > 0"
+          aria-label="Paginação coligações na zona"
+        >
+          <button
+            type="button"
+            class="pagina-nav"
+            [disabled]="paginaPorZonaColigacoes === 1"
+            (click)="paginaAnteriorPorZonaColigacoes()"
+          >
+            Anterior
+          </button>
+          <button
+            type="button"
+            class="pagina-numero"
+            *ngFor="let pagina of paginasVisiveisPorZonaColigacoes"
+            [class.ativa]="pagina === paginaPorZonaColigacoes"
+            (click)="irPaginaPorZonaColigacoes(pagina)"
+          >
+            {{ pagina }}
+          </button>
+          <button
+            type="button"
+            class="pagina-nav"
+            [disabled]="paginaPorZonaColigacoes === totalPaginasPorZonaColigacoes"
+            (click)="proximaPaginaPorZonaColigacoes()"
+          >
+            Próxima
+          </button>
+        </nav>
+      </div>
+    </div>
   </div>
 </section>

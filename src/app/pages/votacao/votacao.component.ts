@@ -3,7 +3,7 @@ import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/cor
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { VotacaoItem, VotacaoService } from '../../service/votacao.service';
-import { ZonasEleitoraisService } from '../../service/zonas-eleitorais.service';
+import { ZonaEleitoral, ZonasEleitoraisService } from '../../service/zonas-eleitorais.service';
 
 /** Cabeçalhos esperados no CSV (iguais às colunas da tabela `votacao`, exceto id e timestamps). */
 export const CABECALHOS_CSV_VOTACAO = [
@@ -97,6 +97,18 @@ export class VotacaoComponent implements OnInit, OnDestroy {
   mensagemImportacao = '';
   /** Menu Exportar (CSV / Excel). */
   menuExportarAberto = false;
+
+  /** Aba da página: visão completa (grade atual) ou por zona. */
+  abaVotacao: 'completa' | 'por-zona' = 'completa';
+
+  /** Catálogo de zonas (API) para o dropdown da aba Por Zona. */
+  zonasEleitoraisLista: ZonaEleitoral[] = [];
+  /** Zona escolhida na aba Por Zona (nr_zona). */
+  nrZonaSelecionadaPorZona: number | null = null;
+  readonly itensPorPaginaPorZona = 5;
+  paginaPorZonaCandidatos = 1;
+  paginaPorZonaColigacoes = 1;
+
   paginaAtual = 1;
   itensPorPagina = 10;
   readonly opcoesItensPorPagina = [10, 20, 50, 100];
@@ -174,12 +186,14 @@ export class VotacaoComponent implements OnInit, OnDestroy {
     }).subscribe({
       next: ({ votos, zonas }) => {
         this.votacoes = votos;
+        this.zonasEleitoraisLista = [...zonas].sort((a, b) => a.nr_zona - b.nr_zona);
         this.mapaNmZonaPorNr = new Map(zonas.map((z) => [z.nr_zona, z.nm_zona]));
         this.filtrosColuna = {};
         this.ordenacao = { col: ORDENACAO_PADRAO.col, dir: ORDENACAO_PADRAO.dir };
         this.fecharPainelFiltro();
         this.atualizarOpcoesDistintas();
         this.paginaAtual = 1;
+        this.sincronizarSelecaoZonaPorZona();
         this.carregando = false;
       },
       error: (err) => {
@@ -194,6 +208,156 @@ export class VotacaoComponent implements OnInit, OnDestroy {
   /** Título da coluna na grade (nr_zona exibe como nm_zona). */
   tituloColuna(col: string): string {
     return col === 'nr_zona' ? 'nm_zona' : col;
+  }
+
+  definirAba(aba: 'completa' | 'por-zona'): void {
+    if (this.abaVotacao === aba) return;
+    this.abaVotacao = aba;
+    if (aba !== 'completa') {
+      this.fecharPainelFiltro();
+      this.fecharMenuExportar();
+    }
+  }
+
+  definirZonaPorZona(nr: number): void {
+    this.nrZonaSelecionadaPorZona = nr;
+    this.paginaPorZonaCandidatos = 1;
+    this.paginaPorZonaColigacoes = 1;
+  }
+
+  /** Primeira zona com dados na votação; senão a primeira do catálogo. */
+  private sincronizarSelecaoZonaPorZona(): void {
+    const ordenadas = this.zonasEleitoraisLista;
+    if (!ordenadas.length) {
+      this.nrZonaSelecionadaPorZona = null;
+      return;
+    }
+    const comDados = new Set(
+      this.votacoes.map((v) => v.nr_zona).filter((n): n is number => n != null),
+    );
+    const primeiraComDados = ordenadas.find((z) => comDados.has(z.nr_zona));
+    this.nrZonaSelecionadaPorZona = primeiraComDados?.nr_zona ?? ordenadas[0].nr_zona;
+    this.paginaPorZonaCandidatos = 1;
+    this.paginaPorZonaColigacoes = 1;
+  }
+
+  parseQtVotosNom(v: VotacaoItem): number {
+    const raw = v.qt_votos_nom_validos;
+    if (raw === undefined || raw === null) return 0;
+    const s = String(raw).replace(/\./g, '').replace(/\s/g, '').replace(',', '.').trim();
+    if (!s) return 0;
+    const n = Number(s);
+    return Number.isFinite(n) ? n : 0;
+  }
+
+  formatarNumeroPtBr(n: number): string {
+    return new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 0 }).format(n);
+  }
+
+  get votacoesDaZonaSelecionada(): VotacaoItem[] {
+    const nz = this.nrZonaSelecionadaPorZona;
+    if (nz == null) return [];
+    return this.votacoes.filter((v) => v.nr_zona === nz);
+  }
+
+  /** Linhas da zona, ordenadas por qt_votos_nom_validos decrescente. */
+  get candidatosZonaOrdenados(): VotacaoItem[] {
+    return [...this.votacoesDaZonaSelecionada].sort(
+      (a, b) => this.parseQtVotosNom(b) - this.parseQtVotosNom(a),
+    );
+  }
+
+  get candidatosZonaPaginados(): VotacaoItem[] {
+    const inicio = (this.paginaPorZonaCandidatos - 1) * this.itensPorPaginaPorZona;
+    return this.candidatosZonaOrdenados.slice(inicio, inicio + this.itensPorPaginaPorZona);
+  }
+
+  get totalPaginasPorZonaCandidatos(): number {
+    const n = this.candidatosZonaOrdenados.length;
+    return Math.max(1, Math.ceil(n / this.itensPorPaginaPorZona));
+  }
+
+  get paginasVisiveisPorZonaCandidatos(): number[] {
+    return this.calcPaginasVisiveis(this.paginaPorZonaCandidatos, this.totalPaginasPorZonaCandidatos);
+  }
+
+  get agregadoColigacoesPorZona(): { ds: string; total: number }[] {
+    const map = new Map<string, number>();
+    for (const v of this.votacoesDaZonaSelecionada) {
+      const key = (v.ds_composicao_coligacao ?? '').trim() || '(sem composição)';
+      map.set(key, (map.get(key) ?? 0) + this.parseQtVotosNom(v));
+    }
+    return [...map.entries()]
+      .map(([ds, total]) => ({ ds, total }))
+      .sort((a, b) => b.total - a.total);
+  }
+
+  get coligacoesZonaPaginadas(): { ds: string; total: number }[] {
+    const inicio = (this.paginaPorZonaColigacoes - 1) * this.itensPorPaginaPorZona;
+    return this.agregadoColigacoesPorZona.slice(inicio, inicio + this.itensPorPaginaPorZona);
+  }
+
+  get totalPaginasPorZonaColigacoes(): number {
+    const n = this.agregadoColigacoesPorZona.length;
+    return Math.max(1, Math.ceil(n / this.itensPorPaginaPorZona));
+  }
+
+  get paginasVisiveisPorZonaColigacoes(): number[] {
+    return this.calcPaginasVisiveis(this.paginaPorZonaColigacoes, this.totalPaginasPorZonaColigacoes);
+  }
+
+  private calcPaginasVisiveis(paginaAtual: number, totalPaginas: number): number[] {
+    const maxBotoes = 5;
+    const total = totalPaginas;
+    if (total <= maxBotoes) {
+      return Array.from({ length: total }, (_, index) => index + 1);
+    }
+    const metade = Math.floor(maxBotoes / 2);
+    let inicio = paginaAtual - metade;
+    let fim = paginaAtual + metade;
+    if (inicio < 1) {
+      inicio = 1;
+      fim = maxBotoes;
+    } else if (fim > total) {
+      fim = total;
+      inicio = total - maxBotoes + 1;
+    }
+    return Array.from({ length: fim - inicio + 1 }, (_, index) => inicio + index);
+  }
+
+  paginaAnteriorPorZonaCandidatos(): void {
+    if (this.paginaPorZonaCandidatos > 1) this.paginaPorZonaCandidatos -= 1;
+  }
+
+  proximaPaginaPorZonaCandidatos(): void {
+    if (this.paginaPorZonaCandidatos < this.totalPaginasPorZonaCandidatos) {
+      this.paginaPorZonaCandidatos += 1;
+    }
+  }
+
+  irPaginaPorZonaCandidatos(p: number): void {
+    if (p < 1 || p > this.totalPaginasPorZonaCandidatos) return;
+    this.paginaPorZonaCandidatos = p;
+  }
+
+  paginaAnteriorPorZonaColigacoes(): void {
+    if (this.paginaPorZonaColigacoes > 1) this.paginaPorZonaColigacoes -= 1;
+  }
+
+  proximaPaginaPorZonaColigacoes(): void {
+    if (this.paginaPorZonaColigacoes < this.totalPaginasPorZonaColigacoes) {
+      this.paginaPorZonaColigacoes += 1;
+    }
+  }
+
+  irPaginaPorZonaColigacoes(p: number): void {
+    if (p < 1 || p > this.totalPaginasPorZonaColigacoes) return;
+    this.paginaPorZonaColigacoes = p;
+  }
+
+  textoUrnaPorZona(v: VotacaoItem): string {
+    const s = v.nm_urna_candidato?.trim();
+    return s?.length ? s : '—';
   }
 
   abrirSeletorCsv(input: HTMLInputElement): void {
@@ -252,7 +416,8 @@ export class VotacaoComponent implements OnInit, OnDestroy {
       return `<tr>${celulas}</tr>`;
     });
 
-    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><table border="1">${`<tr>${headers.map((h) => `<th>${this.escapeHtmlBasico(h)}</th>`).join('')}</tr>`}${linhasTr.join('')}</table></body></html>`;
+    const linhaCabecalho = `<tr>${headers.map((h) => `<th>${this.escapeHtmlBasico(h)}</th>`).join('')}</tr>`;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><table border="1">${linhaCabecalho}${linhasTr.join('')}</table></body></html>`;
 
     const bom = '\uFEFF';
     const blob = new Blob([bom + html], {
