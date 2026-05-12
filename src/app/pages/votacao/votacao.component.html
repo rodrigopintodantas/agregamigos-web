@@ -1,0 +1,89 @@
+<section class="page-card vot-page">
+  <header class="head">
+    <h2>Votação</h2>
+    <div class="head-actions">
+      <input #csvInput type="file" accept=".csv,text/csv" class="input-csv" (change)="importarCsv($event)" />
+      <button type="button" class="ghost" [disabled]="importandoCsv" (click)="abrirSeletorCsv(csvInput)">
+        {{ importandoCsv ? 'Importando CSV...' : 'Carregar CSV' }}
+      </button>
+    </div>
+  </header>
+
+  <div class="search-wrap">
+    <div class="search-box">
+      <span class="search-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          <circle cx="11" cy="11" r="7"></circle>
+          <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+        </svg>
+      </span>
+      <input
+        id="pesquisar-votacao"
+        type="text"
+        placeholder="Filtrar por qualquer coluna"
+        [(ngModel)]="termoPesquisa"
+        (ngModelChange)="aoAlterarPesquisa()"
+      />
+    </div>
+  </div>
+
+  <p class="msg" *ngIf="carregando">Carregando...</p>
+  <p class="msg erro" *ngIf="erro">{{ erro }}</p>
+  <p class="msg sucesso" *ngIf="mensagemImportacao">{{ mensagemImportacao }}</p>
+
+  <div class="table-wrap" *ngIf="!carregando && !erro">
+    <table class="tabela-votacao">
+      <thead>
+        <tr>
+          <th *ngFor="let col of colunasExibicao">{{ col }}</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let v of votacoesPaginadas">
+          <td *ngFor="let col of colunasExibicao" [class.celula-texto-longo]="col === 'ds_composicao_coligacao'">
+            {{ valorCelula(v, col) }}
+          </td>
+        </tr>
+        <tr *ngIf="votacoesFiltradas.length === 0">
+          <td [attr.colspan]="colunasExibicao.length">Nenhum registro encontrado.</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="paginacao" *ngIf="!carregando && !erro && votacoesFiltradas.length > 0">
+    <label class="paginacao-seletor">
+      <span>Por página</span>
+      <select [(ngModel)]="itensPorPagina" (ngModelChange)="aoAlterarItensPorPagina()">
+        <option *ngFor="let opcao of opcoesItensPorPagina" [ngValue]="opcao">{{ opcao }}</option>
+      </select>
+    </label>
+
+    <span class="paginacao-info">
+      {{ (paginaAtual - 1) * itensPorPagina + 1 }}-{{
+        paginaAtual * itensPorPagina > votacoesFiltradas.length
+          ? votacoesFiltradas.length
+          : paginaAtual * itensPorPagina
+      }}
+      de {{ votacoesFiltradas.length }}
+    </span>
+
+    <nav class="paginacao-acoes" aria-label="Paginação de votação">
+      <button type="button" class="pagina-nav" [disabled]="paginaAtual === 1" (click)="paginaAnterior()">
+        Anterior
+      </button>
+      <button
+        type="button"
+        class="pagina-numero"
+        *ngFor="let pagina of paginasVisiveis"
+        [class.ativa]="pagina === paginaAtual"
+        (click)="irParaPagina(pagina)"
+      >
+        {{ pagina }}
+      </button>
+      <button type="button" class="pagina-nav" [disabled]="paginaAtual === totalPaginas" (click)="proximaPagina()">
+        Próxima
+      </button>
+    </nav>
+  </div>
+</section>
