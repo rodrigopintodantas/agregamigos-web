@@ -1,0 +1,766 @@
+import { CommonModule } from '@angular/common';
+import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
+import { FormsModule } from '@angular/forms';
+import { OuvidoriaItem, OuvidoriaService } from '../../service/ouvidoria.service';
+
+/** Nomes das colunas (iguais à tabela `ouvidoria`, exceto id e timestamps). Ordem = arquivo oficial pipe-delimitado. */
+export const CAMPOS_OUVIDORIA_CSV = [
+  'dt_manifestacao',
+  'fl_indicador',
+  'ds_situacao',
+  'ds_tipo',
+  'ds_assunto',
+  'ds_ra',
+  'nm_orgao',
+  'nm_secretaria',
+  'ds_canal',
+] as const;
+
+const COLUNAS_OCULTAS_NA_TABELA = new Set<string>([]);
+
+const COLUNAS_ORDENACAO_BOOLEANA = new Set(['fl_indicador']);
+
+const COLUNAS_ORDENACAO_DATA = new Set(['dt_manifestacao']);
+
+const ORDENACAO_PADRAO = { col: 'dt_manifestacao', dir: 'desc' as const };
+
+const CHAVE_VAZIO = '__vazio__';
+
+@Component({
+  selector: 'app-ouvidoria',
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  templateUrl: './ouvidoria.component.html',
+  styleUrl: './ouvidoria.component.scss',
+})
+export class OuvidoriaComponent implements OnInit, OnDestroy {
+  private ouvidoriaService = inject(OuvidoriaService);
+
+  painelFiltroEstilo: Record<string, string> | null = null;
+  private filtroTriggerEl: HTMLElement | null = null;
+  private readonly reposicionarPainel = (): void => {
+    if (this.colunaFiltroAberta && this.filtroTriggerEl) {
+      this.posicionarPainelFiltro();
+    }
+  };
+
+  readonly colunasExibicao = (CAMPOS_OUVIDORIA_CSV as readonly string[]).filter(
+    (c) => !COLUNAS_OCULTAS_NA_TABELA.has(c),
+  );
+
+  itens: OuvidoriaItem[] = [];
+  opcoesDistintasPorColuna: Record<string, string[]> = {};
+  filtrosColuna: Record<string, string[]> = {};
+  colunaFiltroAberta: string | null = null;
+
+  ordenacao: { col: string; dir: 'asc' | 'desc' } | null = {
+    col: ORDENACAO_PADRAO.col,
+    dir: ORDENACAO_PADRAO.dir,
+  };
+
+  termoPesquisa = '';
+  carregando = true;
+  erro = '';
+  importandoCsv = false;
+  mensagemImportacao = '';
+  menuExportarAberto = false;
+
+  paginaAtual = 1;
+  itensPorPagina = 10;
+  readonly opcoesItensPorPagina = [10, 20, 50, 100];
+
+  ngOnInit(): void {
+    this.carregar();
+    window.addEventListener('scroll', this.reposicionarPainel, true);
+    window.addEventListener('resize', this.reposicionarPainel);
+  }
+
+  ngOnDestroy(): void {
+    this.fecharPainelFiltro();
+    this.menuExportarAberto = false;
+    window.removeEventListener('scroll', this.reposicionarPainel, true);
+    window.removeEventListener('resize', this.reposicionarPainel);
+  }
+
+  get itensFiltrados(): OuvidoriaItem[] {
+    let lista = this.itens.filter((v) => this.passouFiltrosColuna(v));
+    const termo = this.termoPesquisa.trim().toLowerCase();
+    if (termo) {
+      lista = lista.filter((item) => this.textoLinha(item).includes(termo));
+    }
+    return lista;
+  }
+
+  get itensFiltradosOrdenados(): OuvidoriaItem[] {
+    const base = this.itensFiltrados;
+    if (!this.ordenacao) {
+      return base;
+    }
+    return [...base].sort((a, b) => this.compararOrdenacao(a, b));
+  }
+
+  get totalPaginas(): number {
+    const total = Math.ceil(this.itensFiltrados.length / this.itensPorPagina);
+    return Math.max(total, 1);
+  }
+
+  get itensPaginados(): OuvidoriaItem[] {
+    const inicio = (this.paginaAtual - 1) * this.itensPorPagina;
+    const fim = inicio + this.itensPorPagina;
+    return this.itensFiltradosOrdenados.slice(inicio, fim);
+  }
+
+  get paginasVisiveis(): number[] {
+    const maxBotoes = 5;
+    const total = this.totalPaginas;
+    if (total <= maxBotoes) {
+      return Array.from({ length: total }, (_, index) => index + 1);
+    }
+
+    const metade = Math.floor(maxBotoes / 2);
+    let inicio = this.paginaAtual - metade;
+    let fim = this.paginaAtual + metade;
+
+    if (inicio < 1) {
+      inicio = 1;
+      fim = maxBotoes;
+    } else if (fim > total) {
+      fim = total;
+      inicio = total - maxBotoes + 1;
+    }
+
+    return Array.from({ length: fim - inicio + 1 }, (_, index) => inicio + index);
+  }
+
+  carregar(): void {
+    this.carregando = true;
+    this.erro = '';
+    this.ouvidoriaService.listar().subscribe({
+      next: (rows) => {
+        this.itens = rows;
+        this.filtrosColuna = {};
+        this.ordenacao = { col: ORDENACAO_PADRAO.col, dir: ORDENACAO_PADRAO.dir };
+        this.fecharPainelFiltro();
+        this.atualizarOpcoesDistintas();
+        this.paginaAtual = 1;
+        this.carregando = false;
+      },
+      error: (err) => {
+        this.erro = err?.error?.message ?? 'Não foi possível carregar os dados de ouvidoria.';
+        this.carregando = false;
+      },
+    });
+  }
+
+  tituloColuna(col: string): string {
+    return col;
+  }
+
+  abrirSeletorCsv(input: HTMLInputElement): void {
+    this.mensagemImportacao = '';
+    input.click();
+  }
+
+  alternarMenuExportar(ev: MouseEvent): void {
+    ev.stopPropagation();
+    this.menuExportarAberto = !this.menuExportarAberto;
+  }
+
+  fecharMenuExportar(): void {
+    this.menuExportarAberto = false;
+  }
+
+  exportarPara(formato: 'csv' | 'xls'): void {
+    if (formato === 'csv') {
+      this.exportarCsvArquivo();
+    } else {
+      this.exportarXlsArquivo();
+    }
+    this.fecharMenuExportar();
+  }
+
+  private exportarCsvArquivo(): void {
+    const dados = this.itensFiltradosOrdenados;
+    if (!dados.length) return;
+
+    const headers = [...CAMPOS_OUVIDORIA_CSV];
+    const linhas: string[] = [];
+    linhas.push(headers.map((h) => this.escaparCelulaPipe(h)).join('|'));
+    for (const v of dados) {
+      const cells = headers.map((col) => this.escaparCelulaPipe(this.valorParaPipeExport(v, col)));
+      linhas.push(cells.join('|'));
+    }
+
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + linhas.join('\r\n')], {
+      type: 'text/csv;charset=utf-8',
+    });
+    this.dispararDownload(blob, `ouvidoria-${this.dataArquivoExport()}.csv`);
+  }
+
+  private exportarXlsArquivo(): void {
+    const dados = this.itensFiltradosOrdenados;
+    if (!dados.length) return;
+
+    const headers = [...CAMPOS_OUVIDORIA_CSV];
+    const linhasTr = dados.map((v) => {
+      const celulas = headers
+        .map((col) => `<td>${this.escapeHtmlBasico(this.valorParaPipeExport(v, col))}</td>`)
+        .join('');
+      return `<tr>${celulas}</tr>`;
+    });
+
+    const linhaCabecalho = `<tr>${headers.map((h) => `<th>${this.escapeHtmlBasico(h)}</th>`).join('')}</tr>`;
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><table border="1">${linhaCabecalho}${linhasTr.join('')}</table></body></html>`;
+
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + html], {
+      type: 'application/vnd.ms-excel',
+    });
+    this.dispararDownload(blob, `ouvidoria-${this.dataArquivoExport()}.xls`);
+  }
+
+  private dataArquivoExport(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  private dispararDownload(blob: Blob, nomeArquivo: string): void {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nomeArquivo;
+    a.rel = 'noopener';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private escapeHtmlBasico(texto: string): string {
+    return texto
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  private escaparCelulaPipe(valor: string): string {
+    const precisa =
+      valor.includes('|') || valor.includes('"') || valor.includes('\n') || valor.includes('\r');
+    if (!precisa) return valor;
+    return `"${valor.replace(/"/g, '""')}"`;
+  }
+
+  private valorParaPipeExport(v: OuvidoriaItem, col: string): string {
+    const row = v as unknown as Record<string, unknown>;
+    const raw = row[col];
+    if (raw === undefined || raw === null) return '';
+    if (col === 'dt_manifestacao') {
+      const d =
+        typeof raw === 'string'
+          ? new Date(raw)
+          : raw instanceof Date
+            ? raw
+            : new Date(String(raw));
+      if (Number.isNaN(d.getTime())) return String(raw).trim();
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    }
+    if (col === 'fl_indicador') {
+      if (typeof raw === 'boolean') return raw ? 'True' : 'False';
+      const s = String(raw).trim().toLowerCase();
+      if (s === 'true' || s === '1') return 'True';
+      if (s === 'false' || s === '0') return 'False';
+      return String(raw).trim();
+    }
+    return String(raw).trim();
+  }
+
+  async importarCsv(event: Event): Promise<void> {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+    if (!file) return;
+
+    this.erro = '';
+    this.mensagemImportacao = '';
+    this.importandoCsv = true;
+
+    try {
+      const texto = await this.lerArquivoTexto(file);
+      const registros = this.parseConteudoOuvidoriaArquivo(texto);
+      if (!registros.length) {
+        this.importandoCsv = false;
+        this.erro = 'Arquivo vazio ou sem registros válidos.';
+        input.value = '';
+        return;
+      }
+
+      const chaves = Object.keys(registros[0]).map((h) => this.normalizarCabecalhoCsv(h));
+      const faltando = (CAMPOS_OUVIDORIA_CSV as readonly string[]).filter((c) => !chaves.includes(c));
+      if (faltando.length) {
+        this.importandoCsv = false;
+        this.erro = `Arquivo inválido: faltam colunas obrigatórias: ${faltando.join(', ')}.`;
+        input.value = '';
+        return;
+      }
+
+      this.ouvidoriaService.importarCsv({ registros }).subscribe({
+        next: (resp) => {
+          this.importandoCsv = false;
+          this.mensagemImportacao = resp.message ?? 'Importação concluída.';
+          this.carregar();
+          input.value = '';
+        },
+        error: (err) => {
+          this.importandoCsv = false;
+          this.erro = err?.error?.message ?? 'Não foi possível importar o arquivo.';
+          input.value = '';
+        },
+      });
+    } catch (e) {
+      this.importandoCsv = false;
+      this.erro =
+        e instanceof Error
+          ? e.message
+          : 'Não foi possível ler o arquivo. Use UTF-8 ou Windows-1252.';
+      input.value = '';
+    }
+  }
+
+  /**
+   * Dois formatos:
+   * 1) Exportação desta tela: uma manifestação por linha, 9 campos separados por `|`.
+   * 2) Arquivo oficial (ex. DF): registros colados sem `|` entre o canal e a data da próxima
+   *    (ex.: `...|INTERNET01/01/2025 01:51:47|...`). Nesse caso os blocos são separados pelo
+   *    padrão `dd/mm/aaaa hh:mm:ss|`.
+   */
+  private parseConteudoOuvidoriaArquivo(content: string): Record<string, string>[] {
+    const texto = content.replace(/^\uFEFF/, '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+    if (!texto) return [];
+
+    const linhas = texto.split('\n').map((l) => l.trim()).filter((l) => l.length > 0);
+    if (linhas.length === 0) return [];
+
+    let dadosLinhas = linhas;
+    const partesPrimeira = linhas[0].split('|');
+    if (
+      partesPrimeira.length >= CAMPOS_OUVIDORIA_CSV.length &&
+      CAMPOS_OUVIDORIA_CSV.every(
+        (nome, idx) => partesPrimeira[idx]?.trim().toLowerCase() === nome.toLowerCase(),
+      )
+    ) {
+      dadosLinhas = linhas.slice(1);
+    }
+
+    if (dadosLinhas.length === 0) return [];
+
+    const n = CAMPOS_OUVIDORIA_CSV.length;
+    const cadaLinhaTemNoveCampos = dadosLinhas.every((ln) => ln.split('|').length === n);
+    if (cadaLinhaTemNoveCampos) {
+      return dadosLinhas.map((ln) => {
+        const partes = ln.split('|');
+        const row: Record<string, string> = {};
+        for (let j = 0; j < n; j++) {
+          row[CAMPOS_OUVIDORIA_CSV[j]] = (partes[j] ?? '').trim();
+        }
+        return row;
+      });
+    }
+
+    const payload = dadosLinhas.join('');
+    return this.parseFluxoContinuoPorData(payload, n);
+  }
+
+  /** Registros colados: cada um começa com data/hora e o primeiro `|` após o timestamp. */
+  private parseFluxoContinuoPorData(payload: string, n: number): Record<string, string>[] {
+    const re = /\d{2}\/\d{2}\/\d{4} \d{2}:\d{2}:\d{2}\|/g;
+    const indices: number[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(payload)) !== null) {
+      indices.push(m.index);
+    }
+    if (indices.length === 0) {
+      throw new Error(
+        'Não foi possível localizar registros (esperado início no formato dd/mm/aaaa hh:mm:ss|). Verifique o encoding (UTF-8 ou Windows-1252) e se o arquivo é o export oficial.',
+      );
+    }
+
+    const todas: Record<string, string>[] = [];
+    for (let i = 0; i < indices.length; i++) {
+      const ini = indices[i];
+      const fim = i + 1 < indices.length ? indices[i + 1] : payload.length;
+      const bloco = payload.slice(ini, fim);
+      const partes = bloco.split('|');
+      if (partes.length !== n) {
+        throw new Error(
+          `Registro ${i + 1}: após separar por "|" foram encontrados ${partes.length} campos (esperado ${n}).`,
+        );
+      }
+      const row: Record<string, string> = {};
+      for (let j = 0; j < n; j++) {
+        row[CAMPOS_OUVIDORIA_CSV[j]] = (partes[j] ?? '').trim();
+      }
+      todas.push(row);
+    }
+    return todas;
+  }
+
+  aoAlterarPesquisa(): void {
+    this.paginaAtual = 1;
+  }
+
+  alternarOrdenacao(col: string): void {
+    if (!this.ordenacao || this.ordenacao.col !== col) {
+      this.ordenacao = { col, dir: 'asc' };
+    } else if (this.ordenacao.dir === 'asc') {
+      this.ordenacao = { col, dir: 'desc' };
+    } else {
+      this.ordenacao = null;
+    }
+    this.paginaAtual = 1;
+  }
+
+  ordenacaoAriaSort(col: string): 'ascending' | 'descending' | 'none' {
+    if (this.ordenacao?.col !== col) return 'none';
+    return this.ordenacao.dir === 'asc' ? 'ascending' : 'descending';
+  }
+
+  tituloOrdenacaoColuna(col: string): string {
+    const titulo = this.tituloColuna(col);
+    if (this.ordenacao?.col !== col) {
+      return `Ordenar por ${titulo}: crescente`;
+    }
+    if (this.ordenacao.dir === 'asc') {
+      return `Ordenar por ${titulo}: decrescente`;
+    }
+    return 'Voltar à ordem original dos dados';
+  }
+
+  ordenacaoAtivaPara(col: string, dir: 'asc' | 'desc'): boolean {
+    return this.ordenacao !== null && this.ordenacao.col === col && this.ordenacao.dir === dir;
+  }
+
+  private compararOrdenacao(a: OuvidoriaItem, b: OuvidoriaItem): number {
+    const col = this.ordenacao!.col;
+    const dir = this.ordenacao!.dir === 'asc' ? 1 : -1;
+
+    if (COLUNAS_ORDENACAO_DATA.has(col)) {
+      const na = this.parseDataOrdenacao(a)?.getTime() ?? NaN;
+      const nb = this.parseDataOrdenacao(b)?.getTime() ?? NaN;
+      const vazioA = Number.isNaN(na);
+      const vazioB = Number.isNaN(nb);
+      if (vazioA && vazioB) return this.desempateOrdenacaoPorId(a, b);
+      if (vazioA) return 1;
+      if (vazioB) return -1;
+      if (na !== nb) {
+        return na < nb ? -dir : dir;
+      }
+      return this.desempateOrdenacaoPorId(a, b);
+    }
+
+    if (COLUNAS_ORDENACAO_BOOLEANA.has(col)) {
+      const ba = this.parseBoolOrdenacao(a, col);
+      const bb = this.parseBoolOrdenacao(b, col);
+      if (ba === null && bb === null) return this.desempateOrdenacaoPorId(a, b);
+      if (ba === null) return 1;
+      if (bb === null) return -1;
+      if (ba !== bb) {
+        return ba < bb ? -dir : dir;
+      }
+      return this.desempateOrdenacaoPorId(a, b);
+    }
+
+    const ta = this.textoOrdenacao(a, col);
+    const tb = this.textoOrdenacao(b, col);
+    const cmp = ta.localeCompare(tb, 'pt-BR', { numeric: true, sensitivity: 'base' });
+    if (cmp !== 0) {
+      return cmp * dir;
+    }
+    return this.desempateOrdenacaoPorId(a, b);
+  }
+
+  private parseDataOrdenacao(v: OuvidoriaItem): Date | null {
+    const raw = v.dt_manifestacao;
+    if (raw == null) return null;
+    const d = new Date(raw);
+    return Number.isNaN(d.getTime()) ? null : d;
+  }
+
+  private parseBoolOrdenacao(v: OuvidoriaItem, col: string): boolean | null {
+    const row = v as unknown as Record<string, unknown>;
+    const raw = row[col];
+    if (raw === undefined || raw === null) return null;
+    if (typeof raw === 'boolean') return raw;
+    const s = String(raw).trim().toLowerCase();
+    if (s === 'true' || s === '1') return true;
+    if (s === 'false' || s === '0') return false;
+    return null;
+  }
+
+  private textoOrdenacao(v: OuvidoriaItem, col: string): string {
+    const row = v as unknown as Record<string, unknown>;
+    const raw = row[col];
+    if (raw === undefined || raw === null) return '';
+    if (typeof raw === 'boolean') return raw ? 'true' : 'false';
+    return String(raw).trim();
+  }
+
+  private desempateOrdenacaoPorId(a: OuvidoriaItem, b: OuvidoriaItem): number {
+    return (a.id ?? 0) - (b.id ?? 0);
+  }
+
+  @HostListener('document:click', ['$event'])
+  fecharPainelFiltroSeFora(ev: MouseEvent): void {
+    const alvo = ev.target as HTMLElement | null;
+    if (
+      !alvo?.closest?.('.filtro-col-wrap') &&
+      !alvo?.closest?.('.filtro-dropdown-panel--portal')
+    ) {
+      this.fecharPainelFiltro();
+    }
+    if (!alvo?.closest?.('.exportar-wrap')) {
+      this.menuExportarAberto = false;
+    }
+  }
+
+  private fecharPainelFiltro(): void {
+    this.colunaFiltroAberta = null;
+    this.painelFiltroEstilo = null;
+    this.filtroTriggerEl = null;
+  }
+
+  private posicionarPainelFiltro(): void {
+    const trigger = this.filtroTriggerEl;
+    if (!trigger || !this.colunaFiltroAberta) {
+      return;
+    }
+    const r = trigger.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const margem = 8;
+    const panelWidth = Math.min(288, vw - margem * 2);
+    let left = r.left;
+    if (left + panelWidth > vw - margem) {
+      left = vw - margem - panelWidth;
+    }
+    if (left < margem) {
+      left = margem;
+    }
+
+    const espacoAbaixo = vh - r.bottom - margem;
+    const espacoAcima = r.top - margem;
+    let top: number;
+    let maxPainel: number;
+
+    if (espacoAbaixo >= 150 || espacoAbaixo >= espacoAcima) {
+      top = r.bottom + 4;
+      maxPainel = Math.min(280, Math.max(100, espacoAbaixo - 4));
+    } else {
+      maxPainel = Math.min(280, Math.max(100, espacoAcima - 4));
+      top = r.top - 4 - maxPainel;
+    }
+
+    if (top < margem) {
+      maxPainel = Math.max(80, maxPainel - (margem - top));
+      top = margem;
+    }
+
+    this.painelFiltroEstilo = {
+      position: 'fixed',
+      top: `${top}px`,
+      left: `${left}px`,
+      width: `${panelWidth}px`,
+      maxHeight: `${maxPainel}px`,
+      zIndex: '5000',
+    };
+  }
+
+  rotuloOpcaoFiltro(chave: string): string {
+    return chave === CHAVE_VAZIO ? '(vazio)' : chave;
+  }
+
+  opcoesFiltroParaColuna(col: string): string[] {
+    return this.opcoesDistintasPorColuna[col] ?? [];
+  }
+
+  painelFiltroAbertoPara(col: string): boolean {
+    return this.colunaFiltroAberta === col;
+  }
+
+  alternarPainelFiltro(col: string, ev: MouseEvent): void {
+    ev.stopPropagation();
+    const btn = ev.currentTarget as HTMLElement;
+    if (this.colunaFiltroAberta === col) {
+      this.fecharPainelFiltro();
+      return;
+    }
+    this.colunaFiltroAberta = col;
+    this.filtroTriggerEl = btn;
+    setTimeout(() => {
+      this.posicionarPainelFiltro();
+      requestAnimationFrame(() => this.posicionarPainelFiltro());
+    });
+  }
+
+  colunaComFiltroAtivo(col: string): boolean {
+    return (this.filtrosColuna[col]?.length ?? 0) > 0;
+  }
+
+  resumoFiltroColuna(col: string): string {
+    const sel = this.filtrosColuna[col];
+    const total = this.opcoesFiltroParaColuna(col).length;
+    if (!sel?.length) {
+      return 'Todos';
+    }
+    if (sel.length === total) {
+      return 'Todos';
+    }
+    return `${sel.length} selec.`;
+  }
+
+  opcaoFiltroMarcada(col: string, chave: string): boolean {
+    return this.filtrosColuna[col]?.includes(chave) ?? false;
+  }
+
+  alternarOpcaoFiltro(col: string, chave: string): void {
+    const atual = [...(this.filtrosColuna[col] ?? [])];
+    const i = atual.indexOf(chave);
+    if (i >= 0) {
+      atual.splice(i, 1);
+    } else {
+      atual.push(chave);
+    }
+    const todas = this.opcoesFiltroParaColuna(col);
+    if (atual.length === 0 || atual.length === todas.length) {
+      delete this.filtrosColuna[col];
+    } else {
+      this.filtrosColuna[col] = atual;
+    }
+    this.paginaAtual = 1;
+  }
+
+  limparFiltroColuna(col: string, ev: MouseEvent): void {
+    ev.stopPropagation();
+    delete this.filtrosColuna[col];
+    this.paginaAtual = 1;
+  }
+
+  private atualizarOpcoesDistintas(): void {
+    const map: Record<string, Set<string>> = {};
+    for (const col of this.colunasExibicao) {
+      map[col] = new Set<string>();
+    }
+    for (const v of this.itens) {
+      for (const col of this.colunasExibicao) {
+        map[col].add(this.valorChaveFiltro(v, col));
+      }
+    }
+    const next: Record<string, string[]> = {};
+    for (const col of this.colunasExibicao) {
+      const vals = Array.from(map[col]).sort((a, b) => {
+        if (a === CHAVE_VAZIO) return -1;
+        if (b === CHAVE_VAZIO) return 1;
+        return a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
+      });
+      next[col] = vals;
+    }
+    this.opcoesDistintasPorColuna = next;
+  }
+
+  private passouFiltrosColuna(v: OuvidoriaItem): boolean {
+    for (const col of this.colunasExibicao) {
+      const selecionados = this.filtrosColuna[col];
+      if (!selecionados?.length) continue;
+      const chave = this.valorChaveFiltro(v, col);
+      if (!selecionados.includes(chave)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  valorChaveFiltro(v: OuvidoriaItem, col: string): string {
+    const row = v as unknown as Record<string, unknown>;
+    const raw = row[col];
+    if (raw === undefined || raw === null) return CHAVE_VAZIO;
+    if (typeof raw === 'boolean') return raw ? 'true' : 'false';
+    if (typeof raw === 'string' && !raw.trim()) return CHAVE_VAZIO;
+    if (col === 'dt_manifestacao') {
+      const d =
+        raw instanceof Date ? raw : typeof raw === 'string' ? new Date(raw) : new Date(String(raw));
+      return Number.isNaN(d.getTime())
+        ? typeof raw === 'string'
+          ? raw
+          : CHAVE_VAZIO
+        : d.toLocaleDateString('pt-BR');
+    }
+    if (typeof raw === 'number') return String(raw);
+    const s = String(raw).trim();
+    return s.length ? s : CHAVE_VAZIO;
+  }
+
+  aoAlterarItensPorPagina(): void {
+    this.paginaAtual = 1;
+  }
+
+  paginaAnterior(): void {
+    if (this.paginaAtual > 1) {
+      this.paginaAtual -= 1;
+    }
+  }
+
+  proximaPagina(): void {
+    if (this.paginaAtual < this.totalPaginas) {
+      this.paginaAtual += 1;
+    }
+  }
+
+  irParaPagina(pagina: number): void {
+    if (pagina < 1 || pagina > this.totalPaginas) return;
+    this.paginaAtual = pagina;
+  }
+
+  valorCelula(v: OuvidoriaItem, col: string): string | number | null {
+    const row = v as unknown as Record<string, unknown>;
+    const raw = row[col];
+    if (raw === undefined || raw === null) return '—';
+    if (col === 'dt_manifestacao') {
+      const d =
+        raw instanceof Date ? raw : typeof raw === 'string' ? new Date(raw) : new Date(String(raw));
+      if (Number.isNaN(d.getTime())) {
+        return typeof raw === 'string' ? raw.trim() : '—';
+      }
+      return d.toLocaleDateString('pt-BR');
+    }
+    if (col === 'fl_indicador') {
+      if (typeof raw === 'boolean') return raw ? 'Sim' : 'Não';
+      return String(raw).trim() || '—';
+    }
+    if (typeof raw === 'number') return raw;
+    const s = String(raw).trim();
+    return s.length ? s : '—';
+  }
+
+  private textoLinha(v: OuvidoriaItem): string {
+    const row = v as unknown as Record<string, unknown>;
+    const partes = [String(v.id ?? '')];
+    for (const c of CAMPOS_OUVIDORIA_CSV as readonly string[]) {
+      const val = row[c];
+      partes.push(val != null ? String(val) : '');
+    }
+    return partes.join(' ').toLowerCase();
+  }
+
+  private normalizarCabecalhoCsv(value: string): string {
+    return String(value ?? '')
+      .replace(/^\uFEFF/g, '')
+      .replace(/[\u200B-\u200D\uFEFF]/g, '')
+      .trim()
+      .toLowerCase();
+  }
+
+  private async lerArquivoTexto(file: File): Promise<string> {
+    const buffer = await file.arrayBuffer();
+    const utf8 = new TextDecoder('utf-8').decode(buffer);
+    if (!utf8.includes('\uFFFD')) return utf8;
+    return new TextDecoder('windows-1252').decode(buffer);
+  }
+}

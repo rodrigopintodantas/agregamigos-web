@@ -1,0 +1,199 @@
+<section class="page-card ouv-page">
+  <header class="head">
+    <h2>Ouvidoria</h2>
+  </header>
+
+  <p class="ouv-ajuda">
+    Arquivo oficial: campos com <strong>|</strong>, sem cabeçalho; entre um registro e outro <strong>não há
+    "|"</strong> (o canal e a data da próxima manifestação ficam colados, ex. <code>INTERNET01/01/2025</code>).
+    Encoding: UTF-8 ou Windows-1252. Cada nova importação substitui todos os registros já gravados. Também é
+    aceito o CSV exportado por esta tela (uma linha por registro, com cabeçalho opcional).
+  </p>
+
+  <p class="msg" *ngIf="carregando">Carregando...</p>
+  <p class="msg erro" *ngIf="erro">{{ erro }}</p>
+  <p class="msg sucesso" *ngIf="mensagemImportacao">{{ mensagemImportacao }}</p>
+
+  <div class="ouv-tab-panel">
+    <div class="head-actions visao-completa-acoes">
+      <input
+        #csvInput
+        type="file"
+        accept=".csv,.txt,text/csv,text/plain"
+        class="input-csv"
+        (change)="importarCsv($event)"
+      />
+      <button type="button" class="ghost" [disabled]="importandoCsv" (click)="abrirSeletorCsv(csvInput)">
+        {{ importandoCsv ? 'Importando...' : 'Carregar CSV' }}
+      </button>
+      <div class="exportar-wrap">
+        <button
+          type="button"
+          class="ghost"
+          [disabled]="carregando || !!erro || itensFiltrados.length === 0"
+          [attr.aria-expanded]="menuExportarAberto"
+          [attr.aria-haspopup]="true"
+          aria-label="Exportar dados"
+          (click)="alternarMenuExportar($event)"
+        >
+          Exportar
+        </button>
+        <div
+          class="exportar-dropdown"
+          *ngIf="menuExportarAberto"
+          role="menu"
+          (click)="$event.stopPropagation()"
+        >
+          <button type="button" class="exportar-opcao" role="menuitem" (click)="exportarPara('csv')">
+            CSV (pipe)
+          </button>
+          <button type="button" class="exportar-opcao" role="menuitem" (click)="exportarPara('xls')">
+            Excel (.xls)
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div class="search-wrap">
+      <div class="search-box">
+        <span class="search-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+          </svg>
+        </span>
+        <input
+          id="pesquisar-ouvidoria"
+          type="text"
+          placeholder="Filtrar por qualquer coluna"
+          [(ngModel)]="termoPesquisa"
+          (ngModelChange)="aoAlterarPesquisa()"
+        />
+      </div>
+    </div>
+
+    <div class="table-wrap" *ngIf="!carregando && !erro">
+      <table class="tabela-ouvidoria">
+        <thead>
+          <tr>
+            <th
+              *ngFor="let col of colunasExibicao"
+              class="th-titulo-col"
+              scope="col"
+              [attr.aria-sort]="ordenacaoAriaSort(col)"
+            >
+              <button
+                type="button"
+                class="btn-ordenar-col"
+                (click)="alternarOrdenacao(col)"
+                [attr.title]="tituloOrdenacaoColuna(col)"
+                [attr.aria-label]="tituloOrdenacaoColuna(col)"
+              >
+                <span class="titulo-col-texto">{{ tituloColuna(col) }}</span>
+                <span class="ordenacao-setas" aria-hidden="true">
+                  <span class="seta seta-cima" [class.ativa]="ordenacaoAtivaPara(col, 'asc')">▲</span>
+                  <span class="seta seta-baixo" [class.ativa]="ordenacaoAtivaPara(col, 'desc')">▼</span>
+                </span>
+              </button>
+            </th>
+          </tr>
+          <tr class="filtros-linha">
+            <th *ngFor="let col of colunasExibicao" class="th-filtro">
+              <div class="filtro-col-wrap">
+                <button
+                  type="button"
+                  class="filtro-dropdown-trigger"
+                  [class.ativo]="colunaComFiltroAtivo(col)"
+                  [attr.aria-expanded]="painelFiltroAbertoPara(col)"
+                  [attr.aria-haspopup]="true"
+                  (click)="alternarPainelFiltro(col, $event)"
+                >
+                  <span class="filtro-resumo">{{ resumoFiltroColuna(col) }}</span>
+                  <span class="filtro-caret" aria-hidden="true"></span>
+                </button>
+              </div>
+            </th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let v of itensPaginados">
+            <td
+              *ngFor="let col of colunasExibicao"
+              [class.celula-texto-longo]="
+                col === 'ds_assunto' || col === 'nm_orgao' || col === 'nm_secretaria'
+              "
+            >
+              {{ valorCelula(v, col) }}
+            </td>
+          </tr>
+          <tr *ngIf="itensFiltrados.length === 0">
+            <td [attr.colspan]="colunasExibicao.length">Nenhum registro encontrado.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <ng-container *ngIf="colunaFiltroAberta as colunaPainel">
+      <div
+        *ngIf="painelFiltroEstilo"
+        class="filtro-dropdown-panel filtro-dropdown-panel--portal"
+        [ngStyle]="painelFiltroEstilo"
+        (click)="$event.stopPropagation()"
+        role="listbox"
+        [attr.aria-label]="'Filtro: ' + tituloColuna(colunaPainel)"
+      >
+        <div class="filtro-dropdown-scroll">
+          <label *ngFor="let chave of opcoesFiltroParaColuna(colunaPainel)" class="filtro-opcao">
+            <input
+              type="checkbox"
+              [checked]="opcaoFiltroMarcada(colunaPainel, chave)"
+              (change)="alternarOpcaoFiltro(colunaPainel, chave)"
+            />
+            <span>{{ rotuloOpcaoFiltro(chave) }}</span>
+          </label>
+        </div>
+        <div class="filtro-dropdown-rodape">
+          <button type="button" class="filtro-link" (click)="limparFiltroColuna(colunaPainel, $event)">
+            Limpar filtro
+          </button>
+        </div>
+      </div>
+    </ng-container>
+
+    <div class="paginacao" *ngIf="!carregando && !erro && itensFiltrados.length > 0">
+      <label class="paginacao-seletor">
+        <span>Por página</span>
+        <select [(ngModel)]="itensPorPagina" (ngModelChange)="aoAlterarItensPorPagina()">
+          <option *ngFor="let opcao of opcoesItensPorPagina" [ngValue]="opcao">{{ opcao }}</option>
+        </select>
+      </label>
+
+      <span class="paginacao-info">
+        {{ (paginaAtual - 1) * itensPorPagina + 1 }}-{{
+          paginaAtual * itensPorPagina > itensFiltrados.length
+            ? itensFiltrados.length
+            : paginaAtual * itensPorPagina
+        }}
+        de {{ itensFiltrados.length }}
+      </span>
+
+      <nav class="paginacao-acoes" aria-label="Paginação de ouvidoria">
+        <button type="button" class="pagina-nav" [disabled]="paginaAtual === 1" (click)="paginaAnterior()">
+          Anterior
+        </button>
+        <button
+          type="button"
+          class="pagina-numero"
+          *ngFor="let pagina of paginasVisiveis"
+          [class.ativa]="pagina === paginaAtual"
+          (click)="irParaPagina(pagina)"
+        >
+          {{ pagina }}
+        </button>
+        <button type="button" class="pagina-nav" [disabled]="paginaAtual === totalPaginas" (click)="proximaPagina()">
+          Próxima
+        </button>
+      </nav>
+    </div>
+  </div>
+</section>

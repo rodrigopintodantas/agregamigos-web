@@ -11,6 +11,7 @@ import { PessoaComponent } from './pages/pessoa/pessoa.component';
 import { PrincipalComponent } from './pages/principal/principal.component';
 import { TermoConsentimentoComponent } from './pages/termo-consentimento/termo-consentimento.component';
 import { VotacaoComponent } from './pages/votacao/votacao.component';
+import { OuvidoriaComponent } from './pages/ouvidoria/ouvidoria.component';
 import { WhatsappComponent } from './pages/whatsapp/whatsapp.component';
 
 export const routes: Routes = [
@@ -59,6 +60,10 @@ export const routes: Routes = [
       {
         path: 'votacao',
         component: VotacaoComponent
+      },
+      {
+        path: 'ouvidoria',
+        component: OuvidoriaComponent
       }
     ]
   },

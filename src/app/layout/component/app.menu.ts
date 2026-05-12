@@ -79,6 +79,21 @@ import { LayoutUiService } from '../service/layout-ui.service';
           <span class="menu-label">Votação</span>
         </a>
       </li>
+      <li *ngIf="auth.isAdmin()">
+        <a
+          routerLink="/admin/ouvidoria"
+          routerLinkActive="active-route"
+          [attr.title]="ui.sidebarCollapsed() ? 'Ouvidoria' : null"
+          (click)="ui.closeMobileMenu()"
+        >
+          <span class="menu-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 4h16v2H4V4zm0 4h10v2H4V8zm0 4h16v2H4v-2zm0 4h10v2H4v-2z"></path>
+            </svg>
+          </span>
+          <span class="menu-label">Ouvidoria</span>
+        </a>
+      </li>
       <li *ngIf="auth.isAdmin() && isAdminLogin()" class="menu-section">Campanha</li>
       <li *ngIf="auth.isAdmin() && isAdminLogin()">
         <a
