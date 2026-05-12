@@ -6,6 +6,32 @@
       <button type="button" class="ghost" [disabled]="importandoCsv" (click)="abrirSeletorCsv(csvInput)">
         {{ importandoCsv ? 'Importando CSV...' : 'Carregar CSV' }}
       </button>
+      <div class="exportar-wrap">
+        <button
+          type="button"
+          class="ghost"
+          [disabled]="carregando || !!erro || votacoesFiltradas.length === 0"
+          [attr.aria-expanded]="menuExportarAberto"
+          [attr.aria-haspopup]="true"
+          aria-label="Exportar dados"
+          (click)="alternarMenuExportar($event)"
+        >
+          Exportar
+        </button>
+        <div
+          class="exportar-dropdown"
+          *ngIf="menuExportarAberto"
+          role="menu"
+          (click)="$event.stopPropagation()"
+        >
+          <button type="button" class="exportar-opcao" role="menuitem" (click)="exportarPara('csv')">
+            CSV
+          </button>
+          <button type="button" class="exportar-opcao" role="menuitem" (click)="exportarPara('xls')">
+            Excel (.xls)
+          </button>
+        </div>
+      </div>
     </div>
   </header>
 

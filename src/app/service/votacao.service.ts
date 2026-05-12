@@ -29,7 +29,10 @@ export interface ImportarCsvVotacaoPayload {
 
 export interface ImportarCsvVotacaoResponse {
   message: string;
+  /** Quantidade efetivamente inserida nesta importação. */
   total: number;
+  inseridos?: number;
+  ignorados?: number;
 }
 
 @Injectable({ providedIn: 'root' })

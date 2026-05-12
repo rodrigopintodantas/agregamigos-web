@@ -95,8 +95,10 @@ export class VotacaoComponent implements OnInit, OnDestroy {
   erro = '';
   importandoCsv = false;
   mensagemImportacao = '';
+  /** Menu Exportar (CSV / Excel). */
+  menuExportarAberto = false;
   paginaAtual = 1;
-  itensPorPagina = 20;
+  itensPorPagina = 10;
   readonly opcoesItensPorPagina = [10, 20, 50, 100];
 
   ngOnInit(): void {
@@ -107,6 +109,7 @@ export class VotacaoComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.fecharPainelFiltro();
+    this.menuExportarAberto = false;
     window.removeEventListener('scroll', this.reposicionarPainel, true);
     window.removeEventListener('resize', this.reposicionarPainel);
   }
@@ -196,6 +199,111 @@ export class VotacaoComponent implements OnInit, OnDestroy {
   abrirSeletorCsv(input: HTMLInputElement): void {
     this.mensagemImportacao = '';
     input.click();
+  }
+
+  alternarMenuExportar(ev: MouseEvent): void {
+    ev.stopPropagation();
+    this.menuExportarAberto = !this.menuExportarAberto;
+  }
+
+  fecharMenuExportar(): void {
+    this.menuExportarAberto = false;
+  }
+
+  exportarPara(formato: 'csv' | 'xls'): void {
+    if (formato === 'csv') {
+      this.exportarCsvArquivo();
+    } else {
+      this.exportarXlsArquivo();
+    }
+    this.fecharMenuExportar();
+  }
+
+  /** Exporta CSV — mesmo formato do import. */
+  private exportarCsvArquivo(): void {
+    const dados = this.votacoesFiltradasOrdenadas;
+    if (!dados.length) return;
+
+    const headers = [...CABECALHOS_CSV_VOTACAO];
+    const linhas: string[] = [];
+    linhas.push(headers.map((h) => this.escaparCelulaCsv(h)).join(','));
+    for (const v of dados) {
+      const cells = headers.map((col) => this.escaparCelulaCsv(this.valorParaCsvExport(v, col)));
+      linhas.push(cells.join(','));
+    }
+
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + linhas.join('\r\n')], {
+      type: 'text/csv;charset=utf-8',
+    });
+    this.dispararDownload(blob, `votacao-${this.dataArquivoExport()}.csv`);
+  }
+
+  /** Exporta planilha HTML compatível com Excel (.xls). */
+  private exportarXlsArquivo(): void {
+    const dados = this.votacoesFiltradasOrdenadas;
+    if (!dados.length) return;
+
+    const headers = [...CABECALHOS_CSV_VOTACAO];
+    const linhasTr = dados.map((v) => {
+      const celulas = headers
+        .map((col) => `<td>${this.escapeHtmlBasico(this.valorParaCsvExport(v, col))}</td>`)
+        .join('');
+      return `<tr>${celulas}</tr>`;
+    });
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"></head><body><table border="1">${`<tr>${headers.map((h) => `<th>${this.escapeHtmlBasico(h)}</th>`).join('')}</tr>`}${linhasTr.join('')}</table></body></html>`;
+
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + html], {
+      type: 'application/vnd.ms-excel',
+    });
+    this.dispararDownload(blob, `votacao-${this.dataArquivoExport()}.xls`);
+  }
+
+  private dataArquivoExport(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  private dispararDownload(blob: Blob, nomeArquivo: string): void {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = nomeArquivo;
+    a.rel = 'noopener';
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  private escapeHtmlBasico(texto: string): string {
+    return texto
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  private escaparCelulaCsv(valor: string): string {
+    const precisa =
+      valor.includes(',') || valor.includes('"') || valor.includes('\n') || valor.includes('\r');
+    if (!precisa) return valor;
+    return `"${valor.replace(/"/g, '""')}"`;
+  }
+
+  private valorParaCsvExport(v: VotacaoItem, col: string): string {
+    const row = v as unknown as Record<string, unknown>;
+    const raw = row[col];
+    if (raw === undefined || raw === null) return '';
+    if (col === 'dt_ult_totalizacao') {
+      const d =
+        typeof raw === 'string'
+          ? new Date(raw)
+          : raw instanceof Date
+            ? raw
+            : new Date(String(raw));
+      return Number.isNaN(d.getTime()) ? String(raw).trim() : d.toISOString();
+    }
+    return String(raw).trim();
   }
 
   async importarCsv(event: Event): Promise<void> {
@@ -350,6 +458,9 @@ export class VotacaoComponent implements OnInit, OnDestroy {
       !alvo?.closest?.('.filtro-dropdown-panel--portal')
     ) {
       this.fecharPainelFiltro();
+    }
+    if (!alvo?.closest?.('.exportar-wrap')) {
+      this.menuExportarAberto = false;
     }
   }
 

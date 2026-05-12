@@ -15,6 +15,42 @@
 .head-actions {
   display: flex;
   gap: 0.5rem;
+  align-items: flex-start;
+}
+
+.exportar-wrap {
+  position: relative;
+}
+
+.exportar-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 40;
+  min-width: 11rem;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #eaecf0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+}
+
+.exportar-opcao {
+  margin: 0;
+  padding: 0.5rem 0.75rem;
+  border: 0;
+  background: #fff;
+  color: #344054;
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.exportar-opcao:hover {
+  background: #f9fafb;
 }
 
 .head button {
