@@ -260,6 +260,33 @@ app-root {
   max-width: 100%;
 }
 
+/* Primário / secundário reutilizáveis (divulgação, WhatsApp admin, etc.) */
+.btn-montar {
+  border: 0;
+  border-radius: 10px;
+  background: var(--color-brand-500);
+  color: #fff;
+  padding: 0.62rem 1rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.btn-sec {
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  background: #fff;
+  color: #344054;
+  padding: 0.62rem 1rem;
+  cursor: pointer;
+  font: inherit;
+}
+
+.btn-montar:disabled,
+.btn-sec:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 .mobile-auth-footer {
   margin-top: 0;
   background: #f8fafc;

@@ -159,29 +159,6 @@
   font-size: 0.85rem;
 }
 
-.btn-montar {
-  border: 0;
-  border-radius: 10px;
-  background: var(--color-brand-500);
-  color: #fff;
-  padding: 0.62rem 1rem;
-  cursor: pointer;
-}
-
-.btn-sec {
-  border: 1px solid #d0d5dd;
-  border-radius: 10px;
-  background: #fff;
-  color: #344054;
-  padding: 0.62rem 1rem;
-  cursor: pointer;
-}
-
-.btn-montar:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-}
-
 .resultado {
   margin-top: 0.9rem;
 }

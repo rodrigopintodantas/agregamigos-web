@@ -15,6 +15,7 @@ export class WhatsappComponent implements OnInit {
   carregando = true;
   conectando = false;
   desconectando = false;
+  trocandoTelefone = false;
   erro = '';
   sucesso = '';
   status: WhatsappStatus | null = null;
@@ -79,5 +80,32 @@ export class WhatsappComponent implements OnInit {
         this.desconectando = false;
       },
     });
+  }
+
+  trocarTelefone(): void {
+    const ok = confirm(
+      'O número atual será desconectado e a sessão deste canal será apagada. ' +
+        'Em seguida aparecerá um novo QR Code para você vincular outro telefone. Deseja continuar?',
+    );
+    if (!ok) return;
+
+    this.erro = '';
+    this.sucesso = '';
+    this.trocandoTelefone = true;
+    this.whatsappService
+      .trocarTelefone({
+        nomePerfil: this.nomePerfil.trim() || 'Canal principal',
+      })
+      .subscribe({
+        next: (ret) => {
+          this.status = ret;
+          this.sucesso = ret.message;
+          this.trocandoTelefone = false;
+        },
+        error: (err) => {
+          this.erro = err?.error?.message ?? 'Não foi possível trocar o telefone do WhatsApp.';
+          this.trocandoTelefone = false;
+        },
+      });
   }
 }

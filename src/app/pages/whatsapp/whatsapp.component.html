@@ -26,6 +26,9 @@
 
   <article class="bloco">
     <h3>Conectar canal</h3>
+    <p class="contador">
+      Use <strong>Trocar Telefone</strong> quando quiser deixar de enviar por este número e vincular outro aparelho (novo QR Code).
+    </p>
     <label class="campo">
       <span>Nome do perfil</span>
       <input [(ngModel)]="nomePerfil" placeholder="Ex.: Atendimento AgregaAmigos" />
@@ -36,6 +39,14 @@
       </button>
       <button type="button" class="btn-sec" [disabled]="desconectando" (click)="desconectar()">
         {{ desconectando ? 'Desconectando...' : 'Desconectar' }}
+      </button>
+      <button
+        type="button"
+        class="btn-sec"
+        [disabled]="trocandoTelefone || conectando || desconectando"
+        (click)="trocarTelefone()"
+      >
+        {{ trocandoTelefone ? 'Trocando telefone...' : 'Trocar Telefone' }}
       </button>
       <button type="button" class="btn-sec" (click)="carregarStatus()">Atualizar status</button>
     </div>

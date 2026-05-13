@@ -36,4 +36,8 @@ export class WhatsappService {
   desconectar(): Observable<WhatsappAcaoResponse> {
     return this.http.post<WhatsappAcaoResponse>(`${this.base}/desconectar`, {});
   }
+
+  trocarTelefone(payload: WhatsappConectarPayload): Observable<WhatsappAcaoResponse> {
+    return this.http.post<WhatsappAcaoResponse>(`${this.base}/trocar-telefone`, payload);
+  }
 }
