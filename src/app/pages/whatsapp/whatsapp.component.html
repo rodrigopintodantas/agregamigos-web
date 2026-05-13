@@ -33,22 +33,26 @@
       <span>Nome do perfil</span>
       <input [(ngModel)]="nomePerfil" placeholder="Ex.: Atendimento AgregaAmigos" />
     </label>
-    <div class="top-actions">
-      <button type="button" class="btn-montar" [disabled]="conectando" (click)="conectar()">
-        {{ conectando ? 'Conectando...' : 'Conectar' }}
-      </button>
-      <button type="button" class="btn-sec" [disabled]="desconectando" (click)="desconectar()">
-        {{ desconectando ? 'Desconectando...' : 'Desconectar' }}
-      </button>
-      <button
-        type="button"
-        class="btn-sec"
-        [disabled]="trocandoTelefone || conectando || desconectando"
-        (click)="trocarTelefone()"
-      >
-        {{ trocandoTelefone ? 'Trocando telefone...' : 'Trocar Telefone' }}
-      </button>
-      <button type="button" class="btn-sec" (click)="carregarStatus()">Atualizar status</button>
+    <div class="wa-actions">
+      <div class="wa-actions-main">
+        <button type="button" class="btn-montar" [disabled]="conectando" (click)="conectar()">
+          {{ conectando ? 'Conectando...' : 'Conectar' }}
+        </button>
+        <button type="button" class="btn-sec" [disabled]="desconectando" (click)="desconectar()">
+          {{ desconectando ? 'Desconectando...' : 'Desconectar' }}
+        </button>
+        <button type="button" class="btn-sec" (click)="carregarStatus()">Atualizar status</button>
+      </div>
+      <div class="wa-actions-aside">
+        <button
+          type="button"
+          class="btn-sec"
+          [disabled]="trocandoTelefone || conectando || desconectando"
+          (click)="trocarTelefone()"
+        >
+          {{ trocandoTelefone ? 'Trocando telefone...' : 'Trocar Telefone' }}
+        </button>
+      </div>
     </div>
   </article>
 </section>
