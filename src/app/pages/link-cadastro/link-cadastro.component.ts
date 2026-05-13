@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { PessoaPayload, PessoaService } from '../../service/pessoa.service';
 
 type ViaCepResponse = {
@@ -21,8 +21,16 @@ type ViaCepResponse = {
   templateUrl: './link-cadastro.component.html',
   styleUrl: './link-cadastro.component.scss',
 })
-export class LinkCadastroComponent {
+export class LinkCadastroComponent implements OnInit {
   private pessoaService = inject(PessoaService);
+  private route = inject(ActivatedRoute);
+  candidatoSlug = '';
+  ngOnInit(): void {
+    this.route.paramMap.subscribe((pm) => {
+      this.candidatoSlug = (pm.get('candidatoSlug') ?? '').trim().toLowerCase();
+    });
+  }
+
   readonly termoConsentimentoVersao = '2026-05-06-v1';
   readonly termoConsentimentoTexto =
     'Autorizo o tratamento dos meus dados pessoais para fins de cadastro, contato e gestão do relacionamento, nos termos da LGPD.';
@@ -155,6 +163,10 @@ export class LinkCadastroComponent {
       this.erro = 'É necessário concordar com o termo de consentimento para continuar.';
       return;
     }
+    if (!this.candidatoSlug) {
+      this.erro = 'Link de cadastro inválido (candidato não informado na URL).';
+      return;
+    }
     this.salvando = true;
     const payload: PessoaPayload = {
       ...this.form,
@@ -169,7 +181,7 @@ export class LinkCadastroComponent {
       },
     };
 
-    this.pessoaService.criarPorLink(payload).subscribe({
+    this.pessoaService.criarPorLink(this.candidatoSlug, payload).subscribe({
       next: () => {
         this.salvando = false;
         this.sucesso = 'Cadastro enviado com sucesso.';

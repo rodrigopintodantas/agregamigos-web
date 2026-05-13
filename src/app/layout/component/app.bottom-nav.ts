@@ -36,23 +36,17 @@ type BottomNavItem = {
 export class AppBottomNav {
   private auth = inject(AutenticacaoService);
 
-  private usuarioItems: BottomNavItem[] = [
-    {
-      label: 'Dashboard',
-      route: '/home',
-      exact: true,
-      iconPath: 'M3 10.5L12 3l9 7.5v10.5h-6.5V14h-5v7H3V10.5z',
-    },
-  ];
+  private iconHome = 'M3 10.5L12 3l9 7.5v10.5h-6.5V14h-5v7H3V10.5z';
 
-  private adminItems: BottomNavItem[] = [
-    {
-      label: 'Dashboard',
-      route: '/admin',
-      exact: true,
-      iconPath: 'M3 10.5L12 3l9 7.5v10.5h-6.5V14h-5v7H3V10.5z',
-    },
-  ];
-
-  items = computed(() => (this.auth.isAdmin() ? this.adminItems : this.usuarioItems));
+  items = computed((): BottomNavItem[] => {
+    const slug = this.auth.getCandidatoSlug();
+    if (!slug) {
+      return [{ label: 'Início', route: '/selecionar-candidato', exact: true, iconPath: this.iconHome }];
+    }
+    const base = `/${slug}`;
+    if (this.auth.isAdmin()) {
+      return [{ label: 'Dashboard', route: `${base}/admin`, exact: true, iconPath: this.iconHome }];
+    }
+    return [{ label: 'Dashboard', route: `${base}/home`, exact: true, iconPath: this.iconHome }];
+  });
 }

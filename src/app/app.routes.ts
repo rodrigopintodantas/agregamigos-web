@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
 import { canActivateAuthRole } from './autenticacao/auth.guard';
+import { canActivateCandidatoSlug } from './autenticacao/candidato-slug.guard';
+import { canActivateUsuarioLogado } from './autenticacao/usuario-logado.guard';
 import { AppLayout } from './layout/component/app.layout';
 import { AdminDashboardComponent } from './pages/admin/dashboard/admin.dashboard.component';
 import { CriarUsuarioComponent } from './pages/criar-usuario/criar-usuario.component';
@@ -17,86 +19,110 @@ import { WhatsappComponent } from './pages/whatsapp/whatsapp.component';
 export const routes: Routes = [
   {
     path: '',
-    component: PrincipalComponent
+    component: PrincipalComponent,
   },
   {
-    path: 'link-cadastro',
-    component: LinkCadastroComponent
+    path: 'nao-encontrado',
+    component: NaoEncontradoComponent,
   },
   {
-    path: 'termo-consentimento',
-    component: TermoConsentimentoComponent
+    path: 'selecionar-candidato',
+    canActivate: [canActivateUsuarioLogado],
+    loadComponent: () =>
+      import('./pages/selecionar-candidato/selecionar-candidato.component').then(
+        (m) => m.SelecionarCandidatoComponent,
+      ),
   },
   {
-    path: 'admin',
+    path: ':candidatoSlug/link-cadastro',
+    component: LinkCadastroComponent,
+  },
+  {
+    path: ':candidatoSlug/termo-consentimento',
+    component: TermoConsentimentoComponent,
+  },
+  {
+    path: ':candidatoSlug/admin',
     component: AppLayout,
-    canActivate: [canActivateAuthRole],
+    canActivate: [canActivateAuthRole, canActivateCandidatoSlug],
     data: { roles: ['Administrador'] },
     children: [
       {
         path: '',
-        component: AdminDashboardComponent
+        component: AdminDashboardComponent,
       },
       {
         path: 'pessoas',
-        component: PessoaComponent
+        component: PessoaComponent,
       },
       {
         path: 'modelos-mensagem',
-        component: ModeloMensagemComponent
+        component: ModeloMensagemComponent,
       },
       {
         path: 'criar-usuario',
-        component: CriarUsuarioComponent
+        component: CriarUsuarioComponent,
       },
       {
         path: 'divulgacao',
-        component: DivulgacaoComponent
+        component: DivulgacaoComponent,
       },
       {
         path: 'whatsapp',
-        component: WhatsappComponent
+        component: WhatsappComponent,
       },
       {
         path: 'votacao',
-        component: VotacaoComponent
+        component: VotacaoComponent,
       },
       {
         path: 'ouvidoria',
-        component: OuvidoriaComponent
-      }
-    ]
+        component: OuvidoriaComponent,
+      },
+    ],
   },
   {
-    path: 'home',
+    path: ':candidatoSlug/home',
     component: AppLayout,
-    canActivate: [canActivateAuthRole],
+    canActivate: [canActivateAuthRole, canActivateCandidatoSlug],
     data: { roles: ['Usuario'] },
     children: [
       {
         path: '',
-        component: AdminDashboardComponent
+        component: AdminDashboardComponent,
       },
       {
         path: 'pessoas',
-        component: PessoaComponent
-      }
-    ]
+        component: PessoaComponent,
+      },
+    ],
   },
   {
-    path: 'perfil',
+    path: ':candidatoSlug/perfil',
     component: AppLayout,
-    canActivate: [canActivateAuthRole],
+    canActivate: [canActivateUsuarioLogado, canActivateCandidatoSlug],
     children: [
       {
         path: '',
-        loadComponent: () => import('./pages/perfil/meu-perfil.component').then((m) => m.MeuPerfilComponent)
-      }
-    ]
+        loadComponent: () =>
+          import('./pages/perfil/meu-perfil.component').then((m) => m.MeuPerfilComponent),
+      },
+    ],
   },
   {
-    path: 'nao-encontrado',
-    component: NaoEncontradoComponent
+    path: 'admin',
+    redirectTo: 'selecionar-candidato',
+    pathMatch: 'prefix',
   },
-  { path: '**', redirectTo: '/nao-encontrado' }
+  {
+    path: 'home',
+    redirectTo: 'selecionar-candidato',
+    pathMatch: 'prefix',
+  },
+  {
+    path: 'perfil',
+    redirectTo: 'selecionar-candidato',
+    pathMatch: 'full',
+  },
+  { path: '**', redirectTo: '/nao-encontrado' },
 ];

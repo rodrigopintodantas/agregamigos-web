@@ -76,8 +76,9 @@ export class PessoaService {
     return this.http.post<{ id: number; message: string }>(this.apiURL, payload);
   }
 
-  criarPorLink(payload: PessoaPayload): Observable<{ id: number; message: string }> {
-    return this.http.post<{ id: number; message: string }>(`${this.apiURL}/link-cadastro`, payload);
+  criarPorLink(slug: string, payload: PessoaPayload): Observable<{ id: number; message: string }> {
+    const s = encodeURIComponent(slug.trim().toLowerCase());
+    return this.http.post<{ id: number; message: string }>(`${this.apiURL}/link-cadastro/${s}`, payload);
   }
 
   atualizar(id: number, payload: PessoaPayload): Observable<{ message: string }> {

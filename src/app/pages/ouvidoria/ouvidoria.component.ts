@@ -1,5 +1,13 @@
 import { CommonModule } from '@angular/common';
-import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  HostListener,
+  OnDestroy,
+  OnInit,
+  inject,
+} from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { OuvidoriaItem, OuvidoriaService } from '../../service/ouvidoria.service';
 
@@ -32,9 +40,11 @@ const CHAVE_VAZIO = '__vazio__';
   imports: [CommonModule, FormsModule],
   templateUrl: './ouvidoria.component.html',
   styleUrl: './ouvidoria.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class OuvidoriaComponent implements OnInit, OnDestroy {
   private ouvidoriaService = inject(OuvidoriaService);
+  private cdr = inject(ChangeDetectorRef);
 
   painelFiltroEstilo: Record<string, string> | null = null;
   private filtroTriggerEl: HTMLElement | null = null;
@@ -49,6 +59,18 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
   );
 
   itens: OuvidoriaItem[] = [];
+  /** Texto para busca por registro (pré-calculado ao carregar `itens`). */
+  private textoBuscaPorId = new Map<number, string>();
+  /** Termo aplicado na filtragem (debounced em relação ao campo de busca). */
+  private termoBuscaAplicado = '';
+  private pesquisaDebounceHandle: ReturnType<typeof setTimeout> | null = null;
+
+  itensFiltrados: OuvidoriaItem[] = [];
+  itensFiltradosOrdenados: OuvidoriaItem[] = [];
+  itensPaginados: OuvidoriaItem[] = [];
+  totalPaginas = 1;
+  paginasVisiveisLista: number[] = [1];
+
   opcoesDistintasPorColuna: Record<string, string[]> = {};
   filtrosColuna: Record<string, string[]> = {};
   colunaFiltroAberta: string | null = null;
@@ -76,51 +98,64 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.pesquisaDebounceHandle != null) {
+      clearTimeout(this.pesquisaDebounceHandle);
+      this.pesquisaDebounceHandle = null;
+    }
     this.fecharPainelFiltro();
     this.menuExportarAberto = false;
     window.removeEventListener('scroll', this.reposicionarPainel, true);
     window.removeEventListener('resize', this.reposicionarPainel);
   }
 
-  get itensFiltrados(): OuvidoriaItem[] {
+  /** Evita reavaliação da lista a cada ciclo de change detection (crítico com ~100k+ linhas). */
+  trackByLinhaId = (_: number, v: OuvidoriaItem): number => v.id;
+
+  private reindexarTextoBusca(): void {
+    this.textoBuscaPorId.clear();
+    for (const v of this.itens) {
+      this.textoBuscaPorId.set(v.id, this.textoLinha(v));
+    }
+  }
+
+  /** Filtra + ordena; custo O(n) ou O(n log n) — chamar só quando dados, filtros, busca ou ordenação mudam. */
+  private recomputarFiltradoEOrdenado(): void {
     let lista = this.itens.filter((v) => this.passouFiltrosColuna(v));
-    const termo = this.termoPesquisa.trim().toLowerCase();
+    const termo = this.termoBuscaAplicado;
     if (termo) {
-      lista = lista.filter((item) => this.textoLinha(item).includes(termo));
+      lista = lista.filter((item) => (this.textoBuscaPorId.get(item.id) ?? '').includes(termo));
     }
-    return lista;
-  }
-
-  get itensFiltradosOrdenados(): OuvidoriaItem[] {
-    const base = this.itensFiltrados;
+    this.itensFiltrados = lista;
     if (!this.ordenacao) {
-      return base;
+      this.itensFiltradosOrdenados = lista;
+    } else {
+      this.itensFiltradosOrdenados = [...lista].sort((a, b) => this.compararOrdenacao(a, b));
     }
-    return [...base].sort((a, b) => this.compararOrdenacao(a, b));
+    this.atualizarPaginaSlice();
   }
 
-  get totalPaginas(): number {
-    const total = Math.ceil(this.itensFiltrados.length / this.itensPorPagina);
-    return Math.max(total, 1);
-  }
-
-  get itensPaginados(): OuvidoriaItem[] {
+  private atualizarPaginaSlice(): void {
     const inicio = (this.paginaAtual - 1) * this.itensPorPagina;
-    const fim = inicio + this.itensPorPagina;
-    return this.itensFiltradosOrdenados.slice(inicio, fim);
+    this.itensPaginados = this.itensFiltradosOrdenados.slice(inicio, inicio + this.itensPorPagina);
+    this.totalPaginas = Math.max(1, Math.ceil(this.itensFiltrados.length / this.itensPorPagina));
+    if (this.paginaAtual > this.totalPaginas) {
+      this.paginaAtual = this.totalPaginas;
+      const i2 = (this.paginaAtual - 1) * this.itensPorPagina;
+      this.itensPaginados = this.itensFiltradosOrdenados.slice(i2, i2 + this.itensPorPagina);
+    }
+    this.paginasVisiveisLista = this.calcPaginasVisiveis();
+    this.cdr.markForCheck();
   }
 
-  get paginasVisiveis(): number[] {
+  private calcPaginasVisiveis(): number[] {
     const maxBotoes = 5;
     const total = this.totalPaginas;
     if (total <= maxBotoes) {
       return Array.from({ length: total }, (_, index) => index + 1);
     }
-
     const metade = Math.floor(maxBotoes / 2);
     let inicio = this.paginaAtual - metade;
     let fim = this.paginaAtual + metade;
-
     if (inicio < 1) {
       inicio = 1;
       fim = maxBotoes;
@@ -128,26 +163,30 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
       fim = total;
       inicio = total - maxBotoes + 1;
     }
-
     return Array.from({ length: fim - inicio + 1 }, (_, index) => inicio + index);
   }
 
   carregar(): void {
     this.carregando = true;
     this.erro = '';
+    this.cdr.markForCheck();
     this.ouvidoriaService.listar().subscribe({
       next: (rows) => {
         this.itens = rows;
         this.filtrosColuna = {};
         this.ordenacao = { col: ORDENACAO_PADRAO.col, dir: ORDENACAO_PADRAO.dir };
         this.fecharPainelFiltro();
-        this.atualizarOpcoesDistintas();
+        this.opcoesDistintasPorColuna = {};
+        this.termoBuscaAplicado = this.termoPesquisa.trim().toLowerCase();
         this.paginaAtual = 1;
+        this.reindexarTextoBusca();
+        this.recomputarFiltradoEOrdenado();
         this.carregando = false;
       },
       error: (err) => {
         this.erro = err?.error?.message ?? 'Não foi possível carregar os dados de ouvidoria.';
         this.carregando = false;
+        this.cdr.markForCheck();
       },
     });
   }
@@ -164,10 +203,12 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
   alternarMenuExportar(ev: MouseEvent): void {
     ev.stopPropagation();
     this.menuExportarAberto = !this.menuExportarAberto;
+    this.cdr.markForCheck();
   }
 
   fecharMenuExportar(): void {
     this.menuExportarAberto = false;
+    this.cdr.markForCheck();
   }
 
   exportarPara(formato: 'csv' | 'xls'): void {
@@ -282,6 +323,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     this.erro = '';
     this.mensagemImportacao = '';
     this.importandoCsv = true;
+    this.cdr.markForCheck();
 
     try {
       const texto = await this.lerArquivoTexto(file);
@@ -290,6 +332,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
         this.importandoCsv = false;
         this.erro = 'Arquivo vazio ou sem registros válidos.';
         input.value = '';
+        this.cdr.markForCheck();
         return;
       }
 
@@ -299,6 +342,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
         this.importandoCsv = false;
         this.erro = `Arquivo inválido: faltam colunas obrigatórias: ${faltando.join(', ')}.`;
         input.value = '';
+        this.cdr.markForCheck();
         return;
       }
 
@@ -306,6 +350,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
         next: (resp) => {
           this.importandoCsv = false;
           this.mensagemImportacao = resp.message ?? 'Importação concluída.';
+          this.cdr.markForCheck();
           this.carregar();
           input.value = '';
         },
@@ -313,6 +358,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
           this.importandoCsv = false;
           this.erro = err?.error?.message ?? 'Não foi possível importar o arquivo.';
           input.value = '';
+          this.cdr.markForCheck();
         },
       });
     } catch (e) {
@@ -322,6 +368,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
           ? e.message
           : 'Não foi possível ler o arquivo. Use UTF-8 ou Windows-1252.';
       input.value = '';
+      this.cdr.markForCheck();
     }
   }
 
@@ -403,8 +450,16 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     return todas;
   }
 
-  aoAlterarPesquisa(): void {
+  agendarRecomputarPesquisa(): void {
     this.paginaAtual = 1;
+    if (this.pesquisaDebounceHandle != null) {
+      clearTimeout(this.pesquisaDebounceHandle);
+    }
+    this.pesquisaDebounceHandle = setTimeout(() => {
+      this.pesquisaDebounceHandle = null;
+      this.termoBuscaAplicado = this.termoPesquisa.trim().toLowerCase();
+      this.recomputarFiltradoEOrdenado();
+    }, 300);
   }
 
   alternarOrdenacao(col: string): void {
@@ -416,6 +471,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
       this.ordenacao = null;
     }
     this.paginaAtual = 1;
+    this.recomputarFiltradoEOrdenado();
   }
 
   ordenacaoAriaSort(col: string): 'ascending' | 'descending' | 'none' {
@@ -516,15 +572,20 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     ) {
       this.fecharPainelFiltro();
     }
-    if (!alvo?.closest?.('.exportar-wrap')) {
+    if (!alvo?.closest?.('.exportar-wrap') && this.menuExportarAberto) {
       this.menuExportarAberto = false;
+      this.cdr.markForCheck();
     }
   }
 
   private fecharPainelFiltro(): void {
+    if (this.colunaFiltroAberta === null && this.painelFiltroEstilo === null) {
+      return;
+    }
     this.colunaFiltroAberta = null;
     this.painelFiltroEstilo = null;
     this.filtroTriggerEl = null;
+    this.cdr.markForCheck();
   }
 
   private posicionarPainelFiltro(): void {
@@ -571,6 +632,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
       maxHeight: `${maxPainel}px`,
       zIndex: '5000',
     };
+    this.cdr.markForCheck();
   }
 
   rotuloOpcaoFiltro(chave: string): string {
@@ -594,10 +656,16 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     }
     this.colunaFiltroAberta = col;
     this.filtroTriggerEl = btn;
+    if (this.opcoesDistintasPorColuna[col] === undefined && this.itens.length > 0) {
+      this.atualizarOpcoesDistintasParaColuna(col);
+    }
     setTimeout(() => {
       this.posicionarPainelFiltro();
-      requestAnimationFrame(() => this.posicionarPainelFiltro());
+      requestAnimationFrame(() => {
+        this.posicionarPainelFiltro();
+      });
     });
+    this.cdr.markForCheck();
   }
 
   colunaComFiltroAtivo(col: string): boolean {
@@ -606,11 +674,12 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
 
   resumoFiltroColuna(col: string): string {
     const sel = this.filtrosColuna[col];
-    const total = this.opcoesFiltroParaColuna(col).length;
+    const opts = this.opcoesFiltroParaColuna(col);
+    const total = opts.length;
     if (!sel?.length) {
       return 'Todos';
     }
-    if (sel.length === total) {
+    if (total > 0 && sel.length === total) {
       return 'Todos';
     }
     return `${sel.length} selec.`;
@@ -635,34 +704,28 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
       this.filtrosColuna[col] = atual;
     }
     this.paginaAtual = 1;
+    this.recomputarFiltradoEOrdenado();
   }
 
   limparFiltroColuna(col: string, ev: MouseEvent): void {
     ev.stopPropagation();
     delete this.filtrosColuna[col];
     this.paginaAtual = 1;
+    this.recomputarFiltradoEOrdenado();
   }
 
-  private atualizarOpcoesDistintas(): void {
-    const map: Record<string, Set<string>> = {};
-    for (const col of this.colunasExibicao) {
-      map[col] = new Set<string>();
-    }
+  /** Opções distintas de uma coluna (carregadas sob demanda ao abrir o painel do filtro). */
+  private atualizarOpcoesDistintasParaColuna(col: string): void {
+    const set = new Set<string>();
     for (const v of this.itens) {
-      for (const col of this.colunasExibicao) {
-        map[col].add(this.valorChaveFiltro(v, col));
-      }
+      set.add(this.valorChaveFiltro(v, col));
     }
-    const next: Record<string, string[]> = {};
-    for (const col of this.colunasExibicao) {
-      const vals = Array.from(map[col]).sort((a, b) => {
-        if (a === CHAVE_VAZIO) return -1;
-        if (b === CHAVE_VAZIO) return 1;
-        return a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
-      });
-      next[col] = vals;
-    }
-    this.opcoesDistintasPorColuna = next;
+    const vals = Array.from(set).sort((a, b) => {
+      if (a === CHAVE_VAZIO) return -1;
+      if (b === CHAVE_VAZIO) return 1;
+      return a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
+    });
+    this.opcoesDistintasPorColuna = { ...this.opcoesDistintasPorColuna, [col]: vals };
   }
 
   private passouFiltrosColuna(v: OuvidoriaItem): boolean {
@@ -699,23 +762,27 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
 
   aoAlterarItensPorPagina(): void {
     this.paginaAtual = 1;
+    this.atualizarPaginaSlice();
   }
 
   paginaAnterior(): void {
     if (this.paginaAtual > 1) {
       this.paginaAtual -= 1;
+      this.atualizarPaginaSlice();
     }
   }
 
   proximaPagina(): void {
     if (this.paginaAtual < this.totalPaginas) {
       this.paginaAtual += 1;
+      this.atualizarPaginaSlice();
     }
   }
 
   irParaPagina(pagina: number): void {
     if (pagina < 1 || pagina > this.totalPaginas) return;
     this.paginaAtual = pagina;
+    this.atualizarPaginaSlice();
   }
 
   valorCelula(v: OuvidoriaItem, col: string): string | number | null {

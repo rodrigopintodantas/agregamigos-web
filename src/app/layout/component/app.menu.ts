@@ -13,7 +13,7 @@ import { LayoutUiService } from '../service/layout-ui.service';
       <li class="menu-section">Menu</li>
       <li>
         <a
-          [routerLink]="auth.isAdmin() ? '/admin' : '/home'"
+          [routerLink]="auth.isAdmin() ? auth.routerSegments('admin') : auth.routerSegments('home')"
           routerLinkActive="active-route"
           [routerLinkActiveOptions]="{ exact: true }"
           [attr.title]="ui.sidebarCollapsed() ? 'Dashboard' : null"
@@ -29,7 +29,9 @@ import { LayoutUiService } from '../service/layout-ui.service';
       </li>
       <li>
         <a
-          [routerLink]="auth.isAdmin() ? '/admin/pessoas' : '/home/pessoas'"
+          [routerLink]="
+            auth.isAdmin() ? auth.routerSegments('admin', 'pessoas') : auth.routerSegments('home', 'pessoas')
+          "
           routerLinkActive="active-route"
           [attr.title]="ui.sidebarCollapsed() ? 'Pessoas' : null"
           (click)="ui.closeMobileMenu()"
@@ -47,7 +49,7 @@ import { LayoutUiService } from '../service/layout-ui.service';
       </li>
       <li *ngIf="auth.isAdmin()">
         <a
-          routerLink="/admin/criar-usuario"
+          [routerLink]="auth.routerSegments('admin', 'criar-usuario')"
           routerLinkActive="active-route"
           [attr.title]="ui.sidebarCollapsed() ? 'Criar usuário' : null"
           (click)="ui.closeMobileMenu()"
@@ -62,7 +64,7 @@ import { LayoutUiService } from '../service/layout-ui.service';
       </li>
       <li *ngIf="auth.isAdmin()">
         <a
-          routerLink="/admin/votacao"
+          [routerLink]="auth.routerSegments('admin', 'votacao')"
           routerLinkActive="active-route"
           [attr.title]="ui.sidebarCollapsed() ? 'Votação' : null"
           (click)="ui.closeMobileMenu()"
@@ -81,7 +83,7 @@ import { LayoutUiService } from '../service/layout-ui.service';
       </li>
       <li *ngIf="auth.isAdmin()">
         <a
-          routerLink="/admin/ouvidoria"
+          [routerLink]="auth.routerSegments('admin', 'ouvidoria')"
           routerLinkActive="active-route"
           [attr.title]="ui.sidebarCollapsed() ? 'Ouvidoria' : null"
           (click)="ui.closeMobileMenu()"
@@ -97,7 +99,7 @@ import { LayoutUiService } from '../service/layout-ui.service';
       <li *ngIf="auth.isAdmin() && isAdminLogin()" class="menu-section">Campanha</li>
       <li *ngIf="auth.isAdmin() && isAdminLogin()">
         <a
-          routerLink="/admin/whatsapp"
+          [routerLink]="auth.routerSegments('admin', 'whatsapp')"
           routerLinkActive="active-route"
           [attr.title]="ui.sidebarCollapsed() ? 'Conexão WhatsApp' : null"
           (click)="ui.closeMobileMenu()"
@@ -115,7 +117,7 @@ import { LayoutUiService } from '../service/layout-ui.service';
       </li>
       <li *ngIf="auth.isAdmin() && isAdminLogin()">
         <a
-          routerLink="/admin/modelos-mensagem"
+          [routerLink]="auth.routerSegments('admin', 'modelos-mensagem')"
           routerLinkActive="active-route"
           [attr.title]="ui.sidebarCollapsed() ? 'Modelos de mensagem' : null"
           (click)="ui.closeMobileMenu()"
@@ -133,7 +135,7 @@ import { LayoutUiService } from '../service/layout-ui.service';
       </li>
       <li *ngIf="auth.isAdmin() && isAdminLogin()">
         <a
-          routerLink="/admin/divulgacao"
+          [routerLink]="auth.routerSegments('admin', 'divulgacao')"
           routerLinkActive="active-route"
           [attr.title]="ui.sidebarCollapsed() ? 'Divulgação' : null"
           (click)="ui.closeMobileMenu()"

@@ -3,13 +3,6 @@
     <h2>Ouvidoria</h2>
   </header>
 
-  <p class="ouv-ajuda">
-    Arquivo oficial: campos com <strong>|</strong>, sem cabeçalho; entre um registro e outro <strong>não há
-    "|"</strong> (o canal e a data da próxima manifestação ficam colados, ex. <code>INTERNET01/01/2025</code>).
-    Encoding: UTF-8 ou Windows-1252. Cada nova importação substitui todos os registros já gravados. Também é
-    aceito o CSV exportado por esta tela (uma linha por registro, com cabeçalho opcional).
-  </p>
-
   <p class="msg" *ngIf="carregando">Carregando...</p>
   <p class="msg erro" *ngIf="erro">{{ erro }}</p>
   <p class="msg sucesso" *ngIf="mensagemImportacao">{{ mensagemImportacao }}</p>
@@ -67,7 +60,7 @@
           type="text"
           placeholder="Filtrar por qualquer coluna"
           [(ngModel)]="termoPesquisa"
-          (ngModelChange)="aoAlterarPesquisa()"
+          (ngModelChange)="agendarRecomputarPesquisa()"
         />
       </div>
     </div>
@@ -116,7 +109,7 @@
           </tr>
         </thead>
         <tbody>
-          <tr *ngFor="let v of itensPaginados">
+          <tr *ngFor="let v of itensPaginados; trackBy: trackByLinhaId">
             <td
               *ngFor="let col of colunasExibicao"
               [class.celula-texto-longo]="
@@ -184,7 +177,7 @@
         <button
           type="button"
           class="pagina-numero"
-          *ngFor="let pagina of paginasVisiveis"
+          *ngFor="let pagina of paginasVisiveisLista"
           [class.ativa]="pagina === paginaAtual"
           (click)="irParaPagina(pagina)"
         >

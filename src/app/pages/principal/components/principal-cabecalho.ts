@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, inject } from '@angular/core';
+import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AutenticacaoService } from '../../../service/autenticacao.service';
@@ -41,9 +41,9 @@ import { AutenticacaoService } from '../../../service/autenticacao.service';
     </header>
 
     <p class="error" *ngIf="errorMessage">{{ errorMessage }}</p>
-  `
+  `,
 })
-export class PrincipalCabecalho {
+export class PrincipalCabecalho implements OnInit {
   auth = inject(AutenticacaoService);
   router = inject(Router);
 
@@ -55,12 +55,17 @@ export class PrincipalCabecalho {
   ngOnInit() {
     const token = this.auth.getAccessToken();
     const perfil = this.auth.getPerfil();
-    if (token && perfil?.dashboard) {
-      void this.router.navigate([perfil.dashboard]);
+    if (token && perfil?.dashboard && this.auth.temCandidatoSelecionado()) {
+      const dash = perfil.dashboard.replace(/^\//, '');
+      void this.router.navigateByUrl(this.auth.rotaComCandidato(dash));
+      return;
+    }
+    if (token && perfil && !this.auth.temCandidatoSelecionado()) {
+      void this.router.navigate(['/selecionar-candidato']);
       return;
     }
     if (token && !perfil) {
-      void this.router.navigate(['/home']);
+      void this.router.navigate(['/selecionar-candidato']);
     }
   }
 
@@ -75,14 +80,33 @@ export class PrincipalCabecalho {
     this.carregando = true;
     this.auth.autenticar(login, this.senhaInput).subscribe({
       next: (retorno) => {
+        const candidatos = retorno.candidatos ?? [];
+        if (candidatos.length === 0) {
+          this.carregando = false;
+          this.errorMessage = 'Nenhum candidato vinculado ao seu usuário. Contate o administrador.';
+          return;
+        }
+        if (candidatos.length === 1) {
+          this.auth.selecionarCandidato(candidatos[0].slug).subscribe({
+            next: (sel) => {
+              this.carregando = false;
+              const dash = retorno.papeis[0]?.dashboard?.replace(/^\//, '') ?? 'home';
+              void this.router.navigateByUrl(`/${sel.candidato.slug}/${dash}`);
+            },
+            error: (err) => {
+              this.carregando = false;
+              this.errorMessage = err?.error?.message ?? 'Não foi possível definir o candidato.';
+            },
+          });
+          return;
+        }
         this.carregando = false;
-        const dashboard = retorno.papeis[0]?.dashboard || '/home';
-        void this.router.navigate([dashboard]);
+        void this.router.navigate(['/selecionar-candidato']);
       },
       error: (err) => {
         this.carregando = false;
         this.errorMessage = err?.error?.message ?? 'Não foi possível entrar. Verifique login/email e senha.';
-      }
+      },
     });
   }
 }

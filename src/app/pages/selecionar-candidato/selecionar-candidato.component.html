@@ -1,0 +1,18 @@
+<div class="wrap">
+  <h1>Escolher candidato</h1>
+  <p class="sub">Selecione em qual campanha deseja trabalhar agora.</p>
+
+  <p class="err" *ngIf="erro">{{ erro }}</p>
+
+  <div class="loading" *ngIf="carregando">Carregando…</div>
+
+  <ul class="lista" *ngIf="!carregando && candidatos.length">
+    <li *ngFor="let c of candidatos">
+      <button type="button" class="card" (click)="escolher(c)" [disabled]="!!selecionandoSlug">
+        <span class="nome">{{ c.nome }}</span>
+        <span class="slug">/{{ c.slug }}</span>
+        <span class="busy" *ngIf="selecionandoSlug === c.slug">Abrindo…</span>
+      </button>
+    </li>
+  </ul>
+</div>

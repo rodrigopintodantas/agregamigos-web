@@ -45,6 +45,7 @@ import { LayoutUiService } from '../service/layout-ui.service';
             </svg>
           </button>
           <div class="user-menu-dropdown" *ngIf="menuUsuarioAberto" role="menu" aria-label="Conta">
+            <button type="button" class="user-menu-item" role="menuitem" (click)="trocarCandidato()">Trocar candidato</button>
             <button type="button" class="user-menu-item" role="menuitem" (click)="irMeuPerfil()">Meu Perfil</button>
             <button type="button" class="user-menu-item" role="menuitem" (click)="sair()">Sair</button>
           </div>
@@ -81,7 +82,12 @@ export class AppBarraSuperior {
 
   irMeuPerfil() {
     this.menuUsuarioAberto = false;
-    void this.router.navigate(['/perfil']);
+    void this.router.navigateByUrl(this.auth.rotaComCandidato('perfil'));
+  }
+
+  trocarCandidato() {
+    this.menuUsuarioAberto = false;
+    void this.router.navigate(['/selecionar-candidato']);
   }
 
   sair() {
