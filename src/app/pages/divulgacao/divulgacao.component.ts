@@ -29,6 +29,9 @@ export class DivulgacaoComponent implements OnInit {
   private modeloService = inject(ModeloMensagemService);
   private campanhaService = inject(CampanhaDivulgacaoService);
 
+  /** `false`: botão oculto na UI; fluxo `reprocessarErros` permanece no componente. */
+  readonly exibirBotaoReprocessarErros = false;
+
   campanhas: CampanhaDivulgacaoItem[] = [];
   campanhaAbertaId: number | null = null;
   detalhesCampanha: Record<number, CampanhaDestinatarioDetalhe[]> = {};
@@ -155,6 +158,10 @@ export class DivulgacaoComponent implements OnInit {
     return [...new Set(this.pessoas.map((p) => String(p.endereco?.bairro ?? '').trim()).filter(Boolean))].sort(
       (a, b) => a.localeCompare(b, 'pt-BR'),
     );
+  }
+
+  get criarCampanhaDesabilitadoPorEmAndamento(): boolean {
+    return this.campanhas.some((c) => c.status === 'em_andamento');
   }
 
   togglePessoa(id: number, checked: boolean): void {

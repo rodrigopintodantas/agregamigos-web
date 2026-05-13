@@ -156,7 +156,7 @@ export class AppMenu {
   ui = inject(LayoutUiService);
 
   isAdminLogin(): boolean {
-    return (this.auth.getUserLogin() ?? '').trim().toLowerCase() === 'admin';
+    return this.auth.isLoginAdminSistema();
   }
 }
 

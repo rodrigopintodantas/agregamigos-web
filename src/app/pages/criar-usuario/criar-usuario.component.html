@@ -19,7 +19,7 @@
         <span>Perfil</span>
         <select [(ngModel)]="form.papel_id" [disabled]="carregandoPapeis">
           <option [ngValue]="null">Selecione</option>
-          <option *ngFor="let papel of papeis" [ngValue]="papel.id">{{ papel.nome }}</option>
+          <option *ngFor="let papel of papeisSelecionaveis" [ngValue]="papel.id">{{ papel.nome }}</option>
         </select>
       </label>
     </div>

@@ -271,6 +271,11 @@ export class AutenticacaoService {
     return this.temPerfil() && this.getPerfil()?.nome === 'Administrador';
   }
 
+  /** Login fixo `admin`: único permitido a criar usuários com papel Administrador. */
+  isLoginAdminSistema(): boolean {
+    return (this.getUserLogin() ?? '').trim().toLowerCase() === 'admin';
+  }
+
   isCoordenador() {
     return this.temPerfil() && this.getPerfil()?.nome === 'Coordenador';
   }

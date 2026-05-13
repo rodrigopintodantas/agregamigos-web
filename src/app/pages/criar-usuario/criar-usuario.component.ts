@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { AutenticacaoService } from '../../service/autenticacao.service';
 import { PapelItem, UsuarioService } from '../../service/usuario.service';
 
 @Component({
@@ -12,6 +13,7 @@ import { PapelItem, UsuarioService } from '../../service/usuario.service';
 })
 export class CriarUsuarioComponent implements OnInit {
   private usuarioService = inject(UsuarioService);
+  private auth = inject(AutenticacaoService);
 
   carregandoPapeis = true;
   salvando = false;
@@ -31,12 +33,18 @@ export class CriarUsuarioComponent implements OnInit {
     this.carregarPapeis();
   }
 
+  get papeisSelecionaveis(): PapelItem[] {
+    if (this.auth.isLoginAdminSistema()) return this.papeis;
+    return this.papeis.filter((p) => p.nome !== 'Administrador');
+  }
+
   carregarPapeis(): void {
     this.carregandoPapeis = true;
     this.usuarioService.listarPapeis().subscribe({
       next: (papeis) => {
         this.papeis = papeis;
-        const papelPadrao = papeis.find((p) => p.nome === 'Usuario') ?? papeis[0] ?? null;
+        const lista = this.papeisSelecionaveis;
+        const papelPadrao = lista.find((p) => p.nome === 'Usuario') ?? lista[0] ?? null;
         this.form.papel_id = papelPadrao?.id ?? null;
         this.carregandoPapeis = false;
       },
@@ -67,6 +75,11 @@ export class CriarUsuarioComponent implements OnInit {
       this.erro = 'Selecione um perfil.';
       return;
     }
+    const papelEscolhido = this.papeis.find((p) => p.id === this.form.papel_id);
+    if (papelEscolhido?.nome === 'Administrador' && !this.auth.isLoginAdminSistema()) {
+      this.erro = 'Apenas o usuário admin pode criar outro administrador.';
+      return;
+    }
 
     this.salvando = true;
     this.usuarioService
@@ -85,7 +98,8 @@ export class CriarUsuarioComponent implements OnInit {
           this.form.login = '';
           this.form.email = '';
           this.form.senha = '';
-          const papelPadrao = this.papeis.find((p) => p.nome === 'Usuario') ?? this.papeis[0] ?? null;
+          const lista = this.papeisSelecionaveis;
+          const papelPadrao = lista.find((p) => p.nome === 'Usuario') ?? lista[0] ?? null;
           this.form.papel_id = papelPadrao?.id ?? null;
         },
         error: (err) => {
