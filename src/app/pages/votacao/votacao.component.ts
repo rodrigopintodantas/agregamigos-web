@@ -83,6 +83,8 @@ export class VotacaoComponent implements OnInit, OnDestroy {
   filtrosColuna: Record<string, string[]> = {};
   /** Qual painel de filtro está aberto (nome da coluna). */
   colunaFiltroAberta: string | null = null;
+  /** Texto da busca dentro do painel de filtro (refina a lista de checkboxes). */
+  termoBuscaFiltro = '';
 
   /** Ordenação aplicada sobre os registros filtrados; null = ordem original da API. */
   ordenacao: { col: string; dir: 'asc' | 'desc' } | null = {
@@ -633,6 +635,7 @@ export class VotacaoComponent implements OnInit, OnDestroy {
     this.colunaFiltroAberta = null;
     this.painelFiltroEstilo = null;
     this.filtroTriggerEl = null;
+    this.termoBuscaFiltro = '';
   }
 
   private posicionarPainelFiltro(): void {
@@ -658,7 +661,7 @@ export class VotacaoComponent implements OnInit, OnDestroy {
     let top: number;
     let maxPainel: number;
 
-    if (espacoAbaixo >= 150 || espacoAbaixo >= espacoAcima) {
+    if (espacoAbaixo >= 180 || espacoAbaixo >= espacoAcima) {
       top = r.bottom + 4;
       maxPainel = Math.min(280, Math.max(100, espacoAbaixo - 4));
     } else {
@@ -689,6 +692,17 @@ export class VotacaoComponent implements OnInit, OnDestroy {
     return this.opcoesDistintasPorColuna[col] ?? [];
   }
 
+  /** Opções do painel atual filtradas pelo texto de busca (rótulo ou chave). */
+  opcoesFiltroFiltradas(col: string): string[] {
+    const todas = this.opcoesFiltroParaColuna(col);
+    const q = this.termoBuscaFiltro.trim().toLowerCase();
+    if (!q) return todas;
+    return todas.filter((chave) => {
+      const rotulo = this.rotuloOpcaoFiltro(chave).toLowerCase();
+      return rotulo.includes(q) || chave.toLowerCase().includes(q);
+    });
+  }
+
   painelFiltroAbertoPara(col: string): boolean {
     return this.colunaFiltroAberta === col;
   }
@@ -701,10 +715,12 @@ export class VotacaoComponent implements OnInit, OnDestroy {
       return;
     }
     this.colunaFiltroAberta = col;
+    this.termoBuscaFiltro = '';
     this.filtroTriggerEl = btn;
     setTimeout(() => {
       this.posicionarPainelFiltro();
       requestAnimationFrame(() => this.posicionarPainelFiltro());
+      document.querySelector<HTMLInputElement>('.filtro-dropdown-busca-input')?.focus();
     });
   }
 

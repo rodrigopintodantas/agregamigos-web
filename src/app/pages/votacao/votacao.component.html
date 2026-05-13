@@ -154,8 +154,27 @@
       role="listbox"
       [attr.aria-label]="'Filtro: ' + tituloColuna(colunaPainel)"
     >
+      <div class="filtro-dropdown-busca-wrap">
+        <span class="filtro-dropdown-busca-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+          </svg>
+        </span>
+        <input
+          type="search"
+          class="filtro-dropdown-busca-input"
+          placeholder="Pesquisar opções…"
+          [(ngModel)]="termoBuscaFiltro"
+          (click)="$event.stopPropagation()"
+          autocomplete="off"
+          spellcheck="false"
+          [attr.aria-label]="'Pesquisar opções em ' + tituloColuna(colunaPainel)"
+        />
+      </div>
+      <p class="filtro-dropdown-hint">Marque uma ou mais opções.</p>
       <div class="filtro-dropdown-scroll">
-        <label *ngFor="let chave of opcoesFiltroParaColuna(colunaPainel)" class="filtro-opcao">
+        <label *ngFor="let chave of opcoesFiltroFiltradas(colunaPainel)" class="filtro-opcao">
           <input
             type="checkbox"
             [checked]="opcaoFiltroMarcada(colunaPainel, chave)"
@@ -163,6 +182,12 @@
           />
           <span>{{ rotuloOpcaoFiltro(chave) }}</span>
         </label>
+        <p
+          *ngIf="opcoesFiltroFiltradas(colunaPainel).length === 0"
+          class="filtro-dropdown-vazio"
+        >
+          {{ termoBuscaFiltro.trim() ? 'Nenhuma opção corresponde à busca.' : 'Nenhuma opção disponível.' }}
+        </p>
       </div>
       <div class="filtro-dropdown-rodape">
         <button type="button" class="filtro-link" (click)="limparFiltroColuna(colunaPainel, $event)">

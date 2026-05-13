@@ -1,7 +1,12 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PessoaItem, PessoaPayload, PessoaService } from '../../service/pessoa.service';
+
+const CHAVE_VAZIO = '__vazio__';
+
+const COLUNAS_FILTRO = ['bairro', 'candidato', 'erro_whatsapp', 'engajamento'] as const;
+type PessoaFiltroCol = (typeof COLUNAS_FILTRO)[number];
 
 type ViaCepResponse = {
   cep?: string;
@@ -21,10 +26,24 @@ type ViaCepResponse = {
   templateUrl: './pessoa.component.html',
   styleUrl: './pessoa.component.scss',
 })
-export class PessoaComponent implements OnInit {
+export class PessoaComponent implements OnInit, OnDestroy {
   private pessoaService = inject(PessoaService);
 
+  /** Painel de filtro ancorado na viewport (fora do overflow da tabela). */
+  painelFiltroEstilo: Record<string, string> | null = null;
+  private filtroTriggerEl: HTMLElement | null = null;
+  private readonly reposicionarPainel = (): void => {
+    if (this.colunaFiltroAberta && this.filtroTriggerEl) {
+      this.posicionarPainelFiltro();
+    }
+  };
+
   pessoas: PessoaItem[] = [];
+  opcoesDistintasPorColuna: Record<string, string[]> = {};
+  filtrosColuna: Record<string, string[]> = {};
+  colunaFiltroAberta: PessoaFiltroCol | null = null;
+  termoBuscaFiltro = '';
+
   termoPesquisa = '';
   carregando = true;
   erro = '';
@@ -61,20 +80,33 @@ export class PessoaComponent implements OnInit {
 
   ngOnInit(): void {
     this.carregarPessoas();
+    window.addEventListener('scroll', this.reposicionarPainel, true);
+    window.addEventListener('resize', this.reposicionarPainel);
+  }
+
+  ngOnDestroy(): void {
+    this.fecharPainelFiltro();
+    window.removeEventListener('scroll', this.reposicionarPainel, true);
+    window.removeEventListener('resize', this.reposicionarPainel);
   }
 
   get pessoasFiltradas(): PessoaItem[] {
+    let lista = this.pessoas.filter((p) => this.passouFiltrosColuna(p));
     const termo = this.termoPesquisa.trim().toLowerCase();
     if (!termo) {
-      return this.pessoas;
+      return lista;
     }
 
-    return this.pessoas.filter((p) => {
+    return lista.filter((p) => {
       const campos = [
         p.nome ?? '',
         p.email ?? '',
         p.whatsapp ?? '',
         p.endereco?.bairro ?? '',
+        p.candidato_nome ?? '',
+        p.candidato_slug ?? '',
+        p.erro_whatsapp ? 'erro whatsapp' : 'sem erro',
+        this.labelEngajamento(p),
       ]
         .join(' ')
         .toLowerCase();
@@ -121,6 +153,9 @@ export class PessoaComponent implements OnInit {
     this.pessoaService.listar().subscribe({
       next: (pessoas) => {
         this.pessoas = pessoas;
+        this.filtrosColuna = {};
+        this.fecharPainelFiltro();
+        this.atualizarOpcoesDistintas();
         this.paginaAtual = 1;
         this.carregando = false;
       },
@@ -402,7 +437,11 @@ export class PessoaComponent implements OnInit {
   }
 
   labelEngajamento(p: PessoaItem): string {
-    switch (this.engajamentoKey(p)) {
+    return this.labelEngajamentoPorKey(this.engajamentoKey(p));
+  }
+
+  private labelEngajamentoPorKey(k: 'sem_resposta' | 'positivo' | 'negativo' | 'neutro'): string {
+    switch (k) {
       case 'positivo':
         return 'Positivo';
       case 'negativo':
@@ -411,6 +450,237 @@ export class PessoaComponent implements OnInit {
         return 'Neutro';
       default:
         return 'Sem resposta';
+    }
+  }
+
+  tituloPainelFiltro(col: PessoaFiltroCol): string {
+    switch (col) {
+      case 'bairro':
+        return 'Bairro';
+      case 'candidato':
+        return 'Candidato';
+      case 'erro_whatsapp':
+        return 'Erro WhatsApp?';
+      case 'engajamento':
+        return 'Engajamento';
+    }
+  }
+
+  private valorChaveFiltro(p: PessoaItem, col: PessoaFiltroCol): string {
+    switch (col) {
+      case 'bairro':
+        return (p.endereco?.bairro ?? '').trim() || CHAVE_VAZIO;
+      case 'candidato':
+        return (p.candidato_nome ?? '').trim() || CHAVE_VAZIO;
+      case 'erro_whatsapp':
+        return p.erro_whatsapp ? 'erro' : 'sem';
+      case 'engajamento':
+        return this.engajamentoKey(p);
+      default:
+        return CHAVE_VAZIO;
+    }
+  }
+
+  rotuloOpcaoFiltro(col: PessoaFiltroCol, chave: string): string {
+    if (chave === CHAVE_VAZIO) return '(vazio)';
+    if (col === 'erro_whatsapp') {
+      if (chave === 'erro') return 'Erro WhatsApp';
+      if (chave === 'sem') return 'Sem erro';
+    }
+    if (col === 'engajamento') {
+      return this.labelEngajamentoPorKey(chave as 'sem_resposta' | 'positivo' | 'negativo' | 'neutro');
+    }
+    return chave;
+  }
+
+  opcoesFiltroParaColuna(col: PessoaFiltroCol): string[] {
+    return this.opcoesDistintasPorColuna[col] ?? [];
+  }
+
+  opcoesFiltroFiltradas(col: PessoaFiltroCol): string[] {
+    const todas = this.opcoesFiltroParaColuna(col);
+    const q = this.termoBuscaFiltro.trim().toLowerCase();
+    if (!q) return todas;
+    return todas.filter((chave) => {
+      const rotulo = this.rotuloOpcaoFiltro(col, chave).toLowerCase();
+      return rotulo.includes(q) || chave.toLowerCase().includes(q);
+    });
+  }
+
+  painelFiltroAbertoPara(col: PessoaFiltroCol): boolean {
+    return this.colunaFiltroAberta === col;
+  }
+
+  alternarPainelFiltro(col: PessoaFiltroCol, ev: MouseEvent): void {
+    ev.stopPropagation();
+    const btn = ev.currentTarget as HTMLElement;
+    if (this.colunaFiltroAberta === col) {
+      this.fecharPainelFiltro();
+      return;
+    }
+    this.colunaFiltroAberta = col;
+    this.termoBuscaFiltro = '';
+    this.filtroTriggerEl = btn;
+    setTimeout(() => {
+      this.posicionarPainelFiltro();
+      requestAnimationFrame(() => this.posicionarPainelFiltro());
+      document.querySelector<HTMLInputElement>('.filtro-dropdown-busca-input')?.focus();
+    });
+  }
+
+  colunaComFiltroAtivo(col: PessoaFiltroCol): boolean {
+    return (this.filtrosColuna[col]?.length ?? 0) > 0;
+  }
+
+  resumoFiltroColuna(col: PessoaFiltroCol): string {
+    const sel = this.filtrosColuna[col];
+    const total = this.opcoesFiltroParaColuna(col).length;
+    if (!sel?.length) {
+      return 'Todos';
+    }
+    if (sel.length === total) {
+      return 'Todos';
+    }
+    return `${sel.length} selec.`;
+  }
+
+  opcaoFiltroMarcada(col: PessoaFiltroCol, chave: string): boolean {
+    return this.filtrosColuna[col]?.includes(chave) ?? false;
+  }
+
+  alternarOpcaoFiltro(col: PessoaFiltroCol, chave: string): void {
+    const atual = [...(this.filtrosColuna[col] ?? [])];
+    const i = atual.indexOf(chave);
+    if (i >= 0) {
+      atual.splice(i, 1);
+    } else {
+      atual.push(chave);
+    }
+    const todas = this.opcoesFiltroParaColuna(col);
+    if (atual.length === 0 || atual.length === todas.length) {
+      delete this.filtrosColuna[col];
+    } else {
+      this.filtrosColuna[col] = atual;
+    }
+    this.paginaAtual = 1;
+  }
+
+  limparFiltroColuna(col: PessoaFiltroCol, ev: MouseEvent): void {
+    ev.stopPropagation();
+    delete this.filtrosColuna[col];
+    this.paginaAtual = 1;
+  }
+
+  private atualizarOpcoesDistintas(): void {
+    const map: Record<PessoaFiltroCol, Set<string>> = {
+      bairro: new Set(),
+      candidato: new Set(),
+      erro_whatsapp: new Set(),
+      engajamento: new Set(),
+    };
+    for (const p of this.pessoas) {
+      for (const col of COLUNAS_FILTRO) {
+        map[col].add(this.valorChaveFiltro(p, col));
+      }
+    }
+
+    const next: Record<string, string[]> = {};
+    for (const col of COLUNAS_FILTRO) {
+      const vals = Array.from(map[col]).sort((a, b) => {
+        if (col === 'engajamento') {
+          const ordem = ['sem_resposta', 'positivo', 'neutro', 'negativo'];
+          const ia = ordem.indexOf(a);
+          const ib = ordem.indexOf(b);
+          if (ia >= 0 && ib >= 0) return ia - ib;
+          if (ia >= 0) return -1;
+          if (ib >= 0) return 1;
+        }
+        if (a === CHAVE_VAZIO) return -1;
+        if (b === CHAVE_VAZIO) return 1;
+        if (col === 'erro_whatsapp') {
+          const ordemErro = ['sem', 'erro'];
+          return ordemErro.indexOf(a) - ordemErro.indexOf(b);
+        }
+        return a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
+      });
+      next[col] = vals;
+    }
+    this.opcoesDistintasPorColuna = next;
+  }
+
+  private passouFiltrosColuna(p: PessoaItem): boolean {
+    for (const col of COLUNAS_FILTRO) {
+      const selecionados = this.filtrosColuna[col];
+      if (!selecionados?.length) continue;
+      const chave = this.valorChaveFiltro(p, col);
+      if (!selecionados.includes(chave)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  private fecharPainelFiltro(): void {
+    this.colunaFiltroAberta = null;
+    this.painelFiltroEstilo = null;
+    this.filtroTriggerEl = null;
+    this.termoBuscaFiltro = '';
+  }
+
+  private posicionarPainelFiltro(): void {
+    const trigger = this.filtroTriggerEl;
+    if (!trigger || !this.colunaFiltroAberta) {
+      return;
+    }
+    const r = trigger.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const margem = 8;
+    const panelWidth = Math.min(288, vw - margem * 2);
+    let left = r.left;
+    if (left + panelWidth > vw - margem) {
+      left = vw - margem - panelWidth;
+    }
+    if (left < margem) {
+      left = margem;
+    }
+
+    const espacoAbaixo = vh - r.bottom - margem;
+    const espacoAcima = r.top - margem;
+    let top: number;
+    let maxPainel: number;
+
+    if (espacoAbaixo >= 180 || espacoAbaixo >= espacoAcima) {
+      top = r.bottom + 4;
+      maxPainel = Math.min(280, Math.max(100, espacoAbaixo - 4));
+    } else {
+      maxPainel = Math.min(280, Math.max(100, espacoAcima - 4));
+      top = r.top - 4 - maxPainel;
+    }
+
+    if (top < margem) {
+      maxPainel = Math.max(80, maxPainel - (margem - top));
+      top = margem;
+    }
+
+    this.painelFiltroEstilo = {
+      position: 'fixed',
+      top: `${top}px`,
+      left: `${left}px`,
+      width: `${panelWidth}px`,
+      maxHeight: `${maxPainel}px`,
+      zIndex: '5000',
+    };
+  }
+
+  @HostListener('document:click', ['$event'])
+  fecharPainelFiltroSeFora(ev: MouseEvent): void {
+    const alvo = ev.target as HTMLElement | null;
+    if (
+      !alvo?.closest?.('.filtro-col-wrap') &&
+      !alvo?.closest?.('.filtro-dropdown-panel--portal')
+    ) {
+      this.fecharPainelFiltro();
     }
   }
 

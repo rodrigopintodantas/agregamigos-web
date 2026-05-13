@@ -4,6 +4,14 @@
   padding: 0 1rem;
 }
 
+.topo {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.25rem;
+}
+
 h1 {
   font-size: 1.35rem;
   margin: 0 0 0.35rem;
@@ -13,6 +21,22 @@ h1 {
   margin: 0 0 1.25rem;
   color: var(--color-text-muted, #5c5c5c);
   font-size: 0.95rem;
+}
+
+.btn-novo {
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: #fff;
+  cursor: pointer;
+}
+
+.btn-novo:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .err {
@@ -63,4 +87,106 @@ h1 {
 .busy {
   font-size: 0.8rem;
   color: #444;
+}
+
+.dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.45);
+}
+
+.dialog {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1001;
+  width: min(400px, calc(100vw - 2rem));
+  max-height: calc(100vh - 2rem);
+  overflow: auto;
+  padding: 1.25rem 1.35rem;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.dialog h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.15rem;
+}
+
+.dialog-hint {
+  margin: 0 0 1rem;
+  font-size: 0.88rem;
+  color: #444;
+  line-height: 1.4;
+}
+
+.dialog-hint code {
+  font-size: 0.85em;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+  font-size: 0.9rem;
+}
+
+.field span {
+  font-weight: 500;
+}
+
+.field input {
+  padding: 0.5rem 0.6rem;
+  border-radius: 8px;
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  font-size: 1rem;
+}
+
+.btn-link {
+  display: block;
+  margin: -0.25rem 0 1rem;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #1565c0;
+  text-decoration: underline;
+  cursor: pointer;
+  font-size: 0.88rem;
+  text-align: left;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.btn-cancel,
+.btn-primary {
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  cursor: pointer;
+}
+
+.btn-cancel {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  background: #fff;
+}
+
+.btn-primary {
+  border: none;
+  background: #1565c0;
+  color: #fff;
+}
+
+.btn-cancel:disabled,
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }

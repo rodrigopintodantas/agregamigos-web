@@ -50,7 +50,7 @@ export class AutenticacaoService {
     this.syncCandidatoDoToken();
   }
 
-  /** Monta caminho absoluto com slug do candidato ativo, ex.: `/piloto/admin/pessoas`. */
+  /** Monta caminho absoluto com slug do candidato ativo, ex.: `/michello-bueno/admin/pessoas`. */
   rotaComCandidato(...segments: string[]): string {
     const slug = this.getCandidatoSlug();
     if (!slug) {
@@ -60,7 +60,7 @@ export class AutenticacaoService {
     return `/${slug}/${limpos.join('/')}`;
   }
 
-  /** Segmentos para `routerLink`, ex. `['/', 'piloto', 'admin', 'pessoas']`. */
+  /** Segmentos para `routerLink`, ex. `['/', 'michello-bueno', 'admin', 'pessoas']`. */
   routerSegments(...parts: string[]): (string | number)[] {
     const slug = this.getCandidatoSlug();
     if (!slug) {

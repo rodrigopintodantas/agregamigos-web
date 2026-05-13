@@ -40,6 +40,8 @@ export interface PessoaItem {
   engajamento_whatsapp?: EngajamentoWhatsapp | string;
   instagram?: string | null;
   indicacao?: string | null;
+  candidato_nome?: string | null;
+  candidato_slug?: string | null;
   endereco?: EnderecoPayload | null;
 }
 

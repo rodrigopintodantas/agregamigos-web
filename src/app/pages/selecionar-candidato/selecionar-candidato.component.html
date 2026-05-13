@@ -1,6 +1,19 @@
 <div class="wrap">
-  <h1>Escolher candidato</h1>
-  <p class="sub">Selecione em qual campanha deseja trabalhar agora.</p>
+  <div class="topo">
+    <div>
+      <h1>Escolher candidato</h1>
+      <p class="sub">Selecione em qual campanha deseja trabalhar agora.</p>
+    </div>
+    <button
+      *ngIf="isUsuarioAdminLogin()"
+      type="button"
+      class="btn-novo"
+      (click)="abrirDialogNovo()"
+      [disabled]="carregando"
+    >
+      Novo candidato
+    </button>
+  </div>
 
   <p class="err" *ngIf="erro">{{ erro }}</p>
 
@@ -15,4 +28,33 @@
       </button>
     </li>
   </ul>
+</div>
+
+<div class="dialog-backdrop" *ngIf="dialogAberto" (click)="fecharDialog()"></div>
+<div class="dialog" *ngIf="dialogAberto" role="dialog" aria-modal="true" aria-labelledby="dlg-novo-candidato-titulo">
+  <h2 id="dlg-novo-candidato-titulo">Novo candidato</h2>
+  <p class="dialog-hint">
+    O <strong>slug</strong> aparece na URL (ex.: <code>/leticia/admin</code>). Só letras minúsculas, números e hífens.
+  </p>
+
+  <label class="field">
+    <span>Nome exibido</span>
+    <input type="text" [(ngModel)]="formNovoNome" maxlength="160" autocomplete="off" placeholder="Ex.: Letícia" />
+  </label>
+
+  <label class="field">
+    <span>Slug (URL)</span>
+    <input type="text" [(ngModel)]="formNovoSlug" maxlength="80" autocomplete="off" placeholder="Ex.: leticia" />
+  </label>
+
+  <button type="button" class="btn-link" (click)="sugerirSlugAPartirDoNome()">Sugerir slug a partir do nome</button>
+
+  <p class="err" *ngIf="dialogErro">{{ dialogErro }}</p>
+
+  <div class="dialog-actions">
+    <button type="button" class="btn-cancel" (click)="fecharDialog()" [disabled]="salvandoNovo">Cancelar</button>
+    <button type="button" class="btn-primary" (click)="salvarNovoCandidato()" [disabled]="salvandoNovo">
+      {{ salvandoNovo ? 'Salvando…' : 'Criar' }}
+    </button>
+  </div>
 </div>
