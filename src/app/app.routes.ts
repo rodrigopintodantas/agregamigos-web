@@ -98,6 +98,22 @@ export const routes: Routes = [
     ],
   },
   {
+    path: ':candidatoSlug/coordenador',
+    component: AppLayout,
+    canActivate: [canActivateAuthRole, canActivateCandidatoSlug],
+    data: { roles: ['Coordenador'] },
+    children: [
+      {
+        path: '',
+        component: AdminDashboardComponent,
+      },
+      {
+        path: 'pessoas',
+        component: PessoaComponent,
+      },
+    ],
+  },
+  {
     path: ':candidatoSlug/perfil',
     component: AppLayout,
     canActivate: [canActivateUsuarioLogado, canActivateCandidatoSlug],

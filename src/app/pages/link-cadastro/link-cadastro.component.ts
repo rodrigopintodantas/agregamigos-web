@@ -1,7 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
+import { combineLatest, distinctUntilChanged, map } from 'rxjs';
 import { PessoaPayload, PessoaService } from '../../service/pessoa.service';
 
 type ViaCepResponse = {
@@ -25,10 +26,139 @@ export class LinkCadastroComponent implements OnInit {
   private pessoaService = inject(PessoaService);
   private route = inject(ActivatedRoute);
   candidatoSlug = '';
+  candidatoTitulo = 'Cadastro';
+  carregandoContexto = true;
+  erroContexto = '';
+  coordenadores: { id: number; nome: string }[] = [];
+  idCoordenadorSelecionado: number | null = null;
+  /** Quando a URL traz chave de divulgação opaca ou `?coordenador=id` válido, o campo não pode ser alterado. */
+  coordenadorTravado = false;
+  nomeCoordenadorTravado = '';
+  avisoCoordenadorUrl = '';
+
   ngOnInit(): void {
-    this.route.paramMap.subscribe((pm) => {
-      this.candidatoSlug = (pm.get('candidatoSlug') ?? '').trim().toLowerCase();
+    combineLatest([
+      this.route.paramMap.pipe(map((pm) => (pm.get('candidatoSlug') ?? '').trim().toLowerCase())),
+      this.route.queryParamMap,
+    ])
+      .pipe(
+        map(([slug, qm]) => ({
+          slug,
+          qm,
+          serial: this.serialQueryContexto(slug, qm),
+          queryObj: this.queryParamRecord(qm),
+          coordRaw: qm.get('coordenador'),
+        })),
+        distinctUntilChanged((a, b) => a.serial === b.serial),
+      )
+      .subscribe(({ slug, queryObj, coordRaw }) => {
+        this.erroContexto = '';
+        this.sucesso = '';
+        this.erro = '';
+        this.avisoCoordenadorUrl = '';
+        this.coordenadorTravado = false;
+        this.nomeCoordenadorTravado = '';
+        this.candidatoSlug = slug;
+
+        if (!slug) {
+          this.carregandoContexto = false;
+          this.erroContexto = 'Link de cadastro inválido (candidato não informado na URL).';
+          this.candidatoTitulo = 'Cadastro';
+          return;
+        }
+
+        this.carregarContexto(slug, queryObj, coordRaw);
+      });
+  }
+
+  private queryParamRecord(qm: ParamMap): Record<string, string> {
+    const o: Record<string, string> = {};
+    qm.keys.forEach((k) => {
+      o[k] = qm.get(k) ?? '';
     });
+    return o;
+  }
+
+  private serialQueryContexto(slug: string, qm: ParamMap): string {
+    const o = this.queryParamRecord(qm);
+    const parts = Object.keys(o)
+      .sort()
+      .map((k) => `${k}=${o[k]}`);
+    return `${slug}|${parts.join('&')}`;
+  }
+
+  private carregarContexto(
+    slug: string,
+    queryObj: Record<string, string>,
+    coordRaw: string | null | undefined,
+  ): void {
+    this.carregandoContexto = true;
+    this.pessoaService.contextoLinkCadastro(slug, queryObj).subscribe({
+      next: (ctx) => {
+        this.candidatoTitulo = (ctx.candidato?.nome ?? '').trim() || slug;
+        this.coordenadores = Array.isArray(ctx.coordenadores) ? ctx.coordenadores : [];
+        this.idCoordenadorSelecionado = null;
+        this.carregandoContexto = false;
+        const pre = ctx.preselected_coordenador_id;
+        if (pre != null && Number.isInteger(Number(pre)) && Number(pre) > 0) {
+          this.aplicarPreselecaoServidor(Number(pre));
+        } else {
+          this.aplicarQueryCoordenador(coordRaw);
+        }
+      },
+      error: (err) => {
+        this.carregandoContexto = false;
+        this.erroContexto =
+          err?.error?.message ?? 'Não foi possível carregar os dados deste link de cadastro.';
+        this.candidatoTitulo = 'Cadastro';
+      },
+    });
+  }
+
+  private aplicarPreselecaoServidor(id: number): void {
+    this.avisoCoordenadorUrl = '';
+    const found = this.coordenadores.find((c) => c.id === id);
+    if (!found) {
+      this.coordenadorTravado = false;
+      this.nomeCoordenadorTravado = '';
+      this.idCoordenadorSelecionado = null;
+      this.avisoCoordenadorUrl = 'Link de divulgação inválido ou desatualizado.';
+      return;
+    }
+    this.idCoordenadorSelecionado = id;
+    this.coordenadorTravado = true;
+    this.nomeCoordenadorTravado = found.nome;
+  }
+
+  private aplicarQueryCoordenador(raw: string | null | undefined): void {
+    this.avisoCoordenadorUrl = '';
+    const vazio = raw == null || String(raw).trim() === '';
+    if (vazio) {
+      this.coordenadorTravado = false;
+      this.nomeCoordenadorTravado = '';
+      this.idCoordenadorSelecionado = null;
+      return;
+    }
+    const id = Number(String(raw).trim());
+    if (!Number.isInteger(id) || id <= 0) {
+      this.coordenadorTravado = false;
+      this.nomeCoordenadorTravado = '';
+      this.idCoordenadorSelecionado = null;
+      this.avisoCoordenadorUrl = 'Parâmetro de coordenador inválido no link.';
+      return;
+    }
+    const found = this.coordenadores.find((c) => c.id === id);
+    if (!found) {
+      this.coordenadorTravado = false;
+      this.nomeCoordenadorTravado = '';
+      this.idCoordenadorSelecionado = null;
+      this.avisoCoordenadorUrl =
+        'Este link aponta para um coordenador que não está disponível neste cadastro. Escolha um coordenador na lista.';
+      return;
+    }
+    this.idCoordenadorSelecionado = id;
+    this.coordenadorTravado = true;
+    this.nomeCoordenadorTravado = found.nome;
   }
 
   readonly termoConsentimentoVersao = '2026-05-06-v1';
@@ -167,9 +297,18 @@ export class LinkCadastroComponent implements OnInit {
       this.erro = 'Link de cadastro inválido (candidato não informado na URL).';
       return;
     }
+    if (this.idCoordenadorSelecionado == null) {
+      this.erro = 'Selecione um coordenador.';
+      return;
+    }
+    if (!this.coordenadorTravado && !this.coordenadores.length) {
+      this.erro = 'Não há coordenadores disponíveis para concluir o cadastro.';
+      return;
+    }
     this.salvando = true;
     const payload: PessoaPayload = {
       ...this.form,
+      id_coordenador: this.idCoordenadorSelecionado,
       whatsapp: this.form.whatsapp ? this.form.whatsapp.replace(/\D/g, '') : null,
       endereco: {
         ...this.form.endereco,
@@ -205,6 +344,9 @@ export class LinkCadastroComponent implements OnInit {
         };
         this.concordaTermo = false;
         this.bairroDetectadoCep = null;
+        if (!this.coordenadorTravado) {
+          this.idCoordenadorSelecionado = null;
+        }
       },
       error: (err) => {
         this.salvando = false;

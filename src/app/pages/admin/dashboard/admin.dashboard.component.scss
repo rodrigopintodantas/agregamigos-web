@@ -92,6 +92,13 @@
     flex-direction: column;
     min-height: 0;
   }
+
+  &--link-divulgacao {
+    flex: 0 1 auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
 }
 
 .ad-box-title {
@@ -182,6 +189,44 @@
   font-variant-numeric: tabular-nums;
 }
 
+.ad-box-subtitle--tight {
+  margin-bottom: 0.55rem;
+}
+
+.ad-link-divulgacao-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+}
+
+.ad-link-divulgacao-url {
+  font-size: 0.82rem;
+  line-height: 1.45;
+  word-break: break-all;
+  color: var(--color-brand-600, #5b21b6);
+  font-weight: 600;
+  text-decoration: underline;
+}
+
+.ad-link-divulgacao-copiar {
+  align-self: flex-start;
+  margin: 0;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #fff;
+  color: #344054;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ad-link-divulgacao-copiar:hover {
+  background: #f9fafb;
+  border-color: #98a2b3;
+}
+
 .ad-alertas-vazio {
   flex: 1;
   display: flex;
@@ -220,5 +265,31 @@
       calc(var(--ad-bairros-linhas) * var(--ad-bairros-linha) + (var(--ad-bairros-linhas) - 1) * var(--ad-bairros-gap)),
       55vh
     );
+  }
+
+  /** Coordenador no mobile: Cadastros → Link → Bairros → Alertas (por último). */
+  .ad-dash--coord-mobile .ad-dash-grid {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .ad-dash--coord-mobile .ad-dash-col--stack {
+    display: contents;
+  }
+
+  .ad-dash--coord-mobile .ad-box--cadastros {
+    order: 1;
+  }
+
+  .ad-dash--coord-mobile .ad-box--link-divulgacao {
+    order: 2;
+  }
+
+  .ad-dash--coord-mobile .ad-box--lista {
+    order: 3;
+  }
+
+  .ad-dash--coord-mobile .ad-box--alertas {
+    order: 4;
   }
 }

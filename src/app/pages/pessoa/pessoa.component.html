@@ -1,7 +1,7 @@
 <section class="page-card">
   <header class="head">
     <h2>Pessoas</h2>
-    <div class="head-actions">
+    <div class="head-actions" *ngIf="!auth.isCoordenador()">
       <input #csvInput type="file" accept=".csv,text/csv" class="input-csv" (change)="importarCsv($event)" />
       <button type="button" class="ghost" [disabled]="importandoCsv" (click)="abrirSeletorCsv(csvInput)">
         {{ importandoCsv ? 'Importando CSV...' : 'Adicionar CSV' }}
@@ -42,7 +42,7 @@
           <th>Candidato</th>
           <th>Erro Whatsapp?</th>
           <th>Engajamento</th>
-          <th>Ações</th>
+          <th *ngIf="!auth.isCoordenador()">Ações</th>
         </tr>
         <tr class="filtros-linha">
           <th class="th-filtro-vazio" aria-hidden="true"></th>
@@ -107,7 +107,7 @@
               </button>
             </div>
           </th>
-          <th class="th-filtro-vazio" aria-hidden="true"></th>
+          <th class="th-filtro-vazio" *ngIf="!auth.isCoordenador()" aria-hidden="true"></th>
         </tr>
       </thead>
       <tbody>
@@ -135,7 +135,7 @@
               >{{ labelEngajamento(p) }}</span
             >
           </td>
-          <td>
+          <td *ngIf="!auth.isCoordenador()">
             <div class="acoes">
               <button
                 type="button"
@@ -166,7 +166,7 @@
           </td>
         </tr>
         <tr *ngIf="pessoasFiltradas.length === 0">
-          <td colspan="7">Nenhuma pessoa encontrada.</td>
+          <td [attr.colspan]="auth.isCoordenador() ? 6 : 7">Nenhuma pessoa encontrada.</td>
         </tr>
       </tbody>
     </table>

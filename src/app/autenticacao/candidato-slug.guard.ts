@@ -25,7 +25,7 @@ export const canActivateCandidatoSlug: CanActivateFn = (route): boolean | UrlTre
     if (parts.length) {
       parts[0] = slugAtivo;
     } else {
-      parts.push(slugAtivo, auth.isAdmin() ? 'admin' : 'home');
+      parts.push(slugAtivo, auth.areaLogadaSegmento());
     }
     return router.createUrlTree(parts);
   }

@@ -1,4 +1,4 @@
-<section class="ad-dash page-card" aria-labelledby="ad-dash-title">
+<section class="ad-dash page-card" [class.ad-dash--coord-mobile]="auth.isCoordenador()" aria-labelledby="ad-dash-title">
   <header class="ad-dash-hero">
     <p class="ad-dash-kicker">Painel</p>
     <h1 id="ad-dash-title" class="ad-dash-title">Dashboard</h1>
@@ -16,7 +16,10 @@
       <article class="ad-box ad-box--cadastros" aria-labelledby="box-cadastros-title">
         <h2 id="box-cadastros-title" class="ad-box-title">Quantidade de Cadastros</h2>
         <p class="ad-box-metric" aria-live="polite">{{ totalCadastros }}</p>
-        <p class="ad-box-hint">Total de pessoas cadastradas</p>
+        <p class="ad-box-hint" *ngIf="auth.isCoordenador()">
+          Pessoas em que você é o coordenador neste candidato.
+        </p>
+        <p class="ad-box-hint" *ngIf="!auth.isCoordenador()">Total de pessoas cadastradas</p>
       </article>
 
       <article class="ad-box ad-box--alertas" aria-labelledby="box-alertas-title">
@@ -25,11 +28,37 @@
           <p>Nenhum alerta no momento.</p>
         </div>
       </article>
+
+      <article
+        *ngIf="auth.isCoordenador() && linkCadastroDivulgacaoCoordenador"
+        class="ad-box ad-box--link-divulgacao"
+        aria-labelledby="box-link-divulgacao-title"
+      >
+        <h2 id="box-link-divulgacao-title" class="ad-box-title">Link de divulgação do Coordenador</h2>
+        <p class="ad-box-subtitle ad-box-subtitle--tight">
+          Compartilhe este endereço para que novos cadastros já venham vinculados a você.
+        </p>
+        <div class="ad-link-divulgacao-inner">
+          <a
+            class="ad-link-divulgacao-url"
+            [href]="linkCadastroDivulgacaoCoordenador"
+            target="_blank"
+            rel="noopener noreferrer"
+            >{{ linkCadastroDivulgacaoCoordenador }}</a
+          >
+          <button type="button" class="ad-link-divulgacao-copiar" (click)="copiarLinkDivulgacao()">Copiar link</button>
+        </div>
+      </article>
     </div>
 
     <article class="ad-box ad-box--lista" aria-labelledby="box-bairros-title">
       <h2 id="box-bairros-title" class="ad-box-title">Quantidade por Bairro</h2>
-      <p class="ad-box-subtitle">Todos os bairros com cadastro (ordenados por quantidade)</p>
+      <p class="ad-box-subtitle" *ngIf="auth.isCoordenador()">
+        Distribuição entre os cadastros vinculados a você (por bairro informado).
+      </p>
+      <p class="ad-box-subtitle" *ngIf="!auth.isCoordenador()">
+        Todos os bairros com cadastro (ordenados por quantidade)
+      </p>
       <div class="ad-bairros-scroll" *ngIf="topBairros.length">
         <ul class="ad-bairros-lista">
           <li *ngFor="let item of topBairros; let i = index">

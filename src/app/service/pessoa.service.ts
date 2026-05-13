@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -21,6 +21,8 @@ export interface PessoaPayload {
   whatsapp?: string | null;
   instagram?: string | null;
   indicacao?: string | null;
+  /** Usuário coordenador (vínculo com o candidato), ex.: link de cadastro público. */
+  id_coordenador?: number | null;
   endereco?: EnderecoPayload;
   consentimento?: {
     aceito: boolean;
@@ -65,6 +67,13 @@ export interface DashboardEstatisticas {
   bairros: BairroQuantidade[];
 }
 
+export interface LinkCadastroContexto {
+  candidato: { nome: string; slug: string };
+  coordenadores: { id: number; nome: string }[];
+  /** Quando a URL pública envia a chave opaca de divulgação, o backend devolve o id do coordenador já validado. */
+  preselected_coordenador_id?: number | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class PessoaService {
   private http = inject(HttpClient);
@@ -81,6 +90,15 @@ export class PessoaService {
   criarPorLink(slug: string, payload: PessoaPayload): Observable<{ id: number; message: string }> {
     const s = encodeURIComponent(slug.trim().toLowerCase());
     return this.http.post<{ id: number; message: string }>(`${this.apiURL}/link-cadastro/${s}`, payload);
+  }
+
+  contextoLinkCadastro(slug: string, queryParams: Record<string, string> = {}): Observable<LinkCadastroContexto> {
+    const s = encodeURIComponent(slug.trim().toLowerCase());
+    let params = new HttpParams();
+    for (const [k, v] of Object.entries(queryParams)) {
+      params = params.set(k, v);
+    }
+    return this.http.get<LinkCadastroContexto>(`${this.apiURL}/link-cadastro/${s}/contexto`, { params });
   }
 
   atualizar(id: number, payload: PessoaPayload): Observable<{ message: string }> {

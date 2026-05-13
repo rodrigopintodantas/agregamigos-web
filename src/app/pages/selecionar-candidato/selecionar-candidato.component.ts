@@ -131,8 +131,7 @@ export class SelecionarCandidatoComponent implements OnInit {
     this.auth.selecionarCandidato(c.slug).subscribe({
       next: () => {
         this.selecionandoSlug = null;
-        const perfil = this.auth.getPerfil();
-        const dash = (perfil?.dashboard ?? '/home').replace(/^\//, '');
+        const dash = this.auth.areaLogadaSegmento();
         void this.router.navigateByUrl(`/${c.slug}/${dash}`);
       },
       error: (err) => {

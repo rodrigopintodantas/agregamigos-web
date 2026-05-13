@@ -55,8 +55,8 @@ export class PrincipalCabecalho implements OnInit {
   ngOnInit() {
     const token = this.auth.getAccessToken();
     const perfil = this.auth.getPerfil();
-    if (token && perfil?.dashboard && this.auth.temCandidatoSelecionado()) {
-      const dash = perfil.dashboard.replace(/^\//, '');
+    if (token && perfil?.nome && this.auth.temCandidatoSelecionado()) {
+      const dash = this.auth.areaLogadaSegmento();
       void this.router.navigateByUrl(this.auth.rotaComCandidato(dash));
       return;
     }
@@ -90,7 +90,7 @@ export class PrincipalCabecalho implements OnInit {
           this.auth.selecionarCandidato(candidatos[0].slug).subscribe({
             next: (sel) => {
               this.carregando = false;
-              const dash = retorno.papeis[0]?.dashboard?.replace(/^\//, '') ?? 'home';
+              const dash = this.auth.areaLogadaSegmento();
               void this.router.navigateByUrl(`/${sel.candidato.slug}/${dash}`);
             },
             error: (err) => {

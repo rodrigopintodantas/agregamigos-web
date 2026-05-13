@@ -13,7 +13,7 @@ import { LayoutUiService } from '../service/layout-ui.service';
       <li class="menu-section">Menu</li>
       <li>
         <a
-          [routerLink]="auth.isAdmin() ? auth.routerSegments('admin') : auth.routerSegments('home')"
+          [routerLink]="auth.routerSegments(auth.areaLogadaSegmento())"
           routerLinkActive="active-route"
           [routerLinkActiveOptions]="{ exact: true }"
           [attr.title]="ui.sidebarCollapsed() ? 'Dashboard' : null"
@@ -29,9 +29,7 @@ import { LayoutUiService } from '../service/layout-ui.service';
       </li>
       <li>
         <a
-          [routerLink]="
-            auth.isAdmin() ? auth.routerSegments('admin', 'pessoas') : auth.routerSegments('home', 'pessoas')
-          "
+          [routerLink]="auth.routerSegments(auth.areaLogadaSegmento(), 'pessoas')"
           routerLinkActive="active-route"
           [attr.title]="ui.sidebarCollapsed() ? 'Pessoas' : null"
           (click)="ui.closeMobileMenu()"

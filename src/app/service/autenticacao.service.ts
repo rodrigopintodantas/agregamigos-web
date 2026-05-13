@@ -271,8 +271,19 @@ export class AutenticacaoService {
     return this.temPerfil() && this.getPerfil()?.nome === 'Administrador';
   }
 
+  isCoordenador() {
+    return this.temPerfil() && this.getPerfil()?.nome === 'Coordenador';
+  }
+
   isUsuario() {
     return this.temPerfil() && this.getPerfil()?.nome === 'Usuario';
+  }
+
+  /** Segmento de URL da área logada após o slug do candidato: `admin`, `coordenador` ou `home`. */
+  areaLogadaSegmento(): string {
+    if (this.isAdmin()) return 'admin';
+    if (this.isCoordenador()) return 'coordenador';
+    return 'home';
   }
 
   alterarSenha(senhaAtual: string, senhaNova: string, senhaNovaConfirmacao: string): Observable<{ ok: boolean }> {
@@ -285,6 +296,11 @@ export class AutenticacaoService {
       },
       { headers: { Authorization: `Bearer ${this.getAccessToken()}` } },
     );
+  }
+
+  /** JWT curto para montar o link público de cadastro com `?t=` (perfil Coordenador + candidato no token). */
+  obterChaveDivulgacaoLinkCadastro(): Observable<{ chave_publica: string }> {
+    return this.http.get<{ chave_publica: string }>(`${this.apiURL}/link-cadastro-divulgacao-chave`);
   }
 
   private normalizePapeis(response: { papeis?: Perfil[]; up?: Perfil[] }): Perfil[] {

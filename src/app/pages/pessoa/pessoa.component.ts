@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { PessoaItem, PessoaPayload, PessoaService } from '../../service/pessoa.service';
+import { AutenticacaoService } from '../../service/autenticacao.service';
 
 const CHAVE_VAZIO = '__vazio__';
 
@@ -28,6 +29,7 @@ type ViaCepResponse = {
 })
 export class PessoaComponent implements OnInit, OnDestroy {
   private pessoaService = inject(PessoaService);
+  auth = inject(AutenticacaoService);
 
   /** Painel de filtro ancorado na viewport (fora do overflow da tabela). */
   painelFiltroEstilo: Record<string, string> | null = null;

@@ -1,6 +1,28 @@
 <section class="card">
-  <h1>Cadastro Rápido</h1>
+  <h1>{{ candidatoTitulo }}</h1>
   <p class="subtitulo">Preencha os dados para concluir seu cadastro.</p>
+
+  <p class="msg neutro" *ngIf="carregandoContexto">Carregando informações do link…</p>
+  <p class="msg erro" *ngIf="erroContexto && !carregandoContexto">{{ erroContexto }}</p>
+
+  <ng-container *ngIf="!carregandoContexto && !erroContexto">
+  <p class="msg aviso" *ngIf="avisoCoordenadorUrl">{{ avisoCoordenadorUrl }}</p>
+
+  <div class="campo-coordenador-fixo" *ngIf="coordenadorTravado">
+    <span class="campo-coordenador-label">Coordenador</span>
+    <p class="campo-coordenador-valor">{{ nomeCoordenadorTravado }}</p>
+  </div>
+
+  <label *ngIf="!coordenadorTravado">
+    Coordenador
+    <select [(ngModel)]="idCoordenadorSelecionado" [disabled]="!coordenadores.length">
+      <option [ngValue]="null">Selecione um coordenador</option>
+      <option *ngFor="let c of coordenadores" [ngValue]="c.id">{{ c.nome }}</option>
+    </select>
+  </label>
+  <p class="campo-ajuda" *ngIf="!coordenadorTravado && !coordenadores.length">
+    Não há coordenadores disponíveis para este candidato no momento. Tente mais tarde ou contate o apoio da campanha.
+  </p>
 
   <label>Nome completo <input [(ngModel)]="form.nome" /></label>
   <label>Data de nascimento <input type="date" [(ngModel)]="form.data_nascimento" /></label>
@@ -56,7 +78,8 @@
   <p class="msg erro" *ngIf="erro">{{ erro }}</p>
   <p class="msg sucesso" *ngIf="sucesso">{{ sucesso }}</p>
 
-  <button type="button" [disabled]="salvando" (click)="salvar()">
+  <button type="button" [disabled]="salvando || idCoordenadorSelecionado == null" (click)="salvar()">
     {{ salvando ? 'Enviando...' : 'Finalizar cadastro' }}
   </button>
+  </ng-container>
 </section>

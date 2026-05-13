@@ -119,6 +119,49 @@ select {
   margin: 0.45rem 0;
 }
 
+.msg.neutro {
+  color: #475467;
+  font-size: 0.9rem;
+}
+
+.msg.aviso {
+  color: #b54708;
+  background: #fffaeb;
+  border: 1px solid #fedf89;
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+}
+
+.campo-coordenador-fixo {
+  margin-bottom: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  border: 1px solid #eaecf0;
+  border-radius: 8px;
+  background: #f9fafb;
+}
+
+.campo-coordenador-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #344054;
+  margin-bottom: 0.25rem;
+}
+
+.campo-coordenador-valor {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #101828;
+}
+
+.campo-ajuda {
+  margin: -0.35rem 0 0.65rem;
+  font-size: 0.82rem;
+  color: #667085;
+  line-height: 1.35;
+}
+
 .erro {
   color: #b42318;
 }
