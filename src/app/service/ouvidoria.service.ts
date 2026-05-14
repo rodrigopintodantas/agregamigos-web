@@ -11,8 +11,8 @@ export interface OuvidoriaItem {
   ds_tipo?: string | null;
   ds_assunto?: string | null;
   ds_ra?: string | null;
+  nm_setor?: string | null;
   nm_orgao?: string | null;
-  nm_secretaria?: string | null;
   ds_canal?: string | null;
 }
 

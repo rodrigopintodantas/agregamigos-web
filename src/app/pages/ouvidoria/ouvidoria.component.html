@@ -145,7 +145,7 @@
             <td
               *ngFor="let col of colunasExibicao"
               [class.celula-texto-longo]="
-                col === 'ds_assunto' || col === 'nm_orgao' || col === 'nm_secretaria'
+                col === 'ds_assunto' || col === 'nm_setor' || col === 'nm_orgao'
               "
             >
               {{ valorCelula(v, col) }}

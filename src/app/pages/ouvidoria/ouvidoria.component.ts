@@ -19,6 +19,19 @@ export const CAMPOS_OUVIDORIA_CSV = [
   'ds_tipo',
   'ds_assunto',
   'ds_ra',
+  'nm_setor',
+  'nm_orgao',
+  'ds_canal',
+] as const;
+
+/** Cabeçalho de arquivos exportados antes da renomeação das colunas (mesma ordem de campos). */
+export const CAMPOS_OUVIDORIA_CSV_LEGADO = [
+  'dt_manifestacao',
+  'fl_indicador',
+  'ds_situacao',
+  'ds_tipo',
+  'ds_assunto',
+  'ds_ra',
   'nm_orgao',
   'nm_secretaria',
   'ds_canal',
@@ -675,9 +688,12 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     const partesPrimeira = linhas[0].split('|');
     if (
       partesPrimeira.length >= CAMPOS_OUVIDORIA_CSV.length &&
-      CAMPOS_OUVIDORIA_CSV.every(
+      (CAMPOS_OUVIDORIA_CSV.every(
         (nome, idx) => partesPrimeira[idx]?.trim().toLowerCase() === nome.toLowerCase(),
-      )
+      ) ||
+        CAMPOS_OUVIDORIA_CSV_LEGADO.every(
+          (nome, idx) => partesPrimeira[idx]?.trim().toLowerCase() === nome.toLowerCase(),
+        ))
     ) {
       dadosLinhas = linhas.slice(1);
     }
@@ -1026,6 +1042,13 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     const vals = Array.from(set).sort((a, b) => {
       if (a === CHAVE_VAZIO) return -1;
       if (b === CHAVE_VAZIO) return 1;
+      if (col === 'dt_manifestacao') {
+        const na = /^\d{4}$/.test(a) ? Number.parseInt(a, 10) : NaN;
+        const nb = /^\d{4}$/.test(b) ? Number.parseInt(b, 10) : NaN;
+        if (!Number.isNaN(na) && !Number.isNaN(nb)) {
+          return nb - na;
+        }
+      }
       return a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' });
     });
     this.opcoesDistintasPorColuna = { ...this.opcoesDistintasPorColuna, [col]: vals };
@@ -1050,13 +1073,11 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     if (typeof raw === 'boolean') return raw ? 'true' : 'false';
     if (typeof raw === 'string' && !raw.trim()) return CHAVE_VAZIO;
     if (col === 'dt_manifestacao') {
-      const d =
-        raw instanceof Date ? raw : typeof raw === 'string' ? new Date(raw) : new Date(String(raw));
-      return Number.isNaN(d.getTime())
-        ? typeof raw === 'string'
-          ? raw
-          : CHAVE_VAZIO
-        : d.toLocaleDateString('pt-BR');
+      const d = this.parseDataOrdenacao(v);
+      if (d) return String(d.getFullYear());
+      const rawStr = row[col];
+      if (typeof rawStr === 'string' && rawStr.trim()) return rawStr.trim();
+      return CHAVE_VAZIO;
     }
     if (typeof raw === 'number') return String(raw);
     const s = String(raw).trim();
