@@ -8,7 +8,9 @@ import {
   OnInit,
   inject,
 } from '@angular/core';
+import { HttpErrorResponse } from '@angular/common/http';
 import { FormsModule } from '@angular/forms';
+import { firstValueFrom } from 'rxjs';
 import { OuvidoriaItem, OuvidoriaService } from '../../service/ouvidoria.service';
 
 /** Nomes das colunas (iguais à tabela `ouvidoria`, exceto id e timestamps). Ordem = arquivo oficial pipe-delimitado. */
@@ -23,6 +25,9 @@ export const CAMPOS_OUVIDORIA_CSV = [
   'nm_orgao',
   'ds_canal',
 ] as const;
+
+/** Tamanho de cada POST de importação (evita 413 do nginx/proxy com corpo ~1 MB por defeito). */
+const OUVIDORIA_IMPORT_REGISTROS_POR_REQUISICAO = 350;
 
 /** Cabeçalho de arquivos exportados antes da renomeação das colunas (mesma ordem de campos). */
 export const CAMPOS_OUVIDORIA_CSV_LEGADO = [
@@ -932,30 +937,56 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
         return;
       }
 
-      this.ouvidoriaService.importarCsv({ registros }).subscribe({
-        next: (resp) => {
-          this.importandoCsv = false;
-          this.mensagemImportacao = resp.message ?? 'Importação concluída.';
-          this.cdr.markForCheck();
-          this.carregar();
-          input.value = '';
-        },
-        error: (err) => {
-          this.importandoCsv = false;
-          this.erro = err?.error?.message ?? 'Não foi possível importar o arquivo.';
-          input.value = '';
-          this.cdr.markForCheck();
-        },
-      });
+      await this.importarOuvidoriaEmLotes(registros, input);
     } catch (e) {
       this.importandoCsv = false;
-      this.erro =
-        e instanceof Error
-          ? e.message
-          : 'Não foi possível ler o arquivo. Use UTF-8 ou Windows-1252.';
+      if (e instanceof HttpErrorResponse) {
+        const apiMsg = typeof e.error === 'object' && e.error !== null && 'message' in e.error
+          ? String((e.error as { message?: string }).message ?? '')
+          : '';
+        this.erro =
+          e.status === 413
+            ? 'O servidor recusou o tamanho do pedido (413). Tente de novo após atualizar a página; se continuar, o limite do proxy ainda é baixo — peça ao administrador para aumentar o limite do corpo HTTP.'
+            : apiMsg || e.message || `Erro HTTP ${e.status}.`;
+      } else {
+        this.erro =
+          e instanceof Error
+            ? e.message
+            : 'Não foi possível ler o arquivo. Use UTF-8 ou Windows-1252.';
+      }
       input.value = '';
       this.cdr.markForCheck();
     }
+  }
+
+  /**
+   * Vários POSTs pequenos: proxies (ex.: nginx) costumam limitar o corpo a 1 MB; um CSV grande
+   * num único JSON gera 413 Request Entity Too Large.
+   */
+  private async importarOuvidoriaEmLotes(
+    registros: Record<string, string>[],
+    input: HTMLInputElement,
+  ): Promise<void> {
+    const tamanhoLote = OUVIDORIA_IMPORT_REGISTROS_POR_REQUISICAO;
+    const totalLotes = Math.max(1, Math.ceil(registros.length / tamanhoLote));
+    let somaInseridos = 0;
+    let ultimaMsg = '';
+    for (let offset = 0; offset < registros.length; offset += tamanhoLote) {
+      const indiceLote = Math.floor(offset / tamanhoLote) + 1;
+      this.mensagemImportacao = `A importar lote ${indiceLote}/${totalLotes}…`;
+      this.cdr.markForCheck();
+      const lote = registros.slice(offset, offset + tamanhoLote);
+      const resp = await firstValueFrom(this.ouvidoriaService.importarCsv({ registros: lote }));
+      ultimaMsg = resp.message ?? '';
+      somaInseridos += Number(resp.inseridos ?? lote.length);
+    }
+    this.importandoCsv = false;
+    this.mensagemImportacao =
+      ultimaMsg ||
+      `Importação concluída: ${somaInseridos} manifestação(ões) enviada(s) em ${totalLotes} lote(s).`;
+    this.cdr.markForCheck();
+    this.carregar();
+    input.value = '';
   }
 
   /**
