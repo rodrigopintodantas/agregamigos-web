@@ -272,6 +272,59 @@
     </p>
 
     <div class="por-zona-box" *ngIf="!carregando && !erro && dsRaSelecionadaPorZona != null">
+      <h3 class="por-zona-box-titulo">Quantidade por assunto</h3>
+      <p class="por-zona-box-sub">
+        Manifestações por <code>ds_assunto</code> no ano selecionado — do maior para o menor. O texto do
+        assunto aparece por completo. A área do gráfico mostra cerca de cinco linhas; role para ver os
+        demais assuntos.
+      </p>
+      <div class="barras-assuntos-toolbar">
+        <label class="barras-assuntos-label" for="ouv-barras-ano">Ano</label>
+        <select
+          id="ouv-barras-ano"
+          class="barras-assuntos-select por-zona-select"
+          [disabled]="anosDisponiveisBarrasPorZona.length === 0"
+          [ngModel]="anoSelecionadoBarrasPorZona"
+          (ngModelChange)="definirAnoBarrasPorZona($event)"
+        >
+          <option *ngFor="let a of anosDisponiveisBarrasPorZona" [ngValue]="a">{{ a }}</option>
+        </select>
+      </div>
+      <p class="por-zona-box-sub" *ngIf="anosDisponiveisBarrasPorZona.length === 0">
+        Não há datas de manifestação válidas para este ds_ra.
+      </p>
+      <div
+        class="barras-assuntos-scroll"
+        *ngIf="anosDisponiveisBarrasPorZona.length > 0 && assuntosBarrasPorZona.length > 0"
+        role="list"
+        aria-label="Quantidade de manifestações por assunto"
+      >
+        <div
+          class="barras-assuntos-linha"
+          *ngFor="let row of assuntosBarrasPorZona; trackBy: trackByAssuntoBarra"
+          role="listitem"
+        >
+          <div class="barras-assuntos-rotulo">{{ row.rotulo }}</div>
+          <div class="barras-assuntos-track-wrap">
+            <div class="barras-assuntos-track">
+              <div
+                class="barras-assuntos-fill"
+                [style.width.%]="percLarguraBarraAssunto(row.total)"
+              ></div>
+            </div>
+          </div>
+          <div class="barras-assuntos-valor">{{ row.total }}</div>
+        </div>
+      </div>
+      <p
+        class="por-zona-box-sub"
+        *ngIf="anosDisponiveisBarrasPorZona.length > 0 && assuntosBarrasPorZona.length === 0"
+      >
+        Nenhuma manifestação neste ano.
+      </p>
+    </div>
+
+    <div class="por-zona-box" *ngIf="!carregando && !erro && dsRaSelecionadaPorZona != null">
       <h3 class="por-zona-box-titulo">Evolução das manifestações</h3>
       <ng-container *ngIf="evolucaoAssuntosPorZona as ev">
         <p class="por-zona-box-sub">

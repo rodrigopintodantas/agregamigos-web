@@ -49,6 +49,13 @@ export interface EvolucaoAssuntosPorZona {
   maxY: number;
 }
 
+/** Uma linha do gráfico de barras por assunto (aba Por Zona). */
+export interface AssuntoBarraLinha {
+  chave: string;
+  rotulo: string;
+  total: number;
+}
+
 @Component({
   selector: 'app-ouvidoria',
   standalone: true,
@@ -113,6 +120,12 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
 
   /** Gráfico: top 10 assuntos do último ano (por ds_ra) × evolução por ano. */
   evolucaoAssuntosPorZona: EvolucaoAssuntosPorZona | null = null;
+
+  /** Barras horizontais: quantidade por assunto no ano filtrado (por ds_ra). */
+  anosDisponiveisBarrasPorZona: number[] = [];
+  anoSelecionadoBarrasPorZona: number | null = null;
+  assuntosBarrasPorZona: AssuntoBarraLinha[] = [];
+  maxTotalBarrasAssuntos = 1;
 
   readonly evolucaoSvgW = 840;
   readonly evolucaoSvgH = 400;
@@ -218,6 +231,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
         this.recomputarFiltradoEOrdenado();
         this.reconstruirOpcoesDsRaPorZona();
         this.sincronizarSelecaoDsRaPorZona();
+        this.recomputarBarrasAssuntosPorZona();
         this.recomputarEvolucaoAssuntosPorZona();
         this.carregando = false;
         this.cdr.markForCheck();
@@ -242,7 +256,13 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
 
   definirDsRaPorZona(dsRa: string): void {
     this.dsRaSelecionadaPorZona = dsRa;
+    this.recomputarBarrasAssuntosPorZona();
     this.recomputarEvolucaoAssuntosPorZona();
+  }
+
+  definirAnoBarrasPorZona(ano: number): void {
+    this.anoSelecionadoBarrasPorZona = ano;
+    this.recomputarBarrasAssuntosPorZona({ preservarAnoSeValido: true });
   }
 
   /** Valores distintos não vazios de `ds_ra`, como string (igual ao armazenado no item). */
@@ -282,6 +302,66 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
   private rotuloAssuntoEvolucao(chave: string): string {
     return chave === CHAVE_VAZIO ? '(sem assunto)' : chave;
   }
+
+  /** Contagem por assunto no ds_ra + ano (ordenado decrescente). */
+  private recomputarBarrasAssuntosPorZona(options?: { preservarAnoSeValido?: boolean }): void {
+    const preservar = options?.preservarAnoSeValido ?? false;
+    const dsRa = this.dsRaSelecionadaPorZona;
+    if (dsRa == null) {
+      this.anosDisponiveisBarrasPorZona = [];
+      this.anoSelecionadoBarrasPorZona = null;
+      this.assuntosBarrasPorZona = [];
+      this.maxTotalBarrasAssuntos = 1;
+      this.cdr.markForCheck();
+      return;
+    }
+    const porZona = this.itens.filter((v) => v.ds_ra === dsRa);
+    const anosSet = new Set<number>();
+    for (const v of porZona) {
+      const d = this.parseDataOrdenacao(v);
+      if (d) anosSet.add(d.getFullYear());
+    }
+    const anos = [...anosSet].sort((a, b) => a - b);
+    this.anosDisponiveisBarrasPorZona = anos;
+    if (!anos.length) {
+      this.anoSelecionadoBarrasPorZona = null;
+      this.assuntosBarrasPorZona = [];
+      this.maxTotalBarrasAssuntos = 1;
+      this.cdr.markForCheck();
+      return;
+    }
+    if (
+      !preservar ||
+      this.anoSelecionadoBarrasPorZona == null ||
+      !anos.includes(this.anoSelecionadoBarrasPorZona)
+    ) {
+      this.anoSelecionadoBarrasPorZona = anos[anos.length - 1];
+    }
+    const ano = this.anoSelecionadoBarrasPorZona!;
+    const contagem = new Map<string, number>();
+    for (const v of porZona) {
+      const d = this.parseDataOrdenacao(v);
+      if (!d || d.getFullYear() !== ano) continue;
+      const k = this.chaveAssuntoFiltro(v);
+      contagem.set(k, (contagem.get(k) ?? 0) + 1);
+    }
+    const lista: AssuntoBarraLinha[] = [...contagem.entries()]
+      .map(([chave, total]) => ({
+        chave,
+        rotulo: this.rotuloAssuntoEvolucao(chave),
+        total,
+      }))
+      .sort((a, b) => b.total - a.total);
+    this.assuntosBarrasPorZona = lista;
+    this.maxTotalBarrasAssuntos = Math.max(1, lista[0]?.total ?? 1);
+    this.cdr.markForCheck();
+  }
+
+  percLarguraBarraAssunto(total: number): number {
+    return Math.round((10000 * total) / this.maxTotalBarrasAssuntos) / 100;
+  }
+
+  trackByAssuntoBarra = (_: number, row: AssuntoBarraLinha): string => row.chave;
 
   /**
    * Top 10 `ds_assunto` no último ano com manifestações neste ds_ra;
