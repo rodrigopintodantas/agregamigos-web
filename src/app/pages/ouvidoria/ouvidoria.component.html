@@ -3,11 +3,43 @@
     <h2>Ouvidoria</h2>
   </header>
 
+  <nav class="ouv-tabs" role="tablist" aria-label="Visualização da ouvidoria">
+    <button
+      type="button"
+      class="ouv-tab"
+      role="tab"
+      id="tab-ouvidoria-completa"
+      [attr.aria-selected]="abaOuvidoria === 'completa'"
+      [attr.tabindex]="abaOuvidoria === 'completa' ? 0 : -1"
+      [class.ativa]="abaOuvidoria === 'completa'"
+      (click)="definirAba('completa')"
+    >
+      Visão Completa
+    </button>
+    <button
+      type="button"
+      class="ouv-tab"
+      role="tab"
+      id="tab-ouvidoria-por-zona"
+      [attr.aria-selected]="abaOuvidoria === 'por-zona'"
+      [attr.tabindex]="abaOuvidoria === 'por-zona' ? 0 : -1"
+      [class.ativa]="abaOuvidoria === 'por-zona'"
+      (click)="definirAba('por-zona')"
+    >
+      Por Zona
+    </button>
+  </nav>
+
   <p class="msg" *ngIf="carregando">Carregando...</p>
   <p class="msg erro" *ngIf="erro">{{ erro }}</p>
   <p class="msg sucesso" *ngIf="mensagemImportacao">{{ mensagemImportacao }}</p>
 
-  <div class="ouv-tab-panel">
+  <div
+    *ngIf="abaOuvidoria === 'completa'"
+    class="ouv-tab-panel"
+    role="tabpanel"
+    aria-labelledby="tab-ouvidoria-completa"
+  >
     <div class="head-actions visao-completa-acoes">
       <input
         #csvInput
@@ -135,8 +167,28 @@
         role="listbox"
         [attr.aria-label]="'Filtro: ' + tituloColuna(colunaPainel)"
       >
+        <div class="filtro-dropdown-busca-wrap">
+          <span class="filtro-dropdown-busca-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <circle cx="11" cy="11" r="7"></circle>
+              <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+            </svg>
+          </span>
+          <input
+            type="search"
+            class="filtro-dropdown-busca-input"
+            placeholder="Pesquisar opções…"
+            [(ngModel)]="termoBuscaFiltro"
+            (ngModelChange)="aoAlterarBuscaFiltro()"
+            (click)="$event.stopPropagation()"
+            autocomplete="off"
+            spellcheck="false"
+            [attr.aria-label]="'Pesquisar opções em ' + tituloColuna(colunaPainel)"
+          />
+        </div>
+        <p class="filtro-dropdown-hint">Marque uma ou mais opções.</p>
         <div class="filtro-dropdown-scroll">
-          <label *ngFor="let chave of opcoesFiltroParaColuna(colunaPainel)" class="filtro-opcao">
+          <label *ngFor="let chave of opcoesFiltroFiltradas(colunaPainel)" class="filtro-opcao">
             <input
               type="checkbox"
               [checked]="opcaoFiltroMarcada(colunaPainel, chave)"
@@ -144,6 +196,12 @@
             />
             <span>{{ rotuloOpcaoFiltro(chave) }}</span>
           </label>
+          <p
+            *ngIf="opcoesFiltroFiltradas(colunaPainel).length === 0"
+            class="filtro-dropdown-vazio"
+          >
+            {{ termoBuscaFiltro.trim() ? 'Nenhuma opção corresponde à busca.' : 'Nenhuma opção disponível.' }}
+          </p>
         </div>
         <div class="filtro-dropdown-rodape">
           <button type="button" class="filtro-link" (click)="limparFiltroColuna(colunaPainel, $event)">
@@ -187,6 +245,137 @@
           Próxima
         </button>
       </nav>
+    </div>
+  </div>
+
+  <div
+    *ngIf="abaOuvidoria === 'por-zona'"
+    class="ouv-tab-panel por-zona-panel"
+    role="tabpanel"
+    aria-labelledby="tab-ouvidoria-por-zona"
+  >
+    <div class="por-zona-toolbar">
+      <label class="por-zona-select-label" for="ouv-por-zona-ds-ra">ds_ra</label>
+      <select
+        id="ouv-por-zona-ds-ra"
+        class="por-zona-select"
+        [disabled]="carregando || !!erro || dsRaOpcoesPorZona.length === 0"
+        [ngModel]="dsRaSelecionadaPorZona"
+        (ngModelChange)="definirDsRaPorZona($event)"
+      >
+        <option *ngFor="let ra of dsRaOpcoesPorZona" [ngValue]="ra">{{ ra }}</option>
+      </select>
+    </div>
+
+    <p class="msg por-zona-sem-opcoes" *ngIf="!carregando && !erro && dsRaOpcoesPorZona.length === 0">
+      Não há valores em ds_ra nos dados carregados.
+    </p>
+
+    <div class="por-zona-box" *ngIf="!carregando && !erro && dsRaSelecionadaPorZona != null">
+      <h3 class="por-zona-box-titulo">Evolução das manifestações</h3>
+      <ng-container *ngIf="evolucaoAssuntosPorZona as ev">
+        <p class="por-zona-box-sub">
+          Top 10 assuntos em <strong>{{ ev.anoReferencia }}</strong> (último ano com manifestações neste
+          ds_ra) — quantidade por ano.
+        </p>
+        <div class="evolucao-chart-wrap" role="img" [attr.aria-label]="evolucaoAriaLabel(ev)">
+          <svg
+            class="evolucao-svg"
+            [attr.viewBox]="'0 0 ' + evolucaoSvgW + ' ' + evolucaoSvgH"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <defs>
+              <filter id="ouvidoria-evolucao-sombra" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="1" stdDeviation="1.2" flood-color="#101828" flood-opacity="0.12" />
+              </filter>
+            </defs>
+            <!-- Grade horizontal -->
+            <g class="evolucao-grid" *ngFor="let tick of evolucaoTicksY(ev.maxY)">
+              <line
+                class="evolucao-grid-line"
+                [attr.x1]="evolucaoPad.l"
+                [attr.x2]="evolucaoSvgW - evolucaoPad.r"
+                [attr.y1]="evolucaoPlotY(tick, ev.maxY)"
+                [attr.y2]="evolucaoPlotY(tick, ev.maxY)"
+              />
+              <text
+                class="evolucao-axis-y"
+                [attr.x]="evolucaoPad.l - 8"
+                [attr.y]="evolucaoPlotY(tick, ev.maxY) + 4"
+                text-anchor="end"
+              >
+                {{ tick }}
+              </text>
+            </g>
+            <!-- Eixos -->
+            <line
+              class="evolucao-axis"
+              [attr.x1]="evolucaoPad.l"
+              [attr.y1]="evolucaoSvgH - evolucaoPad.b"
+              [attr.x2]="evolucaoSvgW - evolucaoPad.r"
+              [attr.y2]="evolucaoSvgH - evolucaoPad.b"
+            />
+            <line
+              class="evolucao-axis"
+              [attr.x1]="evolucaoPad.l"
+              [attr.y1]="evolucaoPad.t"
+              [attr.x2]="evolucaoPad.l"
+              [attr.y2]="evolucaoSvgH - evolucaoPad.b"
+            />
+            <!-- Séries -->
+            <g *ngFor="let s of ev.series; let si = index">
+              <polyline
+                class="evolucao-linha"
+                fill="none"
+                stroke-width="2.5"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                [attr.stroke]="evolucaoCorSerie(si)"
+                [attr.points]="evolucaoPolylinePoints(s)"
+                filter="url(#ouvidoria-evolucao-sombra)"
+              />
+              <circle
+                *ngFor="let ano of ev.anos; let j = index"
+                class="evolucao-ponto"
+                r="4"
+                [attr.cx]="evolucaoPlotX(j, ev.anos.length)"
+                [attr.cy]="evolucaoPlotY(s.totaisPorAno[j], ev.maxY)"
+                [attr.fill]="evolucaoCorSerie(si)"
+                stroke="#ffffff"
+                stroke-width="1.5"
+              >
+                <title>{{ s.rotulo }} — {{ ano }}: {{ s.totaisPorAno[j] }}</title>
+              </circle>
+            </g>
+            <!-- Rótulos anos (eixo X) -->
+            <text
+              *ngFor="let ano of ev.anos; let j = index"
+              class="evolucao-axis-x"
+              [attr.transform]="
+                'translate(' +
+                evolucaoPlotX(j, ev.anos.length) +
+                ',' +
+                (evolucaoSvgH - evolucaoPad.b + 18) +
+                ') rotate(-38)'
+              "
+              text-anchor="end"
+            >
+              {{ ano }}
+            </text>
+          </svg>
+        </div>
+        <div class="evolucao-legenda" aria-hidden="true">
+          <div class="evolucao-legenda-item" *ngFor="let s of ev.series; let si = index">
+            <span class="evolucao-legenda-swatch" [style.background]="evolucaoCorSerie(si)"></span>
+            <span class="evolucao-legenda-texto" [attr.title]="s.rotulo">{{
+              evolucaoLegendaCurta(s.rotulo)
+            }}</span>
+          </div>
+        </div>
+      </ng-container>
+      <p class="por-zona-box-sub" *ngIf="evolucaoAssuntosPorZona === null">
+        Não há datas de manifestação válidas ou assuntos suficientes no último ano para montar o gráfico.
+      </p>
     </div>
   </div>
 </section>

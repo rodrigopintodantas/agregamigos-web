@@ -12,8 +12,176 @@
   margin-bottom: 0.5rem;
 }
 
+.ouv-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  margin-bottom: 0.75rem;
+  border-bottom: 1px solid #eaecf0;
+}
+
+.ouv-tab {
+  margin: 0;
+  padding: 0.45rem 0.85rem;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -1px;
+  background: transparent;
+  color: #667085;
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 8px 8px 0 0;
+}
+
+.ouv-tab:hover {
+  color: #344054;
+  background: #f9fafb;
+}
+
+.ouv-tab.ativa {
+  color: #344054;
+  border-bottom-color: var(--color-brand-500, #7c3aed);
+  background: transparent;
+}
+
 .ouv-tab-panel {
   min-width: 0;
+}
+
+.por-zona-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.por-zona-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.por-zona-select-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #344054;
+}
+
+.por-zona-select {
+  min-width: min(100%, 18rem);
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #fff;
+  color: #344054;
+  padding: 0.35rem 0.65rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.por-zona-select:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.por-zona-box {
+  border: 1px solid #eaecf0;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.85rem 1rem 1rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
+}
+
+.por-zona-box-titulo {
+  margin: 0 0 0.65rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #101828;
+}
+
+.por-zona-box-sub {
+  margin: 0 0 0.5rem;
+  font-size: 0.8rem;
+  color: #667085;
+}
+
+.por-zona-box-sub:last-of-type {
+  margin-bottom: 0;
+}
+
+.evolucao-chart-wrap {
+  width: 100%;
+  margin-top: 0.65rem;
+  overflow-x: auto;
+}
+
+.evolucao-svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  max-height: 440px;
+}
+
+.evolucao-grid-line {
+  stroke: #eaecf0;
+  stroke-width: 1;
+}
+
+.evolucao-axis {
+  stroke: #d0d5dd;
+  stroke-width: 1.5;
+}
+
+.evolucao-axis-y {
+  font-size: 10px;
+  fill: #667085;
+}
+
+.evolucao-axis-x {
+  font-size: 11px;
+  fill: #475467;
+}
+
+.evolucao-linha {
+  vector-effect: non-scaling-stroke;
+}
+
+.evolucao-ponto {
+  cursor: default;
+}
+
+.evolucao-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.85rem;
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #eaecf0;
+}
+
+.evolucao-legenda-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: min(100%, 20rem);
+}
+
+.evolucao-legenda-swatch {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.evolucao-legenda-texto {
+  font-size: 0.72rem;
+  color: #344054;
+  font-weight: 500;
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .head-actions {
@@ -299,7 +467,70 @@
   flex: 1 1 auto;
   min-height: 0;
   overflow: auto;
-  padding: 0.35rem 0.45rem;
+  padding: 0.35rem 0.45rem 0.45rem;
+}
+
+.filtro-dropdown-busca-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.45rem 0.45rem 0;
+  padding: 0.2rem 0.4rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  background: #fff;
+  flex-shrink: 0;
+}
+
+.filtro-dropdown-busca-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+  color: #667085;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.filtro-dropdown-busca-icon svg {
+  width: 100%;
+  height: 100%;
+  stroke: currentColor;
+  stroke-width: 2;
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.filtro-dropdown-busca-input {
+  border: 0;
+  flex: 1;
+  min-width: 0;
+  padding: 0.2rem 0;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #344054;
+  outline: none;
+  background: transparent;
+}
+
+.filtro-dropdown-busca-input::placeholder {
+  color: #98a2b3;
+}
+
+.filtro-dropdown-hint {
+  margin: 0.35rem 0.45rem 0.15rem;
+  padding: 0;
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: #667085;
+  flex-shrink: 0;
+}
+
+.filtro-dropdown-vazio {
+  margin: 0.35rem 0;
+  padding: 0.25rem 0;
+  font-size: 0.72rem;
+  color: #667085;
+  text-align: center;
 }
 
 .filtro-opcao {

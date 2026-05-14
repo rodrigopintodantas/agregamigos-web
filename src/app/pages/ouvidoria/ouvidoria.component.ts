@@ -34,6 +34,21 @@ const ORDENACAO_PADRAO = { col: 'dt_manifestacao', dir: 'desc' as const };
 
 const CHAVE_VAZIO = '__vazio__';
 
+/** Série no gráfico de evolução (aba Por Zona). */
+export interface SerieEvolucaoAssuntoOuvidoria {
+  chave: string;
+  rotulo: string;
+  totaisPorAno: number[];
+}
+
+export interface EvolucaoAssuntosPorZona {
+  /** Maior ano com manifestação neste ds_ra (base para o top 10 de assuntos). */
+  anoReferencia: number;
+  anos: number[];
+  series: SerieEvolucaoAssuntoOuvidoria[];
+  maxY: number;
+}
+
 @Component({
   selector: 'app-ouvidoria',
   standalone: true,
@@ -74,6 +89,8 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
   opcoesDistintasPorColuna: Record<string, string[]> = {};
   filtrosColuna: Record<string, string[]> = {};
   colunaFiltroAberta: string | null = null;
+  /** Texto da busca dentro do painel de filtro (refina a lista de checkboxes). */
+  termoBuscaFiltro = '';
 
   ordenacao: { col: string; dir: 'asc' | 'desc' } | null = {
     col: ORDENACAO_PADRAO.col,
@@ -86,6 +103,20 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
   importandoCsv = false;
   mensagemImportacao = '';
   menuExportarAberto = false;
+
+  /** Aba: visão completa (grade atual) ou por zona (valores de ds_ra). */
+  abaOuvidoria: 'completa' | 'por-zona' = 'completa';
+
+  /** Valores distintos de `ds_ra` nos dados carregados (texto exatamente como na coluna). */
+  dsRaOpcoesPorZona: string[] = [];
+  dsRaSelecionadaPorZona: string | null = null;
+
+  /** Gráfico: top 10 assuntos do último ano (por ds_ra) × evolução por ano. */
+  evolucaoAssuntosPorZona: EvolucaoAssuntosPorZona | null = null;
+
+  readonly evolucaoSvgW = 840;
+  readonly evolucaoSvgH = 400;
+  readonly evolucaoPad = { l: 52, r: 28, t: 24, b: 88 };
 
   paginaAtual = 1;
   itensPorPagina = 10;
@@ -148,14 +179,18 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
   }
 
   private calcPaginasVisiveis(): number[] {
+    return this.calcPaginasVisiveisPara(this.paginaAtual, this.totalPaginas);
+  }
+
+  private calcPaginasVisiveisPara(paginaAtual: number, totalPaginas: number): number[] {
     const maxBotoes = 5;
-    const total = this.totalPaginas;
+    const total = totalPaginas;
     if (total <= maxBotoes) {
       return Array.from({ length: total }, (_, index) => index + 1);
     }
     const metade = Math.floor(maxBotoes / 2);
-    let inicio = this.paginaAtual - metade;
-    let fim = this.paginaAtual + metade;
+    let inicio = paginaAtual - metade;
+    let fim = paginaAtual + metade;
     if (inicio < 1) {
       inicio = 1;
       fim = maxBotoes;
@@ -181,7 +216,11 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
         this.paginaAtual = 1;
         this.reindexarTextoBusca();
         this.recomputarFiltradoEOrdenado();
+        this.reconstruirOpcoesDsRaPorZona();
+        this.sincronizarSelecaoDsRaPorZona();
+        this.recomputarEvolucaoAssuntosPorZona();
         this.carregando = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         this.erro = err?.error?.message ?? 'Não foi possível carregar os dados de ouvidoria.';
@@ -189,6 +228,172 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
         this.cdr.markForCheck();
       },
     });
+  }
+
+  definirAba(aba: 'completa' | 'por-zona'): void {
+    if (this.abaOuvidoria === aba) return;
+    this.abaOuvidoria = aba;
+    if (aba !== 'completa') {
+      this.fecharPainelFiltro();
+      this.fecharMenuExportar();
+    }
+    this.cdr.markForCheck();
+  }
+
+  definirDsRaPorZona(dsRa: string): void {
+    this.dsRaSelecionadaPorZona = dsRa;
+    this.recomputarEvolucaoAssuntosPorZona();
+  }
+
+  /** Valores distintos não vazios de `ds_ra`, como string (igual ao armazenado no item). */
+  private reconstruirOpcoesDsRaPorZona(): void {
+    const unicos = new Set<string>();
+    for (const v of this.itens) {
+      const ra = v.ds_ra;
+      if (ra === undefined || ra === null) continue;
+      const s = typeof ra === 'string' ? ra : String(ra);
+      if (!s) continue;
+      unicos.add(s);
+    }
+    this.dsRaOpcoesPorZona = Array.from(unicos).sort((a, b) =>
+      a.localeCompare(b, 'pt-BR', { numeric: true, sensitivity: 'base' }),
+    );
+  }
+
+  private sincronizarSelecaoDsRaPorZona(): void {
+    const opcoes = this.dsRaOpcoesPorZona;
+    if (!opcoes.length) {
+      this.dsRaSelecionadaPorZona = null;
+      return;
+    }
+    if (this.dsRaSelecionadaPorZona != null && opcoes.includes(this.dsRaSelecionadaPorZona)) {
+      return;
+    }
+    this.dsRaSelecionadaPorZona = opcoes[0];
+  }
+
+  private chaveAssuntoFiltro(v: OuvidoriaItem): string {
+    const raw = v.ds_assunto;
+    if (raw === undefined || raw === null) return CHAVE_VAZIO;
+    const s = typeof raw === 'string' ? raw.trim() : String(raw).trim();
+    return s.length ? s : CHAVE_VAZIO;
+  }
+
+  private rotuloAssuntoEvolucao(chave: string): string {
+    return chave === CHAVE_VAZIO ? '(sem assunto)' : chave;
+  }
+
+  /**
+   * Top 10 `ds_assunto` no último ano com manifestações neste ds_ra;
+   * contagens por ano em todos os anos com data válida na mesma RA.
+   */
+  private recomputarEvolucaoAssuntosPorZona(): void {
+    const dsRa = this.dsRaSelecionadaPorZona;
+    if (dsRa == null) {
+      this.evolucaoAssuntosPorZona = null;
+      this.cdr.markForCheck();
+      return;
+    }
+    const porZona = this.itens.filter((v) => v.ds_ra === dsRa);
+    const comAno: { ano: number; chave: string }[] = [];
+    for (const v of porZona) {
+      const d = this.parseDataOrdenacao(v);
+      if (!d) continue;
+      const ano = d.getFullYear();
+      comAno.push({ ano, chave: this.chaveAssuntoFiltro(v) });
+    }
+    if (!comAno.length) {
+      this.evolucaoAssuntosPorZona = null;
+      this.cdr.markForCheck();
+      return;
+    }
+    const anos = [...new Set(comAno.map((x) => x.ano))].sort((a, b) => a - b);
+    const anoReferencia = anos[anos.length - 1];
+    const contagemUltimoAno = new Map<string, number>();
+    for (const x of comAno) {
+      if (x.ano !== anoReferencia) continue;
+      contagemUltimoAno.set(x.chave, (contagemUltimoAno.get(x.chave) ?? 0) + 1);
+    }
+    const top10 = [...contagemUltimoAno.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([chave]) => chave);
+    if (!top10.length) {
+      this.evolucaoAssuntosPorZona = null;
+      this.cdr.markForCheck();
+      return;
+    }
+    const contagem = new Map<string, number>();
+    for (const x of comAno) {
+      if (!top10.includes(x.chave)) continue;
+      const k = `${x.ano}\t${x.chave}`;
+      contagem.set(k, (contagem.get(k) ?? 0) + 1);
+    }
+    const series: SerieEvolucaoAssuntoOuvidoria[] = top10.map((chave) => ({
+      chave,
+      rotulo: this.rotuloAssuntoEvolucao(chave),
+      totaisPorAno: anos.map((ano) => contagem.get(`${ano}\t${chave}`) ?? 0),
+    }));
+    let maxY = 0;
+    for (const s of series) {
+      for (const t of s.totaisPorAno) {
+        maxY = Math.max(maxY, t);
+      }
+    }
+    maxY = Math.max(maxY, 1);
+    this.evolucaoAssuntosPorZona = { anoReferencia, anos, series, maxY };
+    this.cdr.markForCheck();
+  }
+
+  evolucaoPlotX(anoIndex: number, totalAnos: number): number {
+    const innerW = this.evolucaoSvgW - this.evolucaoPad.l - this.evolucaoPad.r;
+    if (totalAnos <= 1) {
+      return this.evolucaoPad.l + innerW / 2;
+    }
+    return this.evolucaoPad.l + (innerW * anoIndex) / (totalAnos - 1);
+  }
+
+  evolucaoPlotY(val: number, maxY: number): number {
+    const innerH = this.evolucaoSvgH - this.evolucaoPad.t - this.evolucaoPad.b;
+    return this.evolucaoPad.t + innerH * (1 - val / maxY);
+  }
+
+  evolucaoPolylinePoints(serie: SerieEvolucaoAssuntoOuvidoria): string {
+    const ch = this.evolucaoAssuntosPorZona;
+    if (!ch) return '';
+    const n = ch.anos.length;
+    return ch.anos
+      .map((_, j) => {
+        const x = this.evolucaoPlotX(j, n);
+        const y = this.evolucaoPlotY(serie.totaisPorAno[j] ?? 0, ch.maxY);
+        return `${this.arredondarSvg(x)},${this.arredondarSvg(y)}`;
+      })
+      .join(' ');
+  }
+
+  evolucaoCorSerie(index: number): string {
+    const hues = [262, 200, 25, 340, 145, 15, 310, 175, 220, 55];
+    return `hsl(${hues[index % hues.length]} 58% 40%)`;
+  }
+
+  evolucaoLegendaCurta(rotulo: string, max = 52): string {
+    if (rotulo.length <= max) return rotulo;
+    return `${rotulo.slice(0, max - 1)}…`;
+  }
+
+  private arredondarSvg(n: number): number {
+    return Math.round(n * 100) / 100;
+  }
+
+  evolucaoTicksY(maxY: number): number[] {
+    const n = 4;
+    const raw = Array.from({ length: n + 1 }, (_, i) => Math.round((maxY * i) / n));
+    return [...new Set(raw)].sort((a, b) => a - b);
+  }
+
+  evolucaoAriaLabel(ev: EvolucaoAssuntosPorZona): string {
+    const anosTxt = ev.anos.length ? `${ev.anos[0]} a ${ev.anos[ev.anos.length - 1]}` : '';
+    return `Evolução das manifestações: ${ev.series.length} assuntos do ano ${ev.anoReferencia}, eixo horizontal anos ${anosTxt}.`;
   }
 
   tituloColuna(col: string): string {
@@ -585,6 +790,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     this.colunaFiltroAberta = null;
     this.painelFiltroEstilo = null;
     this.filtroTriggerEl = null;
+    this.termoBuscaFiltro = '';
     this.cdr.markForCheck();
   }
 
@@ -611,7 +817,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     let top: number;
     let maxPainel: number;
 
-    if (espacoAbaixo >= 150 || espacoAbaixo >= espacoAcima) {
+    if (espacoAbaixo >= 180 || espacoAbaixo >= espacoAcima) {
       top = r.bottom + 4;
       maxPainel = Math.min(280, Math.max(100, espacoAbaixo - 4));
     } else {
@@ -643,6 +849,21 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     return this.opcoesDistintasPorColuna[col] ?? [];
   }
 
+  /** Opções do painel atual filtradas pelo texto de busca (rótulo ou chave). */
+  opcoesFiltroFiltradas(col: string): string[] {
+    const todas = this.opcoesFiltroParaColuna(col);
+    const q = this.termoBuscaFiltro.trim().toLowerCase();
+    if (!q) return todas;
+    return todas.filter((chave) => {
+      const rotulo = this.rotuloOpcaoFiltro(chave).toLowerCase();
+      return rotulo.includes(q) || chave.toLowerCase().includes(q);
+    });
+  }
+
+  aoAlterarBuscaFiltro(): void {
+    this.cdr.markForCheck();
+  }
+
   painelFiltroAbertoPara(col: string): boolean {
     return this.colunaFiltroAberta === col;
   }
@@ -655,6 +876,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
       return;
     }
     this.colunaFiltroAberta = col;
+    this.termoBuscaFiltro = '';
     this.filtroTriggerEl = btn;
     if (this.opcoesDistintasPorColuna[col] === undefined && this.itens.length > 0) {
       this.atualizarOpcoesDistintasParaColuna(col);
@@ -664,6 +886,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
       requestAnimationFrame(() => {
         this.posicionarPainelFiltro();
       });
+      document.querySelector<HTMLInputElement>('.filtro-dropdown-busca-input')?.focus();
     });
     this.cdr.markForCheck();
   }
