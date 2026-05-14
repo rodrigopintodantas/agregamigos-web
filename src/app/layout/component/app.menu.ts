@@ -94,8 +94,8 @@ import { LayoutUiService } from '../service/layout-ui.service';
           <span class="menu-label">Ouvidoria</span>
         </a>
       </li>
-      <li *ngIf="auth.isAdmin() && isAdminLogin()" class="menu-section">Campanha</li>
-      <li *ngIf="auth.isAdmin() && isAdminLogin()">
+      <li *ngIf="auth.isAdmin()" class="menu-section">Campanha</li>
+      <li *ngIf="auth.isAdmin()">
         <a
           [routerLink]="auth.routerSegments('admin', 'whatsapp')"
           routerLinkActive="active-route"
@@ -113,7 +113,7 @@ import { LayoutUiService } from '../service/layout-ui.service';
           <span class="menu-label">Conexão WhatsApp</span>
         </a>
       </li>
-      <li *ngIf="auth.isAdmin() && isAdminLogin()">
+      <li *ngIf="auth.isAdmin()">
         <a
           [routerLink]="auth.routerSegments('admin', 'modelos-mensagem')"
           routerLinkActive="active-route"
@@ -131,7 +131,7 @@ import { LayoutUiService } from '../service/layout-ui.service';
           <span class="menu-label">Modelos de mensagem</span>
         </a>
       </li>
-      <li *ngIf="auth.isAdmin() && isAdminLogin()">
+      <li *ngIf="auth.isAdmin()">
         <a
           [routerLink]="auth.routerSegments('admin', 'divulgacao')"
           routerLinkActive="active-route"
@@ -154,9 +154,5 @@ import { LayoutUiService } from '../service/layout-ui.service';
 export class AppMenu {
   auth = inject(AutenticacaoService);
   ui = inject(LayoutUiService);
-
-  isAdminLogin(): boolean {
-    return this.auth.isLoginAdminSistema();
-  }
 }
 

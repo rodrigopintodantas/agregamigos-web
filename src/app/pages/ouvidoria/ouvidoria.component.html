@@ -28,6 +28,18 @@
     >
       Por Zona
     </button>
+    <button
+      type="button"
+      class="ouv-tab"
+      role="tab"
+      id="tab-ouvidoria-progresso"
+      [attr.aria-selected]="abaOuvidoria === 'progresso'"
+      [attr.tabindex]="abaOuvidoria === 'progresso' ? 0 : -1"
+      [class.ativa]="abaOuvidoria === 'progresso'"
+      (click)="definirAba('progresso')"
+    >
+      Progresso
+    </button>
   </nav>
 
   <p class="msg" *ngIf="carregando">Carregando...</p>
@@ -274,9 +286,9 @@
     <div class="por-zona-box" *ngIf="!carregando && !erro && dsRaSelecionadaPorZona != null">
       <h3 class="por-zona-box-titulo">Quantidade por assunto</h3>
       <p class="por-zona-box-sub">
-        Manifestações por <code>ds_assunto</code> no ano selecionado — do maior para o menor. O texto do
-        assunto aparece por completo. A área do gráfico mostra cerca de cinco linhas; role para ver os
-        demais assuntos.
+        Manifestações por <code>ds_assunto</code> no período selecionado (ano; mês opcional como
+        &quot;Todos&quot;) — do maior para o menor. O texto do assunto aparece por completo. A área do
+        gráfico mostra cerca de cinco linhas; role para ver os demais assuntos.
       </p>
       <div class="barras-assuntos-toolbar">
         <label class="barras-assuntos-label" for="ouv-barras-ano">Ano</label>
@@ -288,6 +300,22 @@
           (ngModelChange)="definirAnoBarrasPorZona($event)"
         >
           <option *ngFor="let a of anosDisponiveisBarrasPorZona" [ngValue]="a">{{ a }}</option>
+        </select>
+        <label class="barras-assuntos-label" for="ouv-barras-mes">Mês</label>
+        <select
+          id="ouv-barras-mes"
+          class="barras-assuntos-select por-zona-select"
+          [disabled]="anosDisponiveisBarrasPorZona.length === 0"
+          [ngModel]="mesSelecionadoBarrasPorZona"
+          (ngModelChange)="definirMesBarrasPorZona($event)"
+        >
+          <option [ngValue]="null">Todos</option>
+          <option
+            *ngFor="let m of mesesDisponiveisBarrasPorZona; trackBy: trackByMesBarrasPorZona"
+            [ngValue]="m"
+          >
+            {{ nomeMesBarrasPorZona(m) }}
+          </option>
         </select>
       </div>
       <p class="por-zona-box-sub" *ngIf="anosDisponiveisBarrasPorZona.length === 0">
@@ -309,7 +337,7 @@
             <div class="barras-assuntos-track">
               <div
                 class="barras-assuntos-fill"
-                [style.width.%]="percLarguraBarraAssunto(row.total)"
+                [style.width.%]="percLarguraBarra(row.total, maxTotalBarrasAssuntos)"
               ></div>
             </div>
           </div>
@@ -320,7 +348,76 @@
         class="por-zona-box-sub"
         *ngIf="anosDisponiveisBarrasPorZona.length > 0 && assuntosBarrasPorZona.length === 0"
       >
-        Nenhuma manifestação neste ano.
+        {{ mensagemVaziaBarrasPorZona() }}
+      </p>
+    </div>
+
+    <div class="por-zona-box" *ngIf="!carregando && !erro && dsRaSelecionadaPorZona != null">
+      <h3 class="por-zona-box-titulo">Quantidade por Órgão</h3>
+      <p class="por-zona-box-sub">
+        Manifestações por <code>nm_orgao</code> no período selecionado (ano; mês opcional como
+        &quot;Todos&quot;) — do maior para o menor. O texto do órgão aparece por completo. A área do
+        gráfico mostra cerca de cinco linhas; role para ver os demais órgãos.
+      </p>
+      <div class="barras-assuntos-toolbar">
+        <label class="barras-assuntos-label" for="ouv-barras-ano-orgao">Ano</label>
+        <select
+          id="ouv-barras-ano-orgao"
+          class="barras-assuntos-select por-zona-select"
+          [disabled]="anosDisponiveisBarrasPorZona.length === 0"
+          [ngModel]="anoSelecionadoBarrasPorZona"
+          (ngModelChange)="definirAnoBarrasPorZona($event)"
+        >
+          <option *ngFor="let a of anosDisponiveisBarrasPorZona" [ngValue]="a">{{ a }}</option>
+        </select>
+        <label class="barras-assuntos-label" for="ouv-barras-mes-orgao">Mês</label>
+        <select
+          id="ouv-barras-mes-orgao"
+          class="barras-assuntos-select por-zona-select"
+          [disabled]="anosDisponiveisBarrasPorZona.length === 0"
+          [ngModel]="mesSelecionadoBarrasPorZona"
+          (ngModelChange)="definirMesBarrasPorZona($event)"
+        >
+          <option [ngValue]="null">Todos</option>
+          <option
+            *ngFor="let m of mesesDisponiveisBarrasPorZona; trackBy: trackByMesBarrasPorZona"
+            [ngValue]="m"
+          >
+            {{ nomeMesBarrasPorZona(m) }}
+          </option>
+        </select>
+      </div>
+      <p class="por-zona-box-sub" *ngIf="anosDisponiveisBarrasPorZona.length === 0">
+        Não há datas de manifestação válidas para este ds_ra.
+      </p>
+      <div
+        class="barras-assuntos-scroll"
+        *ngIf="anosDisponiveisBarrasPorZona.length > 0 && orgaosBarrasPorZona.length > 0"
+        role="list"
+        aria-label="Quantidade de manifestações por órgão"
+      >
+        <div
+          class="barras-assuntos-linha"
+          *ngFor="let row of orgaosBarrasPorZona; trackBy: trackByOrgaoBarra"
+          role="listitem"
+        >
+          <div class="barras-assuntos-rotulo">{{ row.rotulo }}</div>
+          <div class="barras-assuntos-track-wrap">
+            <div class="barras-assuntos-track">
+              <div
+                class="barras-assuntos-fill"
+                [style.width.%]="percLarguraBarra(row.total, maxTotalBarrasOrgaos)"
+              ></div>
+            </div>
+          </div>
+          <div class="barras-assuntos-valor">{{ row.total }}</div>
+        </div>
+      </div>
+      <p
+        class="por-zona-box-sub"
+        *ngIf="anosDisponiveisBarrasPorZona.length > 0 && orgaosBarrasPorZona.length === 0"
+      >
+        {{ mensagemVaziaBarrasPorZona() }}
       </p>
     </div>
 
@@ -430,5 +527,134 @@
         Não há datas de manifestação válidas ou assuntos suficientes no último ano para montar o gráfico.
       </p>
     </div>
+  </div>
+
+  <div
+    *ngIf="abaOuvidoria === 'progresso'"
+    class="ouv-tab-panel progresso-panel"
+    role="tabpanel"
+    aria-labelledby="tab-ouvidoria-progresso"
+  >
+    <div class="por-zona-toolbar progresso-toolbar">
+      <label class="por-zona-select-label" for="ouv-progresso-ds-ra">ds_ra</label>
+      <select
+        id="ouv-progresso-ds-ra"
+        class="por-zona-select"
+        [disabled]="carregando || !!erro || dsRaOpcoesPorZona.length === 0"
+        [ngModel]="dsRaSelecionadaProgressoAtual"
+        (ngModelChange)="definirDsRaProgressoAtual($event)"
+      >
+        <option *ngFor="let ra of dsRaOpcoesPorZona" [ngValue]="ra">{{ ra }}</option>
+      </select>
+      <label class="por-zona-select-label" for="ouv-progresso-periodo">Período</label>
+      <select
+        id="ouv-progresso-periodo"
+        class="por-zona-select"
+        [disabled]="carregando || !!erro || dsRaOpcoesPorZona.length === 0"
+        [ngModel]="periodoProgressoSelecionado"
+        (ngModelChange)="definirPeriodoProgresso($event)"
+      >
+        <option *ngFor="let p of opcoesPeriodoProgresso" [ngValue]="p.valor">{{ p.rotulo }}</option>
+      </select>
+    </div>
+
+    <p class="msg por-zona-sem-opcoes" *ngIf="!carregando && !erro && dsRaOpcoesPorZona.length === 0">
+      Não há valores em ds_ra nos dados carregados.
+    </p>
+
+    <div
+      class="por-zona-box"
+      *ngIf="!carregando && !erro && dsRaSelecionadaProgressoAtual != null && progressoAssuntoNegativo as prog"
+    >
+      <h3 class="por-zona-box-titulo">Evolução por assunto — negativa</h3>
+      <p class="por-zona-box-sub" *ngIf="!prog.comparacaoAnosCivisCompletos">
+        <code>ds_ra</code> selecionado: <strong>{{ dsRaSelecionadaProgressoAtual }}</strong>. Período:
+        <strong>{{ rotuloPeriodoProgressoSelecionado() }}</strong>. Data mais recente nesse recorte:
+        <strong>{{ prog.dataReferenciaLabel }}</strong>. Compara o acumulado de manifestações por
+        <code>ds_assunto</code> de <strong>{{ labelCabecalhoColunaProgresso(prog.anoAnterior, prog) }}</strong>
+        com <strong>{{ labelCabecalhoColunaProgresso(prog.anoAtual, prog) }}</strong> e lista os cinco assuntos
+        com maior aumento (variação positiva).
+      </p>
+      <p class="por-zona-box-sub" *ngIf="prog.comparacaoAnosCivisCompletos">
+        <code>ds_ra</code> selecionado: <strong>{{ dsRaSelecionadaProgressoAtual }}</strong>. Período:
+        <strong>{{ rotuloPeriodoProgressoSelecionado() }}</strong>. {{ prog.dataReferenciaLabel }}. Compara os
+        totais por <code>ds_assunto</code> do ano civil <strong>{{ prog.anoAnterior }}</strong> com o ano civil
+        <strong>{{ prog.anoAtual }}</strong> (somente manifestações nesses anos) e lista os cinco assuntos com
+        maior aumento (variação positiva).
+      </p>
+      <div class="table-wrap progresso-assunto-negativo-wrap" *ngIf="prog.linhas.length > 0">
+        <table class="tabela-ouvidoria progresso-assunto-negativo-tabela">
+          <thead>
+            <tr>
+              <th scope="col">Assunto</th>
+              <th scope="col" class="th-num">{{ labelCabecalhoColunaProgresso(prog.anoAnterior, prog) }}</th>
+              <th scope="col" class="th-num">{{ labelCabecalhoColunaProgresso(prog.anoAtual, prog) }}</th>
+              <th scope="col" class="th-num">Variação</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of prog.linhas; trackBy: trackByProgressoAssuntoNegativo">
+              <td class="td-assunto-progresso">{{ row.rotulo }}</td>
+              <td class="td-num">{{ row.totalAnterior }}</td>
+              <td class="td-num">{{ row.totalAtual }}</td>
+              <td class="td-num td-delta">+{{ row.delta }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="por-zona-box-sub" *ngIf="prog.linhas.length === 0">
+        Nenhum assunto teve aumento de manifestações nesse intervalo em relação ao ano anterior.
+      </p>
+    </div>
+
+    <div
+      class="por-zona-box"
+      *ngIf="!carregando && !erro && dsRaSelecionadaProgressoAtual != null && progressoAssuntoPositivo as progP"
+    >
+      <h3 class="por-zona-box-titulo">Evolução por assunto — positiva</h3>
+      <p class="por-zona-box-sub">
+        Período: <strong>{{ rotuloPeriodoProgressoSelecionado() }}</strong>. Mesmo recorte e comparação da caixa
+        anterior: os cinco assuntos com maior <strong>redução</strong> de manifestações (variação negativa), ou
+        seja, os que mais diminuíram.
+      </p>
+      <div class="table-wrap progresso-assunto-negativo-wrap" *ngIf="progP.linhas.length > 0">
+        <table class="tabela-ouvidoria progresso-assunto-positivo-tabela">
+          <thead>
+            <tr>
+              <th scope="col">Assunto</th>
+              <th scope="col" class="th-num">{{ labelCabecalhoColunaProgresso(progP.anoAnterior, progP) }}</th>
+              <th scope="col" class="th-num">{{ labelCabecalhoColunaProgresso(progP.anoAtual, progP) }}</th>
+              <th scope="col" class="th-num">Variação</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let row of progP.linhas; trackBy: trackByProgressoAssuntoNegativo">
+              <td class="td-assunto-progresso">{{ row.rotulo }}</td>
+              <td class="td-num">{{ row.totalAnterior }}</td>
+              <td class="td-num">{{ row.totalAtual }}</td>
+              <td class="td-num td-delta-positiva">{{ row.delta }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="por-zona-box-sub" *ngIf="progP.linhas.length === 0">
+        Nenhum assunto teve redução de manifestações nesse intervalo em relação ao ano anterior.
+      </p>
+    </div>
+
+    <p
+      class="msg"
+      *ngIf="
+        !carregando &&
+        !erro &&
+        periodoProgressoSelecionado === 'atual' &&
+        dsRaOpcoesPorZona.length > 0 &&
+        dsRaSelecionadaProgressoAtual != null &&
+        progressoAssuntoNegativo === null &&
+        progressoAssuntoPositivo === null
+      "
+    >
+      Não há datas de manifestação válidas para este ds_ra.
+    </p>
   </div>
 </section>

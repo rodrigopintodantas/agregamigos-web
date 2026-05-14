@@ -6,6 +6,7 @@ import {
   CampanhaDivulgacaoItem,
   CampanhaDivulgacaoService,
 } from '../../service/campanha-divulgacao.service';
+import { AutenticacaoService } from '../../service/autenticacao.service';
 import { ModeloMensagem, ModeloMensagemService } from '../../service/modelo-mensagem.service';
 import { PessoaItem, PessoaService } from '../../service/pessoa.service';
 
@@ -28,6 +29,12 @@ export class DivulgacaoComponent implements OnInit {
   private pessoaService = inject(PessoaService);
   private modeloService = inject(ModeloMensagemService);
   private campanhaService = inject(CampanhaDivulgacaoService);
+  private auth = inject(AutenticacaoService);
+
+  /** Só o login `admin` vê e dispara «Iniciar envio» (alinhado ao menu e à API). */
+  get podeExibirIniciarEnvioCampanha(): boolean {
+    return this.auth.isLoginAdminSistema();
+  }
 
   /** `false`: botão oculto na UI; fluxo `reprocessarErros` permanece no componente. */
   readonly exibirBotaoReprocessarErros = false;
@@ -315,6 +322,10 @@ export class DivulgacaoComponent implements OnInit {
   iniciarCampanha(c: CampanhaDivulgacaoItem): void {
     this.erro = '';
     this.sucesso = '';
+    if (!this.auth.isLoginAdminSistema()) {
+      this.erro = 'Apenas o utilizador com login admin pode iniciar o envio da campanha.';
+      return;
+    }
     if (!this.podeIniciarCampanha(c)) {
       this.erro = 'A campanha só pode ser iniciada quando estiver montada ou em andamento.';
       return;

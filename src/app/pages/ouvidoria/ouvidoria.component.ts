@@ -47,6 +47,21 @@ const ORDENACAO_PADRAO = { col: 'dt_manifestacao', dir: 'desc' as const };
 
 const CHAVE_VAZIO = '__vazio__';
 
+const NOMES_MES_BARRAS_POR_ZONA = [
+  'Janeiro',
+  'Fevereiro',
+  'Março',
+  'Abril',
+  'Maio',
+  'Junho',
+  'Julho',
+  'Agosto',
+  'Setembro',
+  'Outubro',
+  'Novembro',
+  'Dezembro',
+] as const;
+
 /** Série no gráfico de evolução (aba Por Zona). */
 export interface SerieEvolucaoAssuntoOuvidoria {
   chave: string;
@@ -68,6 +83,30 @@ export interface AssuntoBarraLinha {
   rotulo: string;
   total: number;
 }
+
+/** Linha de comparação de períodos por assunto (aba Progresso). */
+export interface ProgressoAssuntoNegativoLinha {
+  chave: string;
+  rotulo: string;
+  totalAnterior: number;
+  totalAtual: number;
+  delta: number;
+}
+
+/** Comparação jan.–mês da data mais recente vs mesmo intervalo do ano anterior. */
+export interface ProgressoAssuntoNegativoDados {
+  dataReferenciaLabel: string;
+  anoAtual: number;
+  anoAnterior: number;
+  mesAte: number;
+  nomeMesAte: string;
+  /** Se true, colunas são anos civis completos (jan.–dez.). */
+  comparacaoAnosCivisCompletos: boolean;
+  linhas: ProgressoAssuntoNegativoLinha[];
+}
+
+/** Filtro de período da aba Progresso. */
+export type PeriodoProgressoOuvidoria = 'atual' | '2024-2025' | '2023-2024';
 
 @Component({
   selector: 'app-ouvidoria',
@@ -124,12 +163,21 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
   mensagemImportacao = '';
   menuExportarAberto = false;
 
-  /** Aba: visão completa (grade atual) ou por zona (valores de ds_ra). */
-  abaOuvidoria: 'completa' | 'por-zona' = 'completa';
+  /** Aba: visão completa, por zona ou progresso. */
+  abaOuvidoria: 'completa' | 'por-zona' | 'progresso' = 'completa';
 
   /** Valores distintos de `ds_ra` nos dados carregados (texto exatamente como na coluna). */
   dsRaOpcoesPorZona: string[] = [];
   dsRaSelecionadaPorZona: string | null = null;
+  /** RA escolhida na aba Progresso (mesmas opções que `dsRaOpcoesPorZona`). */
+  dsRaSelecionadaProgressoAtual: string | null = null;
+
+  readonly opcoesPeriodoProgresso: { valor: PeriodoProgressoOuvidoria; rotulo: string }[] = [
+    { valor: 'atual', rotulo: 'Atual' },
+    { valor: '2024-2025', rotulo: '2024–2025' },
+    { valor: '2023-2024', rotulo: '2023–2024' },
+  ];
+  periodoProgressoSelecionado: PeriodoProgressoOuvidoria = 'atual';
 
   /** Gráfico: top 10 assuntos do último ano (por ds_ra) × evolução por ano. */
   evolucaoAssuntosPorZona: EvolucaoAssuntosPorZona | null = null;
@@ -137,8 +185,19 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
   /** Barras horizontais: quantidade por assunto no ano filtrado (por ds_ra). */
   anosDisponiveisBarrasPorZona: number[] = [];
   anoSelecionadoBarrasPorZona: number | null = null;
+  /** Meses (1–12) com manifestação no `anoSelecionadoBarrasPorZona` neste ds_ra. */
+  mesesDisponiveisBarrasPorZona: number[] = [];
+  /** `null` = todos os meses do ano. */
+  mesSelecionadoBarrasPorZona: number | null = null;
   assuntosBarrasPorZona: AssuntoBarraLinha[] = [];
   maxTotalBarrasAssuntos = 1;
+  orgaosBarrasPorZona: AssuntoBarraLinha[] = [];
+  maxTotalBarrasOrgaos = 1;
+
+  /** Aba Progresso: top 5 assuntos com maior aumento no período (vs ano anterior). */
+  progressoAssuntoNegativo: ProgressoAssuntoNegativoDados | null = null;
+  /** Aba Progresso: top 5 assuntos com maior redução no período (vs ano anterior). */
+  progressoAssuntoPositivo: ProgressoAssuntoNegativoDados | null = null;
 
   readonly evolucaoSvgW = 840;
   readonly evolucaoSvgH = 400;
@@ -244,8 +303,10 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
         this.recomputarFiltradoEOrdenado();
         this.reconstruirOpcoesDsRaPorZona();
         this.sincronizarSelecaoDsRaPorZona();
+        this.sincronizarSelecaoDsRaProgressoAtual();
         this.recomputarBarrasAssuntosPorZona();
         this.recomputarEvolucaoAssuntosPorZona();
+        this.recomputarProgressoAssuntoNegativo();
         this.carregando = false;
         this.cdr.markForCheck();
       },
@@ -257,7 +318,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     });
   }
 
-  definirAba(aba: 'completa' | 'por-zona'): void {
+  definirAba(aba: 'completa' | 'por-zona' | 'progresso'): void {
     if (this.abaOuvidoria === aba) return;
     this.abaOuvidoria = aba;
     if (aba !== 'completa') {
@@ -273,10 +334,56 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     this.recomputarEvolucaoAssuntosPorZona();
   }
 
+  definirDsRaProgressoAtual(dsRa: string): void {
+    this.dsRaSelecionadaProgressoAtual = dsRa;
+    this.recomputarProgressoAssuntoNegativo();
+  }
+
+  definirPeriodoProgresso(periodo: PeriodoProgressoOuvidoria): void {
+    this.periodoProgressoSelecionado = periodo;
+    this.recomputarProgressoAssuntoNegativo();
+  }
+
+  rotuloPeriodoProgressoSelecionado(): string {
+    return (
+      this.opcoesPeriodoProgresso.find((o) => o.valor === this.periodoProgressoSelecionado)?.rotulo ??
+      this.periodoProgressoSelecionado
+    );
+  }
+
+  /** Cabeçalho de coluna: ano civil ou jan.–mês. */
+  labelCabecalhoColunaProgresso(ano: number, prog: ProgressoAssuntoNegativoDados): string {
+    if (prog.comparacaoAnosCivisCompletos) {
+      return String(ano);
+    }
+    return this.labelPeriodoProgresso(ano, prog.nomeMesAte);
+  }
+
   definirAnoBarrasPorZona(ano: number): void {
     this.anoSelecionadoBarrasPorZona = ano;
+    this.mesSelecionadoBarrasPorZona = null;
     this.recomputarBarrasAssuntosPorZona({ preservarAnoSeValido: true });
   }
+
+  definirMesBarrasPorZona(mes: number | null | undefined): void {
+    this.mesSelecionadoBarrasPorZona = mes ?? null;
+    this.recomputarBarrasAssuntosPorZona({
+      preservarAnoSeValido: true,
+      preservarMesSeValido: true,
+    });
+  }
+
+  nomeMesBarrasPorZona(mes: number): string {
+    return NOMES_MES_BARRAS_POR_ZONA[mes - 1] ?? String(mes);
+  }
+
+  mensagemVaziaBarrasPorZona(): string {
+    return this.mesSelecionadoBarrasPorZona != null
+      ? 'Nenhuma manifestação neste mês.'
+      : 'Nenhuma manifestação neste ano.';
+  }
+
+  trackByMesBarrasPorZona = (_: number, mes: number): string => String(mes);
 
   /** Valores distintos não vazios de `ds_ra`, como string (igual ao armazenado no item). */
   private reconstruirOpcoesDsRaPorZona(): void {
@@ -305,6 +412,18 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     this.dsRaSelecionadaPorZona = opcoes[0];
   }
 
+  private sincronizarSelecaoDsRaProgressoAtual(): void {
+    const opcoes = this.dsRaOpcoesPorZona;
+    if (!opcoes.length) {
+      this.dsRaSelecionadaProgressoAtual = null;
+      return;
+    }
+    if (this.dsRaSelecionadaProgressoAtual != null && opcoes.includes(this.dsRaSelecionadaProgressoAtual)) {
+      return;
+    }
+    this.dsRaSelecionadaProgressoAtual = opcoes[0];
+  }
+
   private chaveAssuntoFiltro(v: OuvidoriaItem): string {
     const raw = v.ds_assunto;
     if (raw === undefined || raw === null) return CHAVE_VAZIO;
@@ -316,15 +435,34 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     return chave === CHAVE_VAZIO ? '(sem assunto)' : chave;
   }
 
-  /** Contagem por assunto no ds_ra + ano (ordenado decrescente). */
-  private recomputarBarrasAssuntosPorZona(options?: { preservarAnoSeValido?: boolean }): void {
-    const preservar = options?.preservarAnoSeValido ?? false;
+  private chaveOrgaoFiltro(v: OuvidoriaItem): string {
+    const raw = v.nm_orgao;
+    if (raw === undefined || raw === null) return CHAVE_VAZIO;
+    const s = typeof raw === 'string' ? raw.trim() : String(raw).trim();
+    return s.length ? s : CHAVE_VAZIO;
+  }
+
+  private rotuloOrgaoBarras(chave: string): string {
+    return chave === CHAVE_VAZIO ? '(sem órgão)' : chave;
+  }
+
+  /** Contagem por assunto e por órgão (`nm_orgao`) no ds_ra + ano (ordenado decrescente). */
+  private recomputarBarrasAssuntosPorZona(options?: {
+    preservarAnoSeValido?: boolean;
+    preservarMesSeValido?: boolean;
+  }): void {
+    const preservarAno = options?.preservarAnoSeValido ?? false;
+    const preservarMes = options?.preservarMesSeValido ?? false;
     const dsRa = this.dsRaSelecionadaPorZona;
     if (dsRa == null) {
       this.anosDisponiveisBarrasPorZona = [];
       this.anoSelecionadoBarrasPorZona = null;
+      this.mesesDisponiveisBarrasPorZona = [];
+      this.mesSelecionadoBarrasPorZona = null;
       this.assuntosBarrasPorZona = [];
       this.maxTotalBarrasAssuntos = 1;
+      this.orgaosBarrasPorZona = [];
+      this.maxTotalBarrasOrgaos = 1;
       this.cdr.markForCheck();
       return;
     }
@@ -338,27 +476,51 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     this.anosDisponiveisBarrasPorZona = anos;
     if (!anos.length) {
       this.anoSelecionadoBarrasPorZona = null;
+      this.mesesDisponiveisBarrasPorZona = [];
+      this.mesSelecionadoBarrasPorZona = null;
       this.assuntosBarrasPorZona = [];
       this.maxTotalBarrasAssuntos = 1;
+      this.orgaosBarrasPorZona = [];
+      this.maxTotalBarrasOrgaos = 1;
       this.cdr.markForCheck();
       return;
     }
     if (
-      !preservar ||
+      !preservarAno ||
       this.anoSelecionadoBarrasPorZona == null ||
       !anos.includes(this.anoSelecionadoBarrasPorZona)
     ) {
       this.anoSelecionadoBarrasPorZona = anos[anos.length - 1];
     }
     const ano = this.anoSelecionadoBarrasPorZona!;
-    const contagem = new Map<string, number>();
+    const mesesSet = new Set<number>();
     for (const v of porZona) {
       const d = this.parseDataOrdenacao(v);
       if (!d || d.getFullYear() !== ano) continue;
-      const k = this.chaveAssuntoFiltro(v);
-      contagem.set(k, (contagem.get(k) ?? 0) + 1);
+      mesesSet.add(d.getMonth() + 1);
     }
-    const lista: AssuntoBarraLinha[] = [...contagem.entries()]
+    const meses = [...mesesSet].sort((a, b) => a - b);
+    this.mesesDisponiveisBarrasPorZona = meses;
+    if (
+      !preservarMes ||
+      this.mesSelecionadoBarrasPorZona == null ||
+      !meses.includes(this.mesSelecionadoBarrasPorZona)
+    ) {
+      this.mesSelecionadoBarrasPorZona = null;
+    }
+    const mesFiltro = this.mesSelecionadoBarrasPorZona;
+    const contagemAssunto = new Map<string, number>();
+    const contagemOrgao = new Map<string, number>();
+    for (const v of porZona) {
+      const d = this.parseDataOrdenacao(v);
+      if (!d || d.getFullYear() !== ano) continue;
+      if (mesFiltro != null && d.getMonth() + 1 !== mesFiltro) continue;
+      const ka = this.chaveAssuntoFiltro(v);
+      contagemAssunto.set(ka, (contagemAssunto.get(ka) ?? 0) + 1);
+      const ko = this.chaveOrgaoFiltro(v);
+      contagemOrgao.set(ko, (contagemOrgao.get(ko) ?? 0) + 1);
+    }
+    const lista: AssuntoBarraLinha[] = [...contagemAssunto.entries()]
       .map(([chave, total]) => ({
         chave,
         rotulo: this.rotuloAssuntoEvolucao(chave),
@@ -367,14 +529,140 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
       .sort((a, b) => b.total - a.total);
     this.assuntosBarrasPorZona = lista;
     this.maxTotalBarrasAssuntos = Math.max(1, lista[0]?.total ?? 1);
+    const listaOrgao: AssuntoBarraLinha[] = [...contagemOrgao.entries()]
+      .map(([chave, total]) => ({
+        chave,
+        rotulo: this.rotuloOrgaoBarras(chave),
+        total,
+      }))
+      .sort((a, b) => b.total - a.total);
+    this.orgaosBarrasPorZona = listaOrgao;
+    this.maxTotalBarrasOrgaos = Math.max(1, listaOrgao[0]?.total ?? 1);
     this.cdr.markForCheck();
   }
 
-  percLarguraBarraAssunto(total: number): number {
-    return Math.round((10000 * total) / this.maxTotalBarrasAssuntos) / 100;
+  percLarguraBarra(total: number, maxTotal: number): number {
+    const m = Math.max(1, maxTotal);
+    return Math.round((10000 * total) / m) / 100;
   }
 
   trackByAssuntoBarra = (_: number, row: AssuntoBarraLinha): string => row.chave;
+
+  trackByOrgaoBarra = (_: number, row: AssuntoBarraLinha): string => row.chave;
+
+  trackByProgressoAssuntoNegativo = (_: number, row: ProgressoAssuntoNegativoLinha): string =>
+    row.chave;
+
+  /** Rótulo curto do intervalo (jan.–mês) para cabeçalhos de tabela. */
+  labelPeriodoProgresso(ano: number, nomeMesAte: string): string {
+    return `jan.–${nomeMesAte} ${ano}`;
+  }
+
+  /** Compara períodos (Atual: até data máx.; ou anos civis fechados); top 5 aumentos e top 5 reduções. */
+  private recomputarProgressoAssuntoNegativo(): void {
+    const dsRa = this.dsRaSelecionadaProgressoAtual;
+    if (dsRa == null) {
+      this.progressoAssuntoNegativo = null;
+      this.progressoAssuntoPositivo = null;
+      this.cdr.markForCheck();
+      return;
+    }
+    const porRa = this.itens.filter((v) => v.ds_ra === dsRa);
+    const periodo = this.periodoProgressoSelecionado;
+
+    let mapAtual: Map<string, number>;
+    let mapAnt: Map<string, number>;
+    let baseMeta: Omit<ProgressoAssuntoNegativoDados, 'linhas'>;
+
+    if (periodo === 'atual') {
+      let maxD: Date | null = null;
+      for (const v of porRa) {
+        const d = this.parseDataOrdenacao(v);
+        if (!d) continue;
+        if (!maxD || d.getTime() > maxD.getTime()) maxD = d;
+      }
+      if (!maxD) {
+        this.progressoAssuntoNegativo = null;
+        this.progressoAssuntoPositivo = null;
+        this.cdr.markForCheck();
+        return;
+      }
+      const anoAtual = maxD.getFullYear();
+      const mesAte = maxD.getMonth() + 1;
+      const anoAnterior = anoAtual - 1;
+      mapAtual = this.contarAssuntosJanAteMes(anoAtual, mesAte, porRa);
+      mapAnt = this.contarAssuntosJanAteMes(anoAnterior, mesAte, porRa);
+      baseMeta = {
+        dataReferenciaLabel: this.formatarDataPtBr(maxD),
+        anoAtual,
+        anoAnterior,
+        mesAte,
+        nomeMesAte: this.nomeMesBarrasPorZona(mesAte),
+        comparacaoAnosCivisCompletos: false,
+      };
+    } else {
+      const anoAnterior = periodo === '2024-2025' ? 2024 : 2023;
+      const anoAtual = periodo === '2024-2025' ? 2025 : 2024;
+      mapAtual = this.contarAssuntosJanAteMes(anoAtual, 12, porRa);
+      mapAnt = this.contarAssuntosJanAteMes(anoAnterior, 12, porRa);
+      baseMeta = {
+        dataReferenciaLabel: `Anos civis fechados ${anoAnterior} e ${anoAtual} (jan.–dez.)`,
+        anoAtual,
+        anoAnterior,
+        mesAte: 12,
+        nomeMesAte: this.nomeMesBarrasPorZona(12),
+        comparacaoAnosCivisCompletos: true,
+      };
+    }
+
+    const chaves = new Set<string>([...mapAtual.keys(), ...mapAnt.keys()]);
+    const linhas: ProgressoAssuntoNegativoLinha[] = [];
+    for (const chave of chaves) {
+      const totalAtual = mapAtual.get(chave) ?? 0;
+      const totalAnterior = mapAnt.get(chave) ?? 0;
+      linhas.push({
+        chave,
+        rotulo: this.rotuloAssuntoEvolucao(chave),
+        totalAnterior,
+        totalAtual,
+        delta: totalAtual - totalAnterior,
+      });
+    }
+    const topAumentos = linhas
+      .filter((l) => l.delta > 0)
+      .sort((a, b) => b.delta - a.delta)
+      .slice(0, 5);
+    const topDiminuicoes = linhas
+      .filter((l) => l.delta < 0)
+      .sort((a, b) => a.delta - b.delta)
+      .slice(0, 5);
+    this.progressoAssuntoNegativo = { ...baseMeta, linhas: topAumentos };
+    this.progressoAssuntoPositivo = { ...baseMeta, linhas: topDiminuicoes };
+    this.cdr.markForCheck();
+  }
+
+  private contarAssuntosJanAteMes(
+    ano: number,
+    mesMaxInclusive: number,
+    fonte: readonly OuvidoriaItem[],
+  ): Map<string, number> {
+    const m = new Map<string, number>();
+    for (const v of fonte) {
+      const d = this.parseDataOrdenacao(v);
+      if (!d || d.getFullYear() !== ano) continue;
+      const mes = d.getMonth() + 1;
+      if (mes < 1 || mes > mesMaxInclusive) continue;
+      const k = this.chaveAssuntoFiltro(v);
+      m.set(k, (m.get(k) ?? 0) + 1);
+    }
+    return m;
+  }
+
+  private formatarDataPtBr(d: Date): string {
+    const dd = String(d.getDate()).padStart(2, '0');
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${d.getFullYear()}`;
+  }
 
   /**
    * Top 10 `ds_assunto` no último ano com manifestações neste ds_ra;

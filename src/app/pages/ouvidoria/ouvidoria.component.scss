@@ -55,6 +55,41 @@
   gap: 1rem;
 }
 
+.progresso-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.progresso-assunto-negativo-wrap {
+  margin-top: 0.25rem;
+}
+
+.progresso-assunto-negativo-tabela,
+.progresso-assunto-positivo-tabela {
+  .th-num,
+  .td-num {
+    text-align: right;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .td-assunto-progresso {
+    max-width: 36rem;
+    word-break: break-word;
+  }
+}
+
+.progresso-assunto-negativo-tabela .td-delta {
+  font-weight: 600;
+  color: #b42318;
+}
+
+.progresso-assunto-positivo-tabela .td-delta-positiva {
+  font-weight: 600;
+  color: #027a48;
+}
+
 .por-zona-toolbar {
   display: flex;
   flex-wrap: wrap;
