@@ -275,6 +275,7 @@
         [ngModel]="dsRaSelecionadaPorZona"
         (ngModelChange)="definirDsRaPorZona($event)"
       >
+        <option [ngValue]="null">Todos</option>
         <option *ngFor="let ra of dsRaOpcoesPorZona" [ngValue]="ra">{{ ra }}</option>
       </select>
     </div>
@@ -283,12 +284,12 @@
       Não há valores em ds_ra nos dados carregados.
     </p>
 
-    <div class="por-zona-box" *ngIf="!carregando && !erro && dsRaSelecionadaPorZona != null">
+    <div class="por-zona-box" *ngIf="!carregando && !erro && dsRaOpcoesPorZona.length > 0">
       <h3 class="por-zona-box-titulo">Quantidade por assunto</h3>
       <p class="por-zona-box-sub">
-        Manifestações por <code>ds_assunto</code> no período selecionado (ano; mês opcional como
-        &quot;Todos&quot;) — do maior para o menor. O texto do assunto aparece por completo. A área do
-        gráfico mostra cerca de cinco linhas; role para ver os demais assuntos.
+        Manifestações por <code>ds_assunto</code> no período selecionado (ano; mês e filtro de
+        assunto opcionais) — do maior para o menor. O texto do assunto aparece por completo. A área
+        do gráfico mostra cerca de cinco linhas; role para ver os demais assuntos.
       </p>
       <div class="barras-assuntos-toolbar">
         <label class="barras-assuntos-label" for="ouv-barras-ano">Ano</label>
@@ -296,8 +297,8 @@
           id="ouv-barras-ano"
           class="barras-assuntos-select por-zona-select"
           [disabled]="anosDisponiveisBarrasPorZona.length === 0"
-          [ngModel]="anoSelecionadoBarrasPorZona"
-          (ngModelChange)="definirAnoBarrasPorZona($event)"
+          [ngModel]="anoSelecionadoBarrasAssuntoPorZona"
+          (ngModelChange)="definirAnoBarrasAssuntoPorZona($event)"
         >
           <option *ngFor="let a of anosDisponiveisBarrasPorZona" [ngValue]="a">{{ a }}</option>
         </select>
@@ -306,17 +307,32 @@
           id="ouv-barras-mes"
           class="barras-assuntos-select por-zona-select"
           [disabled]="anosDisponiveisBarrasPorZona.length === 0"
-          [ngModel]="mesSelecionadoBarrasPorZona"
-          (ngModelChange)="definirMesBarrasPorZona($event)"
+          [ngModel]="mesSelecionadoBarrasAssuntoPorZona"
+          (ngModelChange)="definirMesBarrasAssuntoPorZona($event)"
         >
           <option [ngValue]="null">Todos</option>
           <option
-            *ngFor="let m of mesesDisponiveisBarrasPorZona; trackBy: trackByMesBarrasPorZona"
+            *ngFor="let m of mesesDisponiveisBarrasAssuntoPorZona; trackBy: trackByMesBarrasPorZona"
             [ngValue]="m"
           >
             {{ nomeMesBarrasPorZona(m) }}
           </option>
         </select>
+        <span class="barras-assuntos-label">Assunto</span>
+        <div class="filtro-col-wrap filtro-barras-wrap">
+          <button
+            type="button"
+            class="filtro-dropdown-trigger"
+            [class.ativo]="filtroBarrasAssuntoAtivo()"
+            [attr.aria-expanded]="painelFiltroBarrasAbertoPara('assunto')"
+            [attr.aria-haspopup]="true"
+            [disabled]="anosDisponiveisBarrasPorZona.length === 0"
+            (click)="alternarPainelFiltroBarras('assunto', $event)"
+          >
+            <span class="filtro-resumo">{{ resumoFiltroBarrasAssunto() }}</span>
+            <span class="filtro-caret" aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
       <p class="por-zona-box-sub" *ngIf="anosDisponiveisBarrasPorZona.length === 0">
         Não há datas de manifestação válidas para este ds_ra.
@@ -348,16 +364,16 @@
         class="por-zona-box-sub"
         *ngIf="anosDisponiveisBarrasPorZona.length > 0 && assuntosBarrasPorZona.length === 0"
       >
-        {{ mensagemVaziaBarrasPorZona() }}
+        {{ mensagemVaziaBarrasAssuntoPorZona() }}
       </p>
     </div>
 
-    <div class="por-zona-box" *ngIf="!carregando && !erro && dsRaSelecionadaPorZona != null">
+    <div class="por-zona-box" *ngIf="!carregando && !erro && dsRaOpcoesPorZona.length > 0">
       <h3 class="por-zona-box-titulo">Quantidade por Órgão</h3>
       <p class="por-zona-box-sub">
-        Manifestações por <code>nm_orgao</code> no período selecionado (ano; mês opcional como
-        &quot;Todos&quot;) — do maior para o menor. O texto do órgão aparece por completo. A área do
-        gráfico mostra cerca de cinco linhas; role para ver os demais órgãos.
+        Manifestações por <code>nm_orgao</code> no período selecionado (ano; mês e filtro de órgão
+        opcionais) — do maior para o menor. O texto do órgão aparece por completo. A área do gráfico
+        mostra cerca de cinco linhas; role para ver os demais órgãos.
       </p>
       <div class="barras-assuntos-toolbar">
         <label class="barras-assuntos-label" for="ouv-barras-ano-orgao">Ano</label>
@@ -365,8 +381,8 @@
           id="ouv-barras-ano-orgao"
           class="barras-assuntos-select por-zona-select"
           [disabled]="anosDisponiveisBarrasPorZona.length === 0"
-          [ngModel]="anoSelecionadoBarrasPorZona"
-          (ngModelChange)="definirAnoBarrasPorZona($event)"
+          [ngModel]="anoSelecionadoBarrasOrgaoPorZona"
+          (ngModelChange)="definirAnoBarrasOrgaoPorZona($event)"
         >
           <option *ngFor="let a of anosDisponiveisBarrasPorZona" [ngValue]="a">{{ a }}</option>
         </select>
@@ -375,17 +391,32 @@
           id="ouv-barras-mes-orgao"
           class="barras-assuntos-select por-zona-select"
           [disabled]="anosDisponiveisBarrasPorZona.length === 0"
-          [ngModel]="mesSelecionadoBarrasPorZona"
-          (ngModelChange)="definirMesBarrasPorZona($event)"
+          [ngModel]="mesSelecionadoBarrasOrgaoPorZona"
+          (ngModelChange)="definirMesBarrasOrgaoPorZona($event)"
         >
           <option [ngValue]="null">Todos</option>
           <option
-            *ngFor="let m of mesesDisponiveisBarrasPorZona; trackBy: trackByMesBarrasPorZona"
+            *ngFor="let m of mesesDisponiveisBarrasOrgaoPorZona; trackBy: trackByMesBarrasPorZona"
             [ngValue]="m"
           >
             {{ nomeMesBarrasPorZona(m) }}
           </option>
         </select>
+        <span class="barras-assuntos-label">Órgão</span>
+        <div class="filtro-col-wrap filtro-barras-wrap">
+          <button
+            type="button"
+            class="filtro-dropdown-trigger"
+            [class.ativo]="filtroBarrasOrgaoAtivo()"
+            [attr.aria-expanded]="painelFiltroBarrasAbertoPara('orgao')"
+            [attr.aria-haspopup]="true"
+            [disabled]="anosDisponiveisBarrasPorZona.length === 0"
+            (click)="alternarPainelFiltroBarras('orgao', $event)"
+          >
+            <span class="filtro-resumo">{{ resumoFiltroBarrasOrgao() }}</span>
+            <span class="filtro-caret" aria-hidden="true"></span>
+          </button>
+        </div>
       </div>
       <p class="por-zona-box-sub" *ngIf="anosDisponiveisBarrasPorZona.length === 0">
         Não há datas de manifestação válidas para este ds_ra.
@@ -417,16 +448,18 @@
         class="por-zona-box-sub"
         *ngIf="anosDisponiveisBarrasPorZona.length > 0 && orgaosBarrasPorZona.length === 0"
       >
-        {{ mensagemVaziaBarrasPorZona() }}
+        {{ mensagemVaziaBarrasOrgaoPorZona() }}
       </p>
     </div>
 
-    <div class="por-zona-box" *ngIf="!carregando && !erro && dsRaSelecionadaPorZona != null">
+    <div class="por-zona-box" *ngIf="!carregando && !erro && dsRaOpcoesPorZona.length > 0">
       <h3 class="por-zona-box-titulo">Evolução das manifestações</h3>
       <ng-container *ngIf="evolucaoAssuntosPorZona as ev">
         <p class="por-zona-box-sub">
-          Top 10 assuntos em <strong>{{ ev.anoReferencia }}</strong> (último ano com manifestações neste
-          ds_ra) — quantidade por ano.
+          Top 10 assuntos em <strong>{{ ev.anoReferencia }}</strong> (último ano com manifestações
+          <ng-container *ngIf="dsRaSelecionadaPorZona != null">neste ds_ra</ng-container
+          ><ng-container *ngIf="dsRaSelecionadaPorZona == null">em todos os ds_ra</ng-container>) —
+          quantidade por ano.
         </p>
         <div class="evolucao-chart-wrap" role="img" [attr.aria-label]="evolucaoAriaLabel(ev)">
           <svg
@@ -527,6 +560,71 @@
         Não há datas de manifestação válidas ou assuntos suficientes no último ano para montar o gráfico.
       </p>
     </div>
+
+    <ng-container *ngIf="painelFiltroBarrasAberto as tipoPainelBarras">
+      <div
+        *ngIf="painelFiltroBarrasEstilo"
+        class="filtro-dropdown-panel filtro-dropdown-panel--portal"
+        data-filtro-barras
+        [ngStyle]="painelFiltroBarrasEstilo"
+        (click)="$event.stopPropagation()"
+        role="listbox"
+        [attr.aria-label]="'Filtro: ' + tituloPainelFiltroBarras(tipoPainelBarras)"
+      >
+        <div class="filtro-dropdown-busca-wrap">
+          <span class="filtro-dropdown-busca-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <circle cx="11" cy="11" r="7"></circle>
+              <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+            </svg>
+          </span>
+          <input
+            type="search"
+            class="filtro-dropdown-busca-input"
+            placeholder="Pesquisar opções…"
+            [(ngModel)]="termoBuscaFiltroBarras"
+            (ngModelChange)="aoAlterarBuscaFiltroBarras()"
+            (click)="$event.stopPropagation()"
+            autocomplete="off"
+            spellcheck="false"
+            [attr.aria-label]="'Pesquisar opções em ' + tituloPainelFiltroBarras(tipoPainelBarras)"
+          />
+        </div>
+        <p class="filtro-dropdown-hint">Marque uma ou mais opções.</p>
+        <div class="filtro-dropdown-scroll">
+          <label
+            *ngFor="let chave of opcoesFiltroBarrasFiltradas(tipoPainelBarras); trackBy: trackByChaveFiltroBarras"
+            class="filtro-opcao"
+          >
+            <input
+              type="checkbox"
+              [checked]="opcaoFiltroBarrasMarcada(tipoPainelBarras, chave)"
+              (change)="alternarOpcaoFiltroBarras(tipoPainelBarras, chave)"
+            />
+            <span>{{ rotuloOpcaoFiltroBarras(tipoPainelBarras, chave) }}</span>
+          </label>
+          <p
+            *ngIf="opcoesFiltroBarrasFiltradas(tipoPainelBarras).length === 0"
+            class="filtro-dropdown-vazio"
+          >
+            {{
+              termoBuscaFiltroBarras.trim()
+                ? 'Nenhuma opção corresponde à busca.'
+                : 'Nenhuma opção disponível.'
+            }}
+          </p>
+        </div>
+        <div class="filtro-dropdown-rodape">
+          <button
+            type="button"
+            class="filtro-link"
+            (click)="limparFiltroBarras(tipoPainelBarras, $event)"
+          >
+            Limpar filtro
+          </button>
+        </div>
+      </div>
+    </ng-container>
   </div>
 
   <div

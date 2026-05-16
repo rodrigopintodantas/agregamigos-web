@@ -89,6 +89,14 @@ export interface AssuntoBarraLinha {
   total: number;
 }
 
+/** Opção do filtro Assunto/Órgão nos boxes de barras (aba Por Zona). */
+export interface OpcaoFiltroEntidadeBarrasPorZona {
+  chave: string;
+  rotulo: string;
+}
+
+type PainelFiltroBarrasPorZona = 'assunto' | 'orgao';
+
 /** Linha de comparação de períodos por assunto (aba Progresso). */
 export interface ProgressoAssuntoNegativoLinha {
   chave: string;
@@ -127,9 +135,16 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
 
   painelFiltroEstilo: Record<string, string> | null = null;
   private filtroTriggerEl: HTMLElement | null = null;
+  painelFiltroBarrasEstilo: Record<string, string> | null = null;
+  painelFiltroBarrasAberto: PainelFiltroBarrasPorZona | null = null;
+  termoBuscaFiltroBarras = '';
+  private filtroBarrasTriggerEl: HTMLElement | null = null;
   private readonly reposicionarPainel = (): void => {
     if (this.colunaFiltroAberta && this.filtroTriggerEl) {
       this.posicionarPainelFiltro();
+    }
+    if (this.painelFiltroBarrasAberto && this.filtroBarrasTriggerEl) {
+      this.posicionarPainelFiltroBarras();
     }
   };
 
@@ -173,6 +188,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
 
   /** Valores distintos de `ds_ra` nos dados carregados (texto exatamente como na coluna). */
   dsRaOpcoesPorZona: string[] = [];
+  /** null = Todos os ds_ra (padrão na aba Por zona). */
   dsRaSelecionadaPorZona: string | null = null;
   /** RA escolhida na aba Progresso (mesmas opções que `dsRaOpcoesPorZona`). */
   dsRaSelecionadaProgressoAtual: string | null = null;
@@ -187,15 +203,24 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
   /** Gráfico: top 10 assuntos do último ano (por ds_ra) × evolução por ano. */
   evolucaoAssuntosPorZona: EvolucaoAssuntosPorZona | null = null;
 
-  /** Barras horizontais: quantidade por assunto no ano filtrado (por ds_ra). */
+  /** Anos com manifestação no ds_ra (compartilhado pelos dois boxes de barras). */
   anosDisponiveisBarrasPorZona: number[] = [];
-  anoSelecionadoBarrasPorZona: number | null = null;
-  /** Meses (1–12) com manifestação no `anoSelecionadoBarrasPorZona` neste ds_ra. */
-  mesesDisponiveisBarrasPorZona: number[] = [];
-  /** `null` = todos os meses do ano. */
-  mesSelecionadoBarrasPorZona: number | null = null;
+  /** Filtros do box «Quantidade por assunto». */
+  anoSelecionadoBarrasAssuntoPorZona: number | null = null;
+  mesesDisponiveisBarrasAssuntoPorZona: number[] = [];
+  mesSelecionadoBarrasAssuntoPorZona: number | null = null;
+  assuntosOpcoesFiltroBarrasAssuntoPorZona: OpcaoFiltroEntidadeBarrasPorZona[] = [];
+  /** Vazio = todos os assuntos no período. */
+  assuntosSelecionadosFiltroBarrasAssuntoPorZona: string[] = [];
   assuntosBarrasPorZona: AssuntoBarraLinha[] = [];
   maxTotalBarrasAssuntos = 1;
+  /** Filtros do box «Quantidade por Órgão». */
+  anoSelecionadoBarrasOrgaoPorZona: number | null = null;
+  mesesDisponiveisBarrasOrgaoPorZona: number[] = [];
+  mesSelecionadoBarrasOrgaoPorZona: number | null = null;
+  orgaosOpcoesFiltroBarrasOrgaoPorZona: OpcaoFiltroEntidadeBarrasPorZona[] = [];
+  /** Vazio = todos os órgãos no período. */
+  orgaosSelecionadosFiltroBarrasOrgaoPorZona: string[] = [];
   orgaosBarrasPorZona: AssuntoBarraLinha[] = [];
   maxTotalBarrasOrgaos = 1;
 
@@ -224,6 +249,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
       this.pesquisaDebounceHandle = null;
     }
     this.fecharPainelFiltro();
+    this.fecharPainelFiltroBarras();
     this.menuExportarAberto = false;
     window.removeEventListener('scroll', this.reposicionarPainel, true);
     window.removeEventListener('resize', this.reposicionarPainel);
@@ -309,7 +335,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
         this.reconstruirOpcoesDsRaPorZona();
         this.sincronizarSelecaoDsRaPorZona();
         this.sincronizarSelecaoDsRaProgressoAtual();
-        this.recomputarBarrasAssuntosPorZona();
+        this.recomputarBarrasPorZona();
         this.recomputarEvolucaoAssuntosPorZona();
         this.recomputarProgressoAssuntoNegativo();
         this.carregando = false;
@@ -330,12 +356,22 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
       this.fecharPainelFiltro();
       this.fecharMenuExportar();
     }
+    if (aba !== 'por-zona') {
+      this.fecharPainelFiltroBarras();
+    }
+    if (aba === 'por-zona') {
+      this.dsRaSelecionadaPorZona = null;
+      if (this.dsRaOpcoesPorZona.length > 0) {
+        this.recomputarBarrasPorZona();
+        this.recomputarEvolucaoAssuntosPorZona();
+      }
+    }
     this.cdr.markForCheck();
   }
 
-  definirDsRaPorZona(dsRa: string): void {
+  definirDsRaPorZona(dsRa: string | null): void {
     this.dsRaSelecionadaPorZona = dsRa;
-    this.recomputarBarrasAssuntosPorZona();
+    this.recomputarBarrasPorZona();
     this.recomputarEvolucaoAssuntosPorZona();
   }
 
@@ -364,31 +400,228 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     return this.labelPeriodoProgresso(ano, prog.nomeMesAte);
   }
 
-  definirAnoBarrasPorZona(ano: number): void {
-    this.anoSelecionadoBarrasPorZona = ano;
-    this.mesSelecionadoBarrasPorZona = null;
-    this.recomputarBarrasAssuntosPorZona({ preservarAnoSeValido: true });
+  /** Manifestações do recorte Por zona (ds_ra específico ou todos com ds_ra preenchido). */
+  private itensRecortePorZona(): OuvidoriaItem[] {
+    const dsRa = this.dsRaSelecionadaPorZona;
+    if (dsRa != null) {
+      return this.itens.filter((v) => v.ds_ra === dsRa);
+    }
+    return this.itens.filter((v) => {
+      const ra = v.ds_ra;
+      if (ra === undefined || ra === null) return false;
+      const s = typeof ra === 'string' ? ra.trim() : String(ra).trim();
+      return s.length > 0;
+    });
   }
 
-  definirMesBarrasPorZona(mes: number | null | undefined): void {
-    this.mesSelecionadoBarrasPorZona = mes ?? null;
-    this.recomputarBarrasAssuntosPorZona({
+  private porZonaBarrasAtual(): OuvidoriaItem[] {
+    return this.itensRecortePorZona();
+  }
+
+  definirAnoBarrasAssuntoPorZona(ano: number): void {
+    this.anoSelecionadoBarrasAssuntoPorZona = ano;
+    this.mesSelecionadoBarrasAssuntoPorZona = null;
+    this.assuntosSelecionadosFiltroBarrasAssuntoPorZona = [];
+    this.recomputarBarrasAssuntoPorZona({
+      porZona: this.porZonaBarrasAtual(),
+      anos: this.anosDisponiveisBarrasPorZona,
+      preservarAnoSeValido: true,
+    });
+    this.cdr.markForCheck();
+  }
+
+  definirMesBarrasAssuntoPorZona(mes: number | null | undefined): void {
+    this.mesSelecionadoBarrasAssuntoPorZona = mes ?? null;
+    this.recomputarBarrasAssuntoPorZona({
+      porZona: this.porZonaBarrasAtual(),
+      anos: this.anosDisponiveisBarrasPorZona,
       preservarAnoSeValido: true,
       preservarMesSeValido: true,
+      preservarAssuntoFiltroSeValido: true,
     });
+    this.cdr.markForCheck();
+  }
+
+  definirAnoBarrasOrgaoPorZona(ano: number): void {
+    this.anoSelecionadoBarrasOrgaoPorZona = ano;
+    this.mesSelecionadoBarrasOrgaoPorZona = null;
+    this.orgaosSelecionadosFiltroBarrasOrgaoPorZona = [];
+    this.recomputarBarrasOrgaoPorZona({
+      porZona: this.porZonaBarrasAtual(),
+      anos: this.anosDisponiveisBarrasPorZona,
+      preservarAnoSeValido: true,
+    });
+    this.cdr.markForCheck();
+  }
+
+  definirMesBarrasOrgaoPorZona(mes: number | null | undefined): void {
+    this.mesSelecionadoBarrasOrgaoPorZona = mes ?? null;
+    this.recomputarBarrasOrgaoPorZona({
+      porZona: this.porZonaBarrasAtual(),
+      anos: this.anosDisponiveisBarrasPorZona,
+      preservarAnoSeValido: true,
+      preservarMesSeValido: true,
+      preservarOrgaoFiltroSeValido: true,
+    });
+    this.cdr.markForCheck();
   }
 
   nomeMesBarrasPorZona(mes: number): string {
     return NOMES_MES_BARRAS_POR_ZONA[mes - 1] ?? String(mes);
   }
 
-  mensagemVaziaBarrasPorZona(): string {
-    return this.mesSelecionadoBarrasPorZona != null
+  mensagemVaziaBarrasAssuntoPorZona(): string {
+    if (this.assuntosSelecionadosFiltroBarrasAssuntoPorZona.length > 0) {
+      return 'Nenhuma manifestação para o(s) assunto(s) selecionado(s) no período.';
+    }
+    return this.mesSelecionadoBarrasAssuntoPorZona != null
+      ? 'Nenhuma manifestação neste mês.'
+      : 'Nenhuma manifestação neste ano.';
+  }
+
+  mensagemVaziaBarrasOrgaoPorZona(): string {
+    if (this.orgaosSelecionadosFiltroBarrasOrgaoPorZona.length > 0) {
+      return 'Nenhuma manifestação para o(s) órgão(s) selecionado(s) no período.';
+    }
+    return this.mesSelecionadoBarrasOrgaoPorZona != null
       ? 'Nenhuma manifestação neste mês.'
       : 'Nenhuma manifestação neste ano.';
   }
 
   trackByMesBarrasPorZona = (_: number, mes: number): string => String(mes);
+
+  trackByOpcaoFiltroEntidadeBarras = (_: number, opt: OpcaoFiltroEntidadeBarrasPorZona): string =>
+    opt.chave;
+
+  trackByChaveFiltroBarras = (_: number, chave: string): string => chave;
+
+  painelFiltroBarrasAbertoPara(tipo: PainelFiltroBarrasPorZona): boolean {
+    return this.painelFiltroBarrasAberto === tipo;
+  }
+
+  filtroBarrasAssuntoAtivo(): boolean {
+    return this.assuntosSelecionadosFiltroBarrasAssuntoPorZona.length > 0;
+  }
+
+  filtroBarrasOrgaoAtivo(): boolean {
+    return this.orgaosSelecionadosFiltroBarrasOrgaoPorZona.length > 0;
+  }
+
+  resumoFiltroBarrasAssunto(): string {
+    return this.resumoFiltroBarrasEntidade(
+      this.assuntosSelecionadosFiltroBarrasAssuntoPorZona,
+      this.assuntosOpcoesFiltroBarrasAssuntoPorZona,
+    );
+  }
+
+  resumoFiltroBarrasOrgao(): string {
+    return this.resumoFiltroBarrasEntidade(
+      this.orgaosSelecionadosFiltroBarrasOrgaoPorZona,
+      this.orgaosOpcoesFiltroBarrasOrgaoPorZona,
+    );
+  }
+
+  opcoesFiltroBarrasFiltradas(tipo: PainelFiltroBarrasPorZona): string[] {
+    const todas = this.chavesOpcoesFiltroBarras(tipo);
+    const q = this.termoBuscaFiltroBarras.trim().toLowerCase();
+    if (!q) return todas;
+    return todas.filter((chave) => {
+      const rotulo = this.rotuloOpcaoFiltroBarras(tipo, chave).toLowerCase();
+      return rotulo.includes(q) || chave.toLowerCase().includes(q);
+    });
+  }
+
+  aoAlterarBuscaFiltroBarras(): void {
+    this.cdr.markForCheck();
+  }
+
+  opcaoFiltroBarrasMarcada(tipo: PainelFiltroBarrasPorZona, chave: string): boolean {
+    const sel = this.selecoesFiltroBarras(tipo);
+    return sel.includes(chave);
+  }
+
+  alternarPainelFiltroBarras(tipo: PainelFiltroBarrasPorZona, ev: MouseEvent): void {
+    ev.stopPropagation();
+    this.fecharPainelFiltro();
+    const btn = ev.currentTarget as HTMLElement;
+    if (this.painelFiltroBarrasAberto === tipo) {
+      this.fecharPainelFiltroBarras();
+      return;
+    }
+    this.painelFiltroBarrasAberto = tipo;
+    this.termoBuscaFiltroBarras = '';
+    this.filtroBarrasTriggerEl = btn;
+    this.focarBuscaPainelFiltroBarras();
+    this.cdr.markForCheck();
+  }
+
+  alternarOpcaoFiltroBarras(tipo: PainelFiltroBarrasPorZona, chave: string): void {
+    const sel = [...this.selecoesFiltroBarras(tipo)];
+    const i = sel.indexOf(chave);
+    if (i >= 0) {
+      sel.splice(i, 1);
+    } else {
+      sel.push(chave);
+    }
+    const todas = this.chavesOpcoesFiltroBarras(tipo);
+    if (sel.length === 0 || (todas.length > 0 && sel.length === todas.length)) {
+      this.definirSelecoesFiltroBarras(tipo, []);
+    } else {
+      this.definirSelecoesFiltroBarras(tipo, sel);
+    }
+    if (tipo === 'assunto') {
+      this.recomputarBarrasAssuntoPorZona({
+        porZona: this.porZonaBarrasAtual(),
+        anos: this.anosDisponiveisBarrasPorZona,
+        preservarAnoSeValido: true,
+        preservarMesSeValido: true,
+        preservarAssuntoFiltroSeValido: true,
+      });
+    } else {
+      this.recomputarBarrasOrgaoPorZona({
+        porZona: this.porZonaBarrasAtual(),
+        anos: this.anosDisponiveisBarrasPorZona,
+        preservarAnoSeValido: true,
+        preservarMesSeValido: true,
+        preservarOrgaoFiltroSeValido: true,
+      });
+    }
+    this.cdr.markForCheck();
+  }
+
+  limparFiltroBarras(tipo: PainelFiltroBarrasPorZona, ev: MouseEvent): void {
+    ev.stopPropagation();
+    this.definirSelecoesFiltroBarras(tipo, []);
+    if (tipo === 'assunto') {
+      this.recomputarBarrasAssuntoPorZona({
+        porZona: this.porZonaBarrasAtual(),
+        anos: this.anosDisponiveisBarrasPorZona,
+        preservarAnoSeValido: true,
+        preservarMesSeValido: true,
+        preservarAssuntoFiltroSeValido: true,
+      });
+    } else {
+      this.recomputarBarrasOrgaoPorZona({
+        porZona: this.porZonaBarrasAtual(),
+        anos: this.anosDisponiveisBarrasPorZona,
+        preservarAnoSeValido: true,
+        preservarMesSeValido: true,
+        preservarOrgaoFiltroSeValido: true,
+      });
+    }
+    this.cdr.markForCheck();
+  }
+
+  rotuloOpcaoFiltroBarras(tipo: PainelFiltroBarrasPorZona, chave: string): string {
+    if (tipo === 'assunto') {
+      return this.rotuloAssuntoEvolucao(chave);
+    }
+    return this.rotuloOrgaoBarras(chave);
+  }
+
+  tituloPainelFiltroBarras(tipo: PainelFiltroBarrasPorZona): string {
+    return tipo === 'assunto' ? 'Assunto' : 'Órgão';
+  }
 
   /** Valores distintos não vazios de `ds_ra`, como string (igual ao armazenado no item). */
   private reconstruirOpcoesDsRaPorZona(): void {
@@ -411,10 +644,9 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
       this.dsRaSelecionadaPorZona = null;
       return;
     }
-    if (this.dsRaSelecionadaPorZona != null && opcoes.includes(this.dsRaSelecionadaPorZona)) {
-      return;
+    if (this.dsRaSelecionadaPorZona != null && !opcoes.includes(this.dsRaSelecionadaPorZona)) {
+      this.dsRaSelecionadaPorZona = null;
     }
-    this.dsRaSelecionadaPorZona = opcoes[0];
   }
 
   private sincronizarSelecaoDsRaProgressoAtual(): void {
@@ -451,99 +683,395 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     return chave === CHAVE_VAZIO ? '(sem órgão)' : chave;
   }
 
-  /** Contagem por assunto e por órgão (`nm_orgao`) no ds_ra + ano (ordenado decrescente). */
-  private recomputarBarrasAssuntosPorZona(options?: {
-    preservarAnoSeValido?: boolean;
-    preservarMesSeValido?: boolean;
-  }): void {
-    const preservarAno = options?.preservarAnoSeValido ?? false;
-    const preservarMes = options?.preservarMesSeValido ?? false;
-    const dsRa = this.dsRaSelecionadaPorZona;
-    if (dsRa == null) {
-      this.anosDisponiveisBarrasPorZona = [];
-      this.anoSelecionadoBarrasPorZona = null;
-      this.mesesDisponiveisBarrasPorZona = [];
-      this.mesSelecionadoBarrasPorZona = null;
-      this.assuntosBarrasPorZona = [];
-      this.maxTotalBarrasAssuntos = 1;
-      this.orgaosBarrasPorZona = [];
-      this.maxTotalBarrasOrgaos = 1;
-      this.cdr.markForCheck();
-      return;
-    }
-    const porZona = this.itens.filter((v) => v.ds_ra === dsRa);
+  private limparEstadoBarrasPorZona(): void {
+    this.anosDisponiveisBarrasPorZona = [];
+    this.anoSelecionadoBarrasAssuntoPorZona = null;
+    this.mesesDisponiveisBarrasAssuntoPorZona = [];
+    this.mesSelecionadoBarrasAssuntoPorZona = null;
+    this.assuntosOpcoesFiltroBarrasAssuntoPorZona = [];
+    this.assuntosSelecionadosFiltroBarrasAssuntoPorZona = [];
+    this.assuntosBarrasPorZona = [];
+    this.maxTotalBarrasAssuntos = 1;
+    this.anoSelecionadoBarrasOrgaoPorZona = null;
+    this.mesesDisponiveisBarrasOrgaoPorZona = [];
+    this.mesSelecionadoBarrasOrgaoPorZona = null;
+    this.orgaosOpcoesFiltroBarrasOrgaoPorZona = [];
+    this.orgaosSelecionadosFiltroBarrasOrgaoPorZona = [];
+    this.orgaosBarrasPorZona = [];
+    this.maxTotalBarrasOrgaos = 1;
+    this.cdr.markForCheck();
+  }
+
+  private anosDisponiveisNaZona(porZona: OuvidoriaItem[]): number[] {
     const anosSet = new Set<number>();
     for (const v of porZona) {
       const d = this.parseDataOrdenacao(v);
       if (d) anosSet.add(d.getFullYear());
     }
-    const anos = [...anosSet].sort((a, b) => a - b);
-    this.anosDisponiveisBarrasPorZona = anos;
-    if (!anos.length) {
-      this.anoSelecionadoBarrasPorZona = null;
-      this.mesesDisponiveisBarrasPorZona = [];
-      this.mesSelecionadoBarrasPorZona = null;
-      this.assuntosBarrasPorZona = [];
-      this.maxTotalBarrasAssuntos = 1;
-      this.orgaosBarrasPorZona = [];
-      this.maxTotalBarrasOrgaos = 1;
-      this.cdr.markForCheck();
-      return;
-    }
-    if (
-      !preservarAno ||
-      this.anoSelecionadoBarrasPorZona == null ||
-      !anos.includes(this.anoSelecionadoBarrasPorZona)
-    ) {
-      this.anoSelecionadoBarrasPorZona = anos[anos.length - 1];
-    }
-    const ano = this.anoSelecionadoBarrasPorZona!;
+    return [...anosSet].sort((a, b) => a - b);
+  }
+
+  private mesesDisponiveisNoAno(porZona: OuvidoriaItem[], ano: number): number[] {
     const mesesSet = new Set<number>();
     for (const v of porZona) {
       const d = this.parseDataOrdenacao(v);
       if (!d || d.getFullYear() !== ano) continue;
       mesesSet.add(d.getMonth() + 1);
     }
-    const meses = [...mesesSet].sort((a, b) => a - b);
-    this.mesesDisponiveisBarrasPorZona = meses;
-    if (
-      !preservarMes ||
-      this.mesSelecionadoBarrasPorZona == null ||
-      !meses.includes(this.mesSelecionadoBarrasPorZona)
-    ) {
-      this.mesSelecionadoBarrasPorZona = null;
+    return [...mesesSet].sort((a, b) => a - b);
+  }
+
+  private resolverAnoBarras(
+    anoAtual: number | null,
+    anos: number[],
+    preservarAno: boolean,
+  ): number | null {
+    if (!anos.length) return null;
+    if (!preservarAno || anoAtual == null || !anos.includes(anoAtual)) {
+      return anos[anos.length - 1];
     }
-    const mesFiltro = this.mesSelecionadoBarrasPorZona;
-    const contagemAssunto = new Map<string, number>();
-    const contagemOrgao = new Map<string, number>();
+    return anoAtual;
+  }
+
+  private resolverMesBarras(
+    mesAtual: number | null,
+    meses: number[],
+    preservarMes: boolean,
+  ): number | null {
+    if (!preservarMes || mesAtual == null || !meses.includes(mesAtual)) {
+      return null;
+    }
+    return mesAtual;
+  }
+
+  private resolverSelecoesFiltroEntidade(
+    selecionadas: string[],
+    opcoes: OpcaoFiltroEntidadeBarrasPorZona[],
+    preservar: boolean,
+  ): string[] {
+    if (!preservar) return [];
+    const chavesValidas = new Set(opcoes.map((o) => o.chave));
+    const filtradas = selecionadas.filter((k) => chavesValidas.has(k));
+    const total = opcoes.length;
+    if (filtradas.length === 0 || (total > 0 && filtradas.length === total)) {
+      return [];
+    }
+    return filtradas;
+  }
+
+  private aplicarFiltroSelecoesBarras(
+    lista: AssuntoBarraLinha[],
+    selecionados: string[],
+    totalOpcoes: number,
+  ): AssuntoBarraLinha[] {
+    if (!selecionados.length) return lista;
+    if (totalOpcoes > 0 && selecionados.length === totalOpcoes) return lista;
+    const set = new Set(selecionados);
+    return lista.filter((row) => set.has(row.chave));
+  }
+
+  private resumoFiltroBarrasEntidade(
+    selecionados: string[],
+    opcoes: OpcaoFiltroEntidadeBarrasPorZona[],
+  ): string {
+    const total = opcoes.length;
+    if (!selecionados.length) {
+      return 'Todos';
+    }
+    if (total > 0 && selecionados.length === total) {
+      return 'Todos';
+    }
+    return `${selecionados.length} selec.`;
+  }
+
+  private chavesOpcoesFiltroBarras(tipo: PainelFiltroBarrasPorZona): string[] {
+    const opcoes =
+      tipo === 'assunto'
+        ? this.assuntosOpcoesFiltroBarrasAssuntoPorZona
+        : this.orgaosOpcoesFiltroBarrasOrgaoPorZona;
+    return opcoes.map((o) => o.chave);
+  }
+
+  private selecoesFiltroBarras(tipo: PainelFiltroBarrasPorZona): string[] {
+    return tipo === 'assunto'
+      ? this.assuntosSelecionadosFiltroBarrasAssuntoPorZona
+      : this.orgaosSelecionadosFiltroBarrasOrgaoPorZona;
+  }
+
+  private definirSelecoesFiltroBarras(tipo: PainelFiltroBarrasPorZona, chaves: string[]): void {
+    if (tipo === 'assunto') {
+      this.assuntosSelecionadosFiltroBarrasAssuntoPorZona = chaves;
+    } else {
+      this.orgaosSelecionadosFiltroBarrasOrgaoPorZona = chaves;
+    }
+  }
+
+  private fecharPainelFiltroBarras(): void {
+    if (this.painelFiltroBarrasAberto === null && this.painelFiltroBarrasEstilo === null) {
+      return;
+    }
+    this.painelFiltroBarrasAberto = null;
+    this.painelFiltroBarrasEstilo = null;
+    this.filtroBarrasTriggerEl = null;
+    this.termoBuscaFiltroBarras = '';
+    this.cdr.markForCheck();
+  }
+
+  private posicionarPainelFiltroBarras(): void {
+    const trigger = this.filtroBarrasTriggerEl;
+    if (!trigger || !this.painelFiltroBarrasAberto) {
+      return;
+    }
+    this.painelFiltroBarrasEstilo = this.estiloPainelFiltroPortal(trigger);
+    this.cdr.markForCheck();
+  }
+
+  private focarBuscaPainelFiltroBarras(): void {
+    setTimeout(() => {
+      this.posicionarPainelFiltroBarras();
+      requestAnimationFrame(() => {
+        this.posicionarPainelFiltroBarras();
+      });
+      document
+        .querySelector<HTMLInputElement>(
+          '.filtro-dropdown-panel--portal[data-filtro-barras] .filtro-dropdown-busca-input',
+        )
+        ?.focus();
+    });
+  }
+
+  private focarBuscaPainelFiltroColuna(): void {
+    setTimeout(() => {
+      this.posicionarPainelFiltro();
+      requestAnimationFrame(() => {
+        this.posicionarPainelFiltro();
+      });
+      document
+        .querySelector<HTMLInputElement>(
+          '.filtro-dropdown-panel--portal:not([data-filtro-barras]) .filtro-dropdown-busca-input',
+        )
+        ?.focus();
+    });
+  }
+
+  private estiloPainelFiltroPortal(trigger: HTMLElement): Record<string, string> {
+    const r = trigger.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const margem = 8;
+    const panelWidth = Math.min(288, vw - margem * 2);
+    let left = r.left;
+    if (left + panelWidth > vw - margem) {
+      left = vw - margem - panelWidth;
+    }
+    if (left < margem) {
+      left = margem;
+    }
+
+    const espacoAbaixo = vh - r.bottom - margem;
+    const espacoAcima = r.top - margem;
+    let top: number;
+    let maxPainel: number;
+
+    if (espacoAbaixo >= 180 || espacoAbaixo >= espacoAcima) {
+      top = r.bottom + 4;
+      maxPainel = Math.min(280, Math.max(100, espacoAbaixo - 4));
+    } else {
+      maxPainel = Math.min(280, Math.max(100, espacoAcima - 4));
+      top = r.top - 4 - maxPainel;
+    }
+
+    if (top < margem) {
+      maxPainel = Math.max(80, maxPainel - (margem - top));
+      top = margem;
+    }
+
+    return {
+      position: 'fixed',
+      top: `${top}px`,
+      left: `${left}px`,
+      width: `${panelWidth}px`,
+      maxHeight: `${maxPainel}px`,
+      zIndex: '5000',
+    };
+  }
+
+  private opcoesAssuntoNoPeriodo(
+    porZona: OuvidoriaItem[],
+    ano: number,
+    mesFiltro: number | null,
+  ): OpcaoFiltroEntidadeBarrasPorZona[] {
+    const chaves = new Set<string>();
     for (const v of porZona) {
       const d = this.parseDataOrdenacao(v);
       if (!d || d.getFullYear() !== ano) continue;
       if (mesFiltro != null && d.getMonth() + 1 !== mesFiltro) continue;
-      const ka = this.chaveAssuntoFiltro(v);
-      contagemAssunto.set(ka, (contagemAssunto.get(ka) ?? 0) + 1);
-      const ko = this.chaveOrgaoFiltro(v);
-      contagemOrgao.set(ko, (contagemOrgao.get(ko) ?? 0) + 1);
+      chaves.add(this.chaveAssuntoFiltro(v));
     }
-    const lista: AssuntoBarraLinha[] = [...contagemAssunto.entries()]
+    return [...chaves]
+      .map((chave) => ({ chave, rotulo: this.rotuloAssuntoEvolucao(chave) }))
+      .sort((a, b) => a.rotulo.localeCompare(b.rotulo, 'pt-BR', { numeric: true, sensitivity: 'base' }));
+  }
+
+  private opcoesOrgaoNoPeriodo(
+    porZona: OuvidoriaItem[],
+    ano: number,
+    mesFiltro: number | null,
+  ): OpcaoFiltroEntidadeBarrasPorZona[] {
+    const chaves = new Set<string>();
+    for (const v of porZona) {
+      const d = this.parseDataOrdenacao(v);
+      if (!d || d.getFullYear() !== ano) continue;
+      if (mesFiltro != null && d.getMonth() + 1 !== mesFiltro) continue;
+      chaves.add(this.chaveOrgaoFiltro(v));
+    }
+    return [...chaves]
+      .map((chave) => ({ chave, rotulo: this.rotuloOrgaoBarras(chave) }))
+      .sort((a, b) => a.rotulo.localeCompare(b.rotulo, 'pt-BR', { numeric: true, sensitivity: 'base' }));
+  }
+
+  /** Sincroniza anos disponíveis e recalcula os dois boxes (filtros independentes). */
+  private recomputarBarrasPorZona(): void {
+    if (this.dsRaOpcoesPorZona.length === 0) {
+      this.limparEstadoBarrasPorZona();
+      return;
+    }
+    const porZona = this.itensRecortePorZona();
+    const anos = this.anosDisponiveisNaZona(porZona);
+    this.anosDisponiveisBarrasPorZona = anos;
+    if (!anos.length) {
+      this.limparEstadoBarrasPorZona();
+      return;
+    }
+    this.recomputarBarrasAssuntoPorZona({ porZona, anos });
+    this.recomputarBarrasOrgaoPorZona({ porZona, anos });
+    this.cdr.markForCheck();
+  }
+
+  private recomputarBarrasAssuntoPorZona(ctx: {
+    porZona: OuvidoriaItem[];
+    anos: number[];
+    preservarAnoSeValido?: boolean;
+    preservarMesSeValido?: boolean;
+    preservarAssuntoFiltroSeValido?: boolean;
+  }): void {
+    const preservarAno = ctx.preservarAnoSeValido ?? false;
+    const preservarMes = ctx.preservarMesSeValido ?? false;
+    const preservarAssunto = ctx.preservarAssuntoFiltroSeValido ?? false;
+    const { porZona, anos } = ctx;
+    const ano = this.resolverAnoBarras(
+      this.anoSelecionadoBarrasAssuntoPorZona,
+      anos,
+      preservarAno,
+    );
+    this.anoSelecionadoBarrasAssuntoPorZona = ano;
+    if (ano == null) {
+      this.mesesDisponiveisBarrasAssuntoPorZona = [];
+      this.mesSelecionadoBarrasAssuntoPorZona = null;
+      this.assuntosOpcoesFiltroBarrasAssuntoPorZona = [];
+      this.assuntosSelecionadosFiltroBarrasAssuntoPorZona = [];
+      this.assuntosBarrasPorZona = [];
+      this.maxTotalBarrasAssuntos = 1;
+      return;
+    }
+    const meses = this.mesesDisponiveisNoAno(porZona, ano);
+    this.mesesDisponiveisBarrasAssuntoPorZona = meses;
+    this.mesSelecionadoBarrasAssuntoPorZona = this.resolverMesBarras(
+      this.mesSelecionadoBarrasAssuntoPorZona,
+      meses,
+      preservarMes,
+    );
+    const mesFiltro = this.mesSelecionadoBarrasAssuntoPorZona;
+    const opcoesAssunto = this.opcoesAssuntoNoPeriodo(porZona, ano, mesFiltro);
+    this.assuntosOpcoesFiltroBarrasAssuntoPorZona = opcoesAssunto;
+    this.assuntosSelecionadosFiltroBarrasAssuntoPorZona = this.resolverSelecoesFiltroEntidade(
+      this.assuntosSelecionadosFiltroBarrasAssuntoPorZona,
+      opcoesAssunto,
+      preservarAssunto,
+    );
+    const contagem = new Map<string, number>();
+    for (const v of porZona) {
+      const d = this.parseDataOrdenacao(v);
+      if (!d || d.getFullYear() !== ano) continue;
+      if (mesFiltro != null && d.getMonth() + 1 !== mesFiltro) continue;
+      const k = this.chaveAssuntoFiltro(v);
+      contagem.set(k, (contagem.get(k) ?? 0) + 1);
+    }
+    let lista: AssuntoBarraLinha[] = [...contagem.entries()]
       .map(([chave, total]) => ({
         chave,
         rotulo: this.rotuloAssuntoEvolucao(chave),
         total,
       }))
       .sort((a, b) => b.total - a.total);
+    lista = this.aplicarFiltroSelecoesBarras(
+      lista,
+      this.assuntosSelecionadosFiltroBarrasAssuntoPorZona,
+      opcoesAssunto.length,
+    );
     this.assuntosBarrasPorZona = lista;
     this.maxTotalBarrasAssuntos = Math.max(1, lista[0]?.total ?? 1);
-    const listaOrgao: AssuntoBarraLinha[] = [...contagemOrgao.entries()]
+  }
+
+  private recomputarBarrasOrgaoPorZona(ctx: {
+    porZona: OuvidoriaItem[];
+    anos: number[];
+    preservarAnoSeValido?: boolean;
+    preservarMesSeValido?: boolean;
+    preservarOrgaoFiltroSeValido?: boolean;
+  }): void {
+    const preservarAno = ctx.preservarAnoSeValido ?? false;
+    const preservarMes = ctx.preservarMesSeValido ?? false;
+    const preservarOrgao = ctx.preservarOrgaoFiltroSeValido ?? false;
+    const { porZona, anos } = ctx;
+    const ano = this.resolverAnoBarras(this.anoSelecionadoBarrasOrgaoPorZona, anos, preservarAno);
+    this.anoSelecionadoBarrasOrgaoPorZona = ano;
+    if (ano == null) {
+      this.mesesDisponiveisBarrasOrgaoPorZona = [];
+      this.mesSelecionadoBarrasOrgaoPorZona = null;
+      this.orgaosOpcoesFiltroBarrasOrgaoPorZona = [];
+      this.orgaosSelecionadosFiltroBarrasOrgaoPorZona = [];
+      this.orgaosBarrasPorZona = [];
+      this.maxTotalBarrasOrgaos = 1;
+      return;
+    }
+    const meses = this.mesesDisponiveisNoAno(porZona, ano);
+    this.mesesDisponiveisBarrasOrgaoPorZona = meses;
+    this.mesSelecionadoBarrasOrgaoPorZona = this.resolverMesBarras(
+      this.mesSelecionadoBarrasOrgaoPorZona,
+      meses,
+      preservarMes,
+    );
+    const mesFiltro = this.mesSelecionadoBarrasOrgaoPorZona;
+    const opcoesOrgao = this.opcoesOrgaoNoPeriodo(porZona, ano, mesFiltro);
+    this.orgaosOpcoesFiltroBarrasOrgaoPorZona = opcoesOrgao;
+    this.orgaosSelecionadosFiltroBarrasOrgaoPorZona = this.resolverSelecoesFiltroEntidade(
+      this.orgaosSelecionadosFiltroBarrasOrgaoPorZona,
+      opcoesOrgao,
+      preservarOrgao,
+    );
+    const contagem = new Map<string, number>();
+    for (const v of porZona) {
+      const d = this.parseDataOrdenacao(v);
+      if (!d || d.getFullYear() !== ano) continue;
+      if (mesFiltro != null && d.getMonth() + 1 !== mesFiltro) continue;
+      const k = this.chaveOrgaoFiltro(v);
+      contagem.set(k, (contagem.get(k) ?? 0) + 1);
+    }
+    let lista: AssuntoBarraLinha[] = [...contagem.entries()]
       .map(([chave, total]) => ({
         chave,
         rotulo: this.rotuloOrgaoBarras(chave),
         total,
       }))
       .sort((a, b) => b.total - a.total);
-    this.orgaosBarrasPorZona = listaOrgao;
-    this.maxTotalBarrasOrgaos = Math.max(1, listaOrgao[0]?.total ?? 1);
-    this.cdr.markForCheck();
+    lista = this.aplicarFiltroSelecoesBarras(
+      lista,
+      this.orgaosSelecionadosFiltroBarrasOrgaoPorZona,
+      opcoesOrgao.length,
+    );
+    this.orgaosBarrasPorZona = lista;
+    this.maxTotalBarrasOrgaos = Math.max(1, lista[0]?.total ?? 1);
   }
 
   percLarguraBarra(total: number, maxTotal: number): number {
@@ -674,13 +1202,12 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
    * contagens por ano em todos os anos com data válida na mesma RA.
    */
   private recomputarEvolucaoAssuntosPorZona(): void {
-    const dsRa = this.dsRaSelecionadaPorZona;
-    if (dsRa == null) {
+    if (this.dsRaOpcoesPorZona.length === 0) {
       this.evolucaoAssuntosPorZona = null;
       this.cdr.markForCheck();
       return;
     }
-    const porZona = this.itens.filter((v) => v.ds_ra === dsRa);
+    const porZona = this.itensRecortePorZona();
     const comAno: { ano: number; chave: string }[] = [];
     for (const v of porZona) {
       const d = this.parseDataOrdenacao(v);
@@ -1188,9 +1715,11 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     const alvo = ev.target as HTMLElement | null;
     if (
       !alvo?.closest?.('.filtro-col-wrap') &&
+      !alvo?.closest?.('.filtro-barras-wrap') &&
       !alvo?.closest?.('.filtro-dropdown-panel--portal')
     ) {
       this.fecharPainelFiltro();
+      this.fecharPainelFiltroBarras();
     }
     if (!alvo?.closest?.('.exportar-wrap') && this.menuExportarAberto) {
       this.menuExportarAberto = false;
@@ -1214,45 +1743,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     if (!trigger || !this.colunaFiltroAberta) {
       return;
     }
-    const r = trigger.getBoundingClientRect();
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const margem = 8;
-    const panelWidth = Math.min(288, vw - margem * 2);
-    let left = r.left;
-    if (left + panelWidth > vw - margem) {
-      left = vw - margem - panelWidth;
-    }
-    if (left < margem) {
-      left = margem;
-    }
-
-    const espacoAbaixo = vh - r.bottom - margem;
-    const espacoAcima = r.top - margem;
-    let top: number;
-    let maxPainel: number;
-
-    if (espacoAbaixo >= 180 || espacoAbaixo >= espacoAcima) {
-      top = r.bottom + 4;
-      maxPainel = Math.min(280, Math.max(100, espacoAbaixo - 4));
-    } else {
-      maxPainel = Math.min(280, Math.max(100, espacoAcima - 4));
-      top = r.top - 4 - maxPainel;
-    }
-
-    if (top < margem) {
-      maxPainel = Math.max(80, maxPainel - (margem - top));
-      top = margem;
-    }
-
-    this.painelFiltroEstilo = {
-      position: 'fixed',
-      top: `${top}px`,
-      left: `${left}px`,
-      width: `${panelWidth}px`,
-      maxHeight: `${maxPainel}px`,
-      zIndex: '5000',
-    };
+    this.painelFiltroEstilo = this.estiloPainelFiltroPortal(trigger);
     this.cdr.markForCheck();
   }
 
@@ -1285,6 +1776,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
 
   alternarPainelFiltro(col: string, ev: MouseEvent): void {
     ev.stopPropagation();
+    this.fecharPainelFiltroBarras();
     const btn = ev.currentTarget as HTMLElement;
     if (this.colunaFiltroAberta === col) {
       this.fecharPainelFiltro();
@@ -1296,13 +1788,7 @@ export class OuvidoriaComponent implements OnInit, OnDestroy {
     if (this.opcoesDistintasPorColuna[col] === undefined && this.itens.length > 0) {
       this.atualizarOpcoesDistintasParaColuna(col);
     }
-    setTimeout(() => {
-      this.posicionarPainelFiltro();
-      requestAnimationFrame(() => {
-        this.posicionarPainelFiltro();
-      });
-      document.querySelector<HTMLInputElement>('.filtro-dropdown-busca-input')?.focus();
-    });
+    this.focarBuscaPainelFiltroColuna();
     this.cdr.markForCheck();
   }
 

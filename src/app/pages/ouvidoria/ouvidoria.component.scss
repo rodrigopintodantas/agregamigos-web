@@ -162,6 +162,16 @@
   min-width: min(100%, 8rem);
 }
 
+.barras-assuntos-toolbar .filtro-barras-wrap {
+  flex: 0 1 auto;
+  min-width: min(100%, 9.5rem);
+  max-width: 14rem;
+}
+
+.barras-assuntos-toolbar .filtro-barras-wrap .filtro-dropdown-trigger {
+  width: 100%;
+}
+
 .barras-assuntos-scroll {
   max-height: 11.75rem;
   overflow-y: auto;

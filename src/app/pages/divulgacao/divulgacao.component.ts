@@ -442,6 +442,23 @@ export class DivulgacaoComponent implements OnInit {
     this.dialogMensagemAberto = false;
   }
 
+  /** Lista expandida: mais cedo em `agendado_para` primeiro; sem data no fim. */
+  private ordenarDestinatariosPorAgendado(
+    lista: CampanhaDestinatarioDetalhe[],
+  ): CampanhaDestinatarioDetalhe[] {
+    return [...lista].sort((a, b) => {
+      const ta = a.agendado_para ? new Date(a.agendado_para).getTime() : Number.NaN;
+      const tb = b.agendado_para ? new Date(b.agendado_para).getTime() : Number.NaN;
+      const validA = Number.isFinite(ta);
+      const validB = Number.isFinite(tb);
+      if (!validA && !validB) return (a.ordem ?? 0) - (b.ordem ?? 0);
+      if (!validA) return 1;
+      if (!validB) return -1;
+      if (ta !== tb) return ta - tb;
+      return (a.ordem ?? 0) - (b.ordem ?? 0);
+    });
+  }
+
   toggleCampanha(campanhaId: number): void {
     if (this.campanhaAbertaId === campanhaId) {
       this.campanhaAbertaId = null;
@@ -452,7 +469,9 @@ export class DivulgacaoComponent implements OnInit {
     this.carregandoDetalhe[campanhaId] = true;
     this.campanhaService.detalhe(campanhaId).subscribe({
       next: (detalhe) => {
-        this.detalhesCampanha[campanhaId] = detalhe.destinatarios ?? [];
+        this.detalhesCampanha[campanhaId] = this.ordenarDestinatariosPorAgendado(
+          detalhe.destinatarios ?? [],
+        );
         this.carregandoDetalhe[campanhaId] = false;
       },
       error: (err) => {
