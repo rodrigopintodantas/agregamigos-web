@@ -143,11 +143,19 @@
                           <td>{{ d.pessoa?.whatsapp || '—' }}</td>
                           <td>{{ d.modelo?.titulo || '—' }}</td>
                           <td>{{ d.turno || '—' }}</td>
-                          <td>{{ d.agendado_para ? (d.agendado_para | date: 'dd/MM/yyyy HH:mm') : '—' }}</td>
+                          <td>{{
+                            d.agendado_para
+                              ? (d.agendado_para | date: 'dd/MM/yyyy HH:mm' : 'America/Sao_Paulo')
+                              : '—'
+                          }}</td>
                           <td>
                             <span class="status-badge status-envio-{{ d.status }}">{{ labelStatusDestinatario(d.status) }}</span>
                           </td>
-                          <td>{{ d.enviado_em ? (d.enviado_em | date: 'dd/MM/yyyy HH:mm') : '—' }}</td>
+                          <td>{{
+                            d.enviado_em
+                              ? (d.enviado_em | date: 'dd/MM/yyyy HH:mm' : 'America/Sao_Paulo')
+                              : '—'
+                          }}</td>
                           <td>
                             <button
                               type="button"
