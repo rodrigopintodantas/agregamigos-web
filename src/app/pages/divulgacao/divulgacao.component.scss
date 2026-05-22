@@ -29,10 +29,36 @@
   color: #344054;
 }
 
-.campo input {
+.campo input,
+.campo select {
   border: 1px solid #d0d5dd;
   border-radius: 8px;
   padding: 0.52rem 0.65rem;
+  font-size: 0.88rem;
+  color: #101828;
+  background: #fff;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 32rem;
+}
+
+.campo select {
+  cursor: pointer;
+  appearance: auto;
+}
+
+.campo input:focus,
+.campo select:focus {
+  outline: none;
+  border-color: #84adff;
+  box-shadow: 0 0 0 3px rgba(46, 144, 250, 0.15);
+}
+
+.campo-ajuda {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #667085;
+  line-height: 1.4;
 }
 
 .msg {

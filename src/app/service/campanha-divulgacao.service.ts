@@ -6,11 +6,20 @@ import { environment } from '../../environments/environment';
 
 export type CampanhaStatus = 'rascunho' | 'montada' | 'em_andamento' | 'finalizada' | 'cancelada';
 
+export interface WhatsappCanalResumo {
+  id: number;
+  nome: string;
+  numero: string | null;
+  status: string;
+}
+
 export interface CampanhaDivulgacaoItem {
   id: number;
   nome: string;
   status: CampanhaStatus;
   mensagens_por_turno: number;
+  whatsapp_canal_id?: number | null;
+  whatsapp_canal?: WhatsappCanalResumo | null;
   total_destinatarios: number;
   total_enviados: number;
   total_pendentes: number;
@@ -23,6 +32,7 @@ export interface CriarCampanhaPayload {
   pessoa_ids: number[];
   modelo_ids: number[];
   mensagens_por_turno: number;
+  whatsapp_canal_id: number;
 }
 
 export interface CriarCampanhaResponse {
@@ -80,6 +90,8 @@ export interface CampanhaDivulgacaoDetalhe {
   nome: string;
   status: CampanhaStatus;
   mensagens_por_turno: number;
+  whatsapp_canal_id?: number | null;
+  whatsapp_canal?: WhatsappCanalResumo | null;
   total_destinatarios: number;
   total_enviados: number;
   createdAt: string;

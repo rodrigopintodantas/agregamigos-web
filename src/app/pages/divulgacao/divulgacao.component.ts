@@ -9,6 +9,7 @@ import {
 import { AutenticacaoService } from '../../service/autenticacao.service';
 import { ModeloMensagem, ModeloMensagemService } from '../../service/modelo-mensagem.service';
 import { PessoaItem, PessoaService } from '../../service/pessoa.service';
+import { WhatsappCanal, WhatsappService } from '../../service/whatsapp.service';
 
 type ItemCampanha = {
   pessoaId: number;
@@ -29,6 +30,7 @@ export class DivulgacaoComponent implements OnInit {
   private pessoaService = inject(PessoaService);
   private modeloService = inject(ModeloMensagemService);
   private campanhaService = inject(CampanhaDivulgacaoService);
+  private whatsappService = inject(WhatsappService);
   private auth = inject(AutenticacaoService);
 
   /** Só o login `admin` vê e dispara «Iniciar envio» (alinhado ao menu e à API). */
@@ -51,6 +53,8 @@ export class DivulgacaoComponent implements OnInit {
 
   pessoas: PessoaItem[] = [];
   modelos: ModeloMensagem[] = [];
+  canaisWhatsapp: WhatsappCanal[] = [];
+  whatsappCanalIdSelecionado: number | null = null;
 
   selecionadosPessoas = new Set<number>();
   selecionadosModelos = new Set<number>();
@@ -105,11 +109,14 @@ export class DivulgacaoComponent implements OnInit {
     this.filtroNome = '';
     this.filtroBairro = '';
     this.mensagensPorTurno = 2;
+    this.whatsappCanalIdSelecionado = null;
+    this.canaisWhatsapp = [];
 
     let pessoasOk = false;
     let modelosOk = false;
+    let canaisOk = false;
     const finalizar = () => {
-      if (pessoasOk && modelosOk) this.carregandoCriacao = false;
+      if (pessoasOk && modelosOk && canaisOk) this.carregandoCriacao = false;
     };
 
     this.pessoaService.listar().subscribe({
@@ -135,6 +142,20 @@ export class DivulgacaoComponent implements OnInit {
         this.carregandoCriacao = false;
       },
     });
+
+    this.whatsappService.listarCanais().subscribe({
+      next: (lista) => {
+        this.canaisWhatsapp = lista;
+        const conectado = lista.find((c) => c.conectado);
+        this.whatsappCanalIdSelecionado = conectado?.id ?? lista[0]?.id ?? null;
+        canaisOk = true;
+        finalizar();
+      },
+      error: (err) => {
+        this.erro = err?.error?.message ?? 'Não foi possível carregar os celulares WhatsApp.';
+        this.carregandoCriacao = false;
+      },
+    });
   }
 
   cancelarCriacao(): void {
@@ -146,8 +167,23 @@ export class DivulgacaoComponent implements OnInit {
     this.selecionadosPessoas.clear();
     this.selecionadosModelos.clear();
     this.campanhaMontada = [];
+    this.canaisWhatsapp = [];
+    this.whatsappCanalIdSelecionado = null;
     this.erro = '';
     this.sucesso = '';
+  }
+
+  labelCanalWhatsapp(canal: WhatsappCanal): string {
+    const status = canal.conectado ? 'conectado' : canal.status || 'desconectado';
+    const numero = canal.numero ? ` · ${canal.numero}` : '';
+    return `${canal.nome} (${status})${numero}`;
+  }
+
+  resumoCanalCampanha(c: CampanhaDivulgacaoItem): string {
+    const canal = c.whatsapp_canal;
+    if (!canal) return '—';
+    const num = canal.numero ? ` (${canal.numero})` : '';
+    return `${canal.nome}${num}`;
   }
 
   get pessoasFiltradas(): PessoaItem[] {
@@ -215,6 +251,10 @@ export class DivulgacaoComponent implements OnInit {
       this.erro = 'Mensagens por turno deve ser um número inteiro maior ou igual a 1.';
       return;
     }
+    if (!this.whatsappCanalIdSelecionado) {
+      this.erro = 'Selecione o celular que enviará as mensagens da campanha.';
+      return;
+    }
 
     const pessoasSelecionadas = this.pessoas
       .filter((p) => this.selecionadosPessoas.has(p.id))
@@ -249,12 +289,17 @@ export class DivulgacaoComponent implements OnInit {
       return;
     }
     this.salvandoCampanha = true;
+    if (!this.whatsappCanalIdSelecionado) {
+      this.erro = 'Selecione o celular que enviará as mensagens da campanha.';
+      return;
+    }
     this.campanhaService
       .criar({
         nome: this.nomeCampanha.trim(),
         pessoa_ids: [...this.selecionadosPessoas],
         modelo_ids: [...this.selecionadosModelos],
         mensagens_por_turno: this.mensagensPorTurno,
+        whatsapp_canal_id: this.whatsappCanalIdSelecionado,
       })
       .subscribe({
         next: () => {

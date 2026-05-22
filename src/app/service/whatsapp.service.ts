@@ -3,21 +3,30 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
-export interface WhatsappStatus {
-  conectado: boolean;
-  status: 'conectado' | 'desconectado' | 'conectando' | 'aguardando_qr' | 'reconectando' | string;
+export interface WhatsappCanal {
+  id: number;
+  nome: string;
   numero: string | null;
-  nomePerfil: string | null;
-  qrCode: string | null;
-  ultimaAtualizacao: string;
+  status: string;
+  conectado?: boolean;
+  qrCode?: string | null;
+  nomePerfil?: string | null;
+  ultimaAtualizacao?: string;
+  candidato_id?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface WhatsappConectarPayload {
   nomePerfil?: string;
 }
 
-export interface WhatsappAcaoResponse extends WhatsappStatus {
+export interface WhatsappAcaoResponse extends WhatsappCanal {
   message: string;
+}
+
+export interface CriarWhatsappCanalPayload {
+  nome: string;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -25,19 +34,27 @@ export class WhatsappService {
   private http = inject(HttpClient);
   private base = `${environment.apiUrl}/whatsapp`;
 
-  status(): Observable<WhatsappStatus> {
-    return this.http.get<WhatsappStatus>(`${this.base}/status`);
+  listarCanais(): Observable<WhatsappCanal[]> {
+    return this.http.get<WhatsappCanal[]>(`${this.base}/canais`);
   }
 
-  conectar(payload: WhatsappConectarPayload): Observable<WhatsappAcaoResponse> {
-    return this.http.post<WhatsappAcaoResponse>(`${this.base}/conectar`, payload);
+  criarCanal(payload: CriarWhatsappCanalPayload): Observable<WhatsappAcaoResponse> {
+    return this.http.post<WhatsappAcaoResponse>(`${this.base}/canais`, payload);
   }
 
-  desconectar(): Observable<WhatsappAcaoResponse> {
-    return this.http.post<WhatsappAcaoResponse>(`${this.base}/desconectar`, {});
+  statusCanal(canalId: number): Observable<WhatsappCanal> {
+    return this.http.get<WhatsappCanal>(`${this.base}/canais/${canalId}/status`);
   }
 
-  trocarTelefone(payload: WhatsappConectarPayload): Observable<WhatsappAcaoResponse> {
-    return this.http.post<WhatsappAcaoResponse>(`${this.base}/trocar-telefone`, payload);
+  conectarCanal(canalId: number, payload?: WhatsappConectarPayload): Observable<WhatsappAcaoResponse> {
+    return this.http.post<WhatsappAcaoResponse>(`${this.base}/canais/${canalId}/conectar`, payload ?? {});
+  }
+
+  desconectarCanal(canalId: number): Observable<WhatsappAcaoResponse> {
+    return this.http.post<WhatsappAcaoResponse>(`${this.base}/canais/${canalId}/desconectar`, {});
+  }
+
+  trocarTelefoneCanal(canalId: number, payload?: WhatsappConectarPayload): Observable<WhatsappAcaoResponse> {
+    return this.http.post<WhatsappAcaoResponse>(`${this.base}/canais/${canalId}/trocar-telefone`, payload ?? {});
   }
 }

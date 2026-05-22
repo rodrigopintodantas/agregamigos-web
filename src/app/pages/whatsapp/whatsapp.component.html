@@ -1,38 +1,72 @@
 <section class="page-card div-page">
   <header class="head">
     <h2>Conexão WhatsApp</h2>
-    <p class="head-desc">Gerencie o estado da conexão para envio de campanhas.</p>
+    <p class="head-desc">
+      Cadastre vários celulares e conecte cada um com QR Code. Na criação da campanha você escolhe qual número enviará as mensagens.
+    </p>
   </header>
 
-  <p class="msg" *ngIf="carregando">Carregando status...</p>
+  <p class="msg" *ngIf="carregando">Carregando canais...</p>
   <p class="msg erro" *ngIf="erro">{{ erro }}</p>
   <p class="msg sucesso" *ngIf="sucesso">{{ sucesso }}</p>
 
-  <article class="bloco" *ngIf="!carregando">
-    <h3>Status atual</h3>
-    <p class="contador">
-      Estado:
-      <strong>{{ status?.conectado ? 'Conectado' : 'Desconectado' }}</strong>
-      ({{ status?.status || 'desconhecido' }})
-      · Atualizado em: {{ status?.ultimaAtualizacao | date: 'dd/MM/yyyy HH:mm:ss' }}
-    </p>
-    <p class="contador">Número ativo: {{ status?.numero || '—' }}</p>
-    <p class="contador">Perfil: {{ status?.nomePerfil || '—' }}</p>
-    <div *ngIf="status?.qrCode" style="margin-top: 12px">
-      <p class="contador">Escaneie o QR Code no WhatsApp para concluir a conexão:</p>
-      <img [src]="status?.qrCode || ''" alt="QR Code de conexão do WhatsApp" width="280" height="280" />
+  <article class="bloco" *ngIf="!carregando && podeAdicionarCelular">
+    <h3>Adicionar celular</h3>
+    <div class="novo-canal">
+      <label class="campo" style="margin-bottom: 0; flex: 1; min-width: 200px">
+        <span>Nome do canal (ex.: Celular equipe, Voluntários)</span>
+        <input [(ngModel)]="nomeNovoCanal" placeholder="Ex.: Celular campanha" />
+      </label>
+      <button type="button" class="btn-montar" [disabled]="criandoCanal" (click)="criarCanal()">
+        {{ criandoCanal ? 'Criando...' : 'Adicionar canal' }}
+      </button>
     </div>
   </article>
 
-  <article class="bloco">
-    <h3>Conectar canal</h3>
-    <p class="contador">
-      Use <strong>Trocar Telefone</strong> quando quiser deixar de enviar por este número e vincular outro aparelho (novo QR Code).
+  <article class="bloco" *ngIf="!carregando">
+    <h3>Canais cadastrados</h3>
+    <p class="contador" *ngIf="!canais.length">
+      Nenhum canal cadastrado.
+      <ng-container *ngIf="podeAdicionarCelular">
+        Se não aparecer o canal «Principal», use a área acima para adicionar um celular.
+      </ng-container>
+      <ng-container *ngIf="!podeAdicionarCelular">
+        Peça ao usuário administrador do sistema para cadastrar ou conectar os celulares.
+      </ng-container>
     </p>
-    <label class="campo">
-      <span>Nome do perfil</span>
-      <input [(ngModel)]="nomePerfil" placeholder="Ex.: Atendimento AgregaAmigos" />
-    </label>
+    <div class="canais-lista" *ngIf="canais.length">
+      <button
+        type="button"
+        class="canal-item"
+        *ngFor="let c of canais"
+        [class.ativo]="c.id === canalSelecionadoId"
+        (click)="selecionarCanal(c.id)"
+      >
+        <strong>{{ c.nome }}</strong>
+        <span>· {{ labelStatus(c) }}</span>
+        <span *ngIf="c.numero">· {{ c.numero }}</span>
+      </button>
+    </div>
+  </article>
+
+  <article class="bloco" *ngIf="!carregando && canalSelecionado">
+    <h3>Gerenciar: {{ canalSelecionado.nome }}</h3>
+    <p class="contador">
+      Estado:
+      <strong>{{ labelStatus(canalSelecionado) }}</strong>
+      <span *ngIf="canalSelecionado.ultimaAtualizacao">
+        · Atualizado em: {{ canalSelecionado.ultimaAtualizacao | date: 'dd/MM/yyyy HH:mm:ss' }}
+      </span>
+    </p>
+    <p class="contador">Número ativo: {{ canalSelecionado.numero || '—' }}</p>
+    <div *ngIf="canalSelecionado.qrCode" style="margin-top: 12px">
+      <p class="contador">Escaneie o QR Code no WhatsApp deste aparelho:</p>
+      <img [src]="canalSelecionado.qrCode" alt="QR Code de conexão do WhatsApp" width="280" height="280" />
+    </div>
+
+    <p class="contador" style="margin-top: 1rem">
+      Use <strong>Trocar telefone</strong> para desvincular o aparelho atual deste canal e parear outro número.
+    </p>
     <div class="wa-actions">
       <div class="wa-actions-main">
         <button type="button" class="btn-montar" [disabled]="conectando" (click)="conectar()">
@@ -41,7 +75,7 @@
         <button type="button" class="btn-sec" [disabled]="desconectando" (click)="desconectar()">
           {{ desconectando ? 'Desconectando...' : 'Desconectar' }}
         </button>
-        <button type="button" class="btn-sec" (click)="carregarStatus()">Atualizar status</button>
+        <button type="button" class="btn-sec" (click)="carregarCanais(canalSelecionadoId)">Atualizar lista</button>
       </div>
       <div class="wa-actions-aside">
         <button
@@ -50,7 +84,7 @@
           [disabled]="trocandoTelefone || conectando || desconectando"
           (click)="trocarTelefone()"
         >
-          {{ trocandoTelefone ? 'Trocando telefone...' : 'Trocar Telefone' }}
+          {{ trocandoTelefone ? 'Trocando telefone...' : 'Trocar telefone' }}
         </button>
       </div>
     </div>

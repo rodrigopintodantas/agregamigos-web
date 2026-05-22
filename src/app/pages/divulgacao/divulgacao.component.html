@@ -29,6 +29,7 @@
         <thead>
           <tr>
             <th>Campanha</th>
+            <th>Celular</th>
             <th>Status</th>
             <th>Msgs/turno</th>
             <th>Destinatários</th>
@@ -47,6 +48,7 @@
                   <span class="drop-icon">{{ campanhaAbertaId === c.id ? '▾' : '▸' }}</span>
                 </button>
               </td>
+              <td>{{ resumoCanalCampanha(c) }}</td>
               <td>
                 <span class="status-badge status-{{ c.status }}">{{ labelStatus(c.status) }}</span>
               </td>
@@ -116,8 +118,11 @@
               </td>
             </tr>
             <tr class="campanha-dropdown-row" *ngIf="campanhaAbertaId === c.id">
-              <td colspan="8">
+              <td colspan="9">
                 <div class="campanha-dropdown">
+                  <p class="contador" *ngIf="c.whatsapp_canal">
+                    Celular da campanha: <strong>{{ resumoCanalCampanha(c) }}</strong>
+                  </p>
                   <p class="contador" *ngIf="carregandoDetalhe[c.id]">Carregando destinatários...</p>
                   <div class="table-wrap" *ngIf="!carregandoDetalhe[c.id]">
                     <table *ngIf="detalhesCampanha[c.id]?.length">
@@ -224,6 +229,18 @@
     <label class="campo">
       <span>Mensagens por turno (manhã/tarde/noite)</span>
       <input type="number" min="1" step="1" [(ngModel)]="mensagensPorTurno" />
+    </label>
+    <label class="campo" *ngIf="!carregandoCriacao">
+      <span>Celular que enviará a campanha</span>
+      <select [(ngModel)]="whatsappCanalIdSelecionado">
+        <option [ngValue]="null">Selecione o celular...</option>
+        <option *ngFor="let canal of canaisWhatsapp" [ngValue]="canal.id">
+          {{ labelCanalWhatsapp(canal) }}
+        </option>
+      </select>
+      <small class="campo-ajuda" *ngIf="!canaisWhatsapp.length">
+        Nenhum canal cadastrado. Cadastre em <strong>Conexão WhatsApp</strong>.
+      </small>
     </label>
 
     <p class="msg" *ngIf="carregandoCriacao">Carregando dados da criação...</p>
