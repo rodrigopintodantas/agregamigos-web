@@ -290,6 +290,29 @@ th {
   background: #b42318;
 }
 
+.dialog-excluir .dialog-excluir-aviso {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: #667085;
+  line-height: 1.45;
+}
+
+.dialog-excluir .actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1rem;
+}
+
+.btn-excluir-confirmar {
+  background: #b42318;
+  border-color: #b42318;
+}
+
+.btn-excluir-confirmar:hover:not(:disabled) {
+  background: #912018;
+}
+
 .btn-acao.iniciar svg polygon {
   fill: currentColor;
   stroke: none;

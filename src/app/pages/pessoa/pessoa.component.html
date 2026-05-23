@@ -3,10 +3,39 @@
     <h2>Pessoas</h2>
     <div class="head-actions" *ngIf="!auth.isCoordenador()">
       <input #csvInput type="file" accept=".csv,text/csv" class="input-csv" (change)="importarCsv($event)" />
-      <button type="button" class="ghost" [disabled]="importandoCsv" (click)="abrirSeletorCsv(csvInput)">
-        {{ importandoCsv ? 'Importando CSV...' : 'Adicionar CSV' }}
-      </button>
       <button type="button" (click)="abrirDialog()">Adicionar Pessoa</button>
+      <div class="user-menu-wrap pessoas-acoes-menu-wrap">
+        <button
+          type="button"
+          class="acoes-menu-trigger"
+          (click)="toggleMenuAcoes($event)"
+          [attr.aria-expanded]="menuAcoesAberto"
+          aria-haspopup="true"
+          aria-label="Mais ações"
+        >
+          <span class="acoes-menu-dots" aria-hidden="true">⋯</span>
+        </button>
+        <div class="user-menu-dropdown" *ngIf="menuAcoesAberto" role="menu" aria-label="Ações de pessoas">
+          <button
+            type="button"
+            class="user-menu-item"
+            role="menuitem"
+            [disabled]="importandoCsv"
+            (click)="acionarImportarCsv(csvInput)"
+          >
+            {{ importandoCsv ? 'Importando CSV...' : 'Adicionar CSV' }}
+          </button>
+          <button
+            type="button"
+            class="user-menu-item"
+            role="menuitem"
+            [disabled]="exportandoPlanilha || carregando"
+            (click)="exportarPlanilha()"
+          >
+            {{ exportandoPlanilha ? 'Exportando planilha...' : 'Exportar planilha' }}
+          </button>
+        </div>
+      </div>
     </div>
   </header>
 

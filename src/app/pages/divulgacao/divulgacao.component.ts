@@ -38,6 +38,11 @@ export class DivulgacaoComponent implements OnInit {
     return this.auth.isLoginAdminSistema();
   }
 
+  /** Só o login `admin` pode excluir campanhas. */
+  get podeExibirExcluirCampanha(): boolean {
+    return this.auth.isLoginAdminSistema();
+  }
+
   /** `false`: botão oculto na UI; fluxo `reprocessarErros` permanece no componente. */
   readonly exibirBotaoReprocessarErros = false;
 
@@ -72,6 +77,9 @@ export class DivulgacaoComponent implements OnInit {
   dialogMensagemTitulo = '';
   dialogMensagemDestinatario = '';
   dialogMensagemCorpo = '';
+
+  dialogExcluirAberto = false;
+  campanhaParaExcluir: CampanhaDivulgacaoItem | null = null;
   erro = '';
   sucesso = '';
 
@@ -329,10 +337,6 @@ export class DivulgacaoComponent implements OnInit {
     }
   }
 
-  podeExcluirCampanha(c: CampanhaDivulgacaoItem): boolean {
-    return c.status === 'montada';
-  }
-
   podeIniciarCampanha(c: CampanhaDivulgacaoItem): boolean {
     return c.status === 'montada' || c.status === 'em_andamento';
   }
@@ -341,19 +345,54 @@ export class DivulgacaoComponent implements OnInit {
     return c.status === 'em_andamento';
   }
 
-  excluirCampanha(c: CampanhaDivulgacaoItem): void {
-    this.erro = '';
-    this.sucesso = '';
-    if (!this.podeExcluirCampanha(c)) {
-      this.erro = 'A campanha só pode ser excluída quando estiver no status Montada.';
+  podeExcluirCampanha(c: CampanhaDivulgacaoItem): boolean {
+    return c.status !== 'em_andamento';
+  }
+
+  abrirDialogExcluirCampanha(c: CampanhaDivulgacaoItem): void {
+    if (!this.podeExibirExcluirCampanha) {
+      this.erro = 'Apenas o utilizador com login admin pode excluir campanhas.';
       return;
     }
-    if (!window.confirm(`Deseja excluir a campanha "${c.nome}"?`)) return;
+    if (!this.podeExcluirCampanha(c)) {
+      this.erro = 'Campanhas em andamento não podem ser excluídas. Cancele o envio antes.';
+      return;
+    }
+    this.erro = '';
+    this.sucesso = '';
+    this.campanhaParaExcluir = c;
+    this.dialogExcluirAberto = true;
+  }
+
+  fecharDialogExcluirCampanha(): void {
+    this.dialogExcluirAberto = false;
+    this.campanhaParaExcluir = null;
+  }
+
+  confirmarExclusaoCampanha(): void {
+    const c = this.campanhaParaExcluir;
+    if (!c) return;
+    if (!this.podeExibirExcluirCampanha) {
+      this.erro = 'Apenas o utilizador com login admin pode excluir campanhas.';
+      this.fecharDialogExcluirCampanha();
+      return;
+    }
+    if (!this.podeExcluirCampanha(c)) {
+      this.erro = 'Campanhas em andamento não podem ser excluídas. Cancele o envio antes.';
+      this.fecharDialogExcluirCampanha();
+      return;
+    }
 
     this.excluindoCampanhaId = c.id;
     this.campanhaService.excluir(c.id).subscribe({
       next: (ret) => {
         this.excluindoCampanhaId = null;
+        this.fecharDialogExcluirCampanha();
+        if (this.campanhaAbertaId === c.id) {
+          this.campanhaAbertaId = null;
+        }
+        delete this.detalhesCampanha[c.id];
+        delete this.carregandoDetalhe[c.id];
         this.sucesso = ret?.message ?? 'Campanha excluída com sucesso.';
         this.carregarCampanhas();
       },

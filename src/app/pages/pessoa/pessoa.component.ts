@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import * as XLSX from 'xlsx';
 import { PessoaItem, PessoaPayload, PessoaService } from '../../service/pessoa.service';
 import { AutenticacaoService } from '../../service/autenticacao.service';
 
@@ -54,6 +55,8 @@ export class PessoaComponent implements OnInit, OnDestroy {
   erroDialog = '';
   editandoId: number | null = null;
   importandoCsv = false;
+  exportandoPlanilha = false;
+  menuAcoesAberto = false;
   mensagemImportacao = '';
   dialogDuplicadosAberto = false;
   nomesDuplicadosImportacao: string[] = [];
@@ -190,6 +193,72 @@ export class PessoaComponent implements OnInit, OnDestroy {
         ibge: null,
       },
     };
+  }
+
+  toggleMenuAcoes(ev: MouseEvent): void {
+    ev.stopPropagation();
+    this.menuAcoesAberto = !this.menuAcoesAberto;
+  }
+
+  acionarImportarCsv(input: HTMLInputElement): void {
+    this.menuAcoesAberto = false;
+    this.abrirSeletorCsv(input);
+  }
+
+  exportarPlanilha(): void {
+    this.menuAcoesAberto = false;
+    this.erro = '';
+    const lista = this.pessoasFiltradas;
+    if (!lista.length) {
+      this.erro = 'Não há pessoas para exportar com os filtros atuais.';
+      return;
+    }
+
+    this.exportandoPlanilha = true;
+    try {
+      const linhas = lista.map((p) => ({
+        'Nome Completo': p.nome ?? '',
+        'Telefone com DDD (preferencialmente Whatsapp)': this.celulaTextoPlanilha(p.whatsapp),
+        'Data de Nascimento': this.formatarDataNascimentoCsv(p.data_nascimento),
+        email: p.email ?? '',
+        'Perfil do Instagram': p.instagram ?? '',
+        Indicacao: p.indicacao ?? '',
+        Endereço: p.endereco?.logradouro ?? '',
+        'Região Administrativa': p.endereco?.bairro ?? '',
+        CEP: this.celulaTextoPlanilha(p.endereco?.cep),
+        Cidade: p.endereco?.cidade ?? '',
+        UF: p.endereco?.uf ?? '',
+        'Erro WhatsApp': p.erro_whatsapp ? 'sim' : 'nao',
+        'Engajamento WhatsApp': this.labelEngajamento(p),
+      }));
+
+      const planilha = XLSX.utils.json_to_sheet(linhas);
+      planilha['!cols'] = [
+        { wch: 32 },
+        { wch: 22 },
+        { wch: 14 },
+        { wch: 28 },
+        { wch: 22 },
+        { wch: 18 },
+        { wch: 28 },
+        { wch: 22 },
+        { wch: 12 },
+        { wch: 18 },
+        { wch: 6 },
+        { wch: 14 },
+        { wch: 20 },
+      ];
+
+      const livro = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(livro, planilha, 'Pessoas');
+      const nomeArquivo = `pessoas-${this.slugArquivoExportacao()}-${this.dataArquivoExportacao()}.xlsx`;
+      XLSX.writeFile(livro, nomeArquivo, { compression: true });
+      this.mensagemImportacao = `Planilha exportada com ${lista.length} registro(s).`;
+    } catch {
+      this.erro = 'Não foi possível gerar a planilha.';
+    } finally {
+      this.exportandoPlanilha = false;
+    }
   }
 
   abrirSeletorCsv(input: HTMLInputElement): void {
@@ -684,6 +753,43 @@ export class PessoaComponent implements OnInit, OnDestroy {
     ) {
       this.fecharPainelFiltro();
     }
+    if (!alvo?.closest?.('.pessoas-acoes-menu-wrap')) {
+      this.menuAcoesAberto = false;
+    }
+  }
+
+  private formatarDataNascimentoCsv(value?: string | null): string {
+    if (!value) return '';
+    const raw = String(value).trim();
+    const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (iso) {
+      return `${iso[3]}/${iso[2]}/${iso[1]}`;
+    }
+    return raw;
+  }
+
+  /** Evita que Excel converta telefone/CEP numérico para notação científica. */
+  private celulaTextoPlanilha(value?: string | null): string {
+    const s = String(value ?? '').trim();
+    return s;
+  }
+
+  private slugArquivoExportacao(): string {
+    const slug = this.pessoas[0]?.candidato_slug;
+    if (slug) {
+      return String(slug)
+        .trim()
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+    }
+    return 'exportacao';
+  }
+
+  private dataArquivoExportacao(): string {
+    const d = new Date();
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
   }
 
   private parseCsv(content: string): Record<string, string>[] {
