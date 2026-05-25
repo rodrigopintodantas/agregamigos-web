@@ -21,6 +21,8 @@ export interface PessoaPayload {
   whatsapp?: string | null;
   instagram?: string | null;
   indicacao?: string | null;
+  /** Apenas na edição manual (admin). */
+  engajamento_whatsapp?: EngajamentoWhatsapp | null;
   /** Usuário coordenador (vínculo com o candidato), ex.: link de cadastro público. */
   id_coordenador?: number | null;
   endereco?: EnderecoPayload;
@@ -51,10 +53,35 @@ export interface ImportarCsvPayload {
   registros: Record<string, string>[];
 }
 
+export type MotivoRegistroNaoImportado = 'nome_duplicado' | 'whatsapp_duplicado';
+
+export interface RegistroNaoImportadoCsv {
+  nome: string;
+  whatsapp: string | null;
+  motivo: MotivoRegistroNaoImportado;
+  cadastro_existente?: string | null;
+}
+
 export interface ImportarCsvResponse {
   message: string;
   total: number;
   nomes_duplicados?: string[];
+  registros_nao_importados?: RegistroNaoImportadoCsv[];
+  ids_importados?: number[];
+  sem_whatsapp?: number;
+}
+
+export interface DesfazerImportacaoCsvResponse {
+  message: string;
+  removidos: number;
+  ids_removidos?: number[];
+}
+
+export interface DesfazerImportacaoRecentesPreview {
+  minutos: number;
+  total: number;
+  nomes_amostra: string[];
+  ids: number[];
 }
 
 export interface BairroQuantidade {
@@ -111,6 +138,23 @@ export class PessoaService {
 
   importarCsv(payload: ImportarCsvPayload): Observable<ImportarCsvResponse> {
     return this.http.post<ImportarCsvResponse>(`${this.apiURL}/importar-csv`, payload);
+  }
+
+  desfazerImportacaoCsv(ids: number[]): Observable<DesfazerImportacaoCsvResponse> {
+    return this.http.post<DesfazerImportacaoCsvResponse>(`${this.apiURL}/importar-csv/desfazer`, { ids });
+  }
+
+  previewDesfazerImportacaoRecentes(minutos = 120): Observable<DesfazerImportacaoRecentesPreview> {
+    return this.http.get<DesfazerImportacaoRecentesPreview>(
+      `${this.apiURL}/importar-csv/desfazer-recentes/preview`,
+      { params: { minutos: String(minutos) } },
+    );
+  }
+
+  desfazerImportacaoRecentes(minutos = 120): Observable<DesfazerImportacaoCsvResponse> {
+    return this.http.post<DesfazerImportacaoCsvResponse>(`${this.apiURL}/importar-csv/desfazer-recentes`, {
+      minutos,
+    });
   }
 
   estatisticas(): Observable<DashboardEstatisticas> {
