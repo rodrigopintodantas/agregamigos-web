@@ -1,4 +1,4 @@
-import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -54,6 +54,66 @@ export interface AcaoCampanhaResponse {
 }
 
 export type RespostaSentimento = 'positivo' | 'negativo' | 'neutro' | 'desconhecido';
+
+export type EngajamentoPainel = 'sem_resposta' | 'positivo' | 'negativo' | 'neutro';
+
+export interface PainelEngajamentoContagem {
+  sem_resposta: number;
+  positivo: number;
+  negativo: number;
+  neutro: number;
+  total: number;
+}
+
+export interface PainelCampanhaResumo {
+  id: number;
+  nome: string;
+  status: CampanhaStatus | string;
+  total_destinatarios: number;
+  total_enviados: number;
+  createdAt: string;
+  updatedAt: string;
+  respostas: {
+    com_resposta: number;
+    sem_resposta: number;
+    positivo: number;
+    negativo: number;
+    neutro: number;
+  };
+}
+
+export interface PainelCampanhasResponse {
+  totais: {
+    pessoas_cadastradas: number;
+    campanhas: number;
+    campanhas_realizadas: number;
+  };
+  engajamento: PainelEngajamentoContagem;
+  campanhas: PainelCampanhaResumo[];
+}
+
+export interface PainelCampanhaPessoaItem {
+  id: number;
+  nome: string;
+  whatsapp: string | null;
+  engajamento_whatsapp: string;
+  bairro?: string | null;
+  erro_whatsapp?: boolean;
+  enviado_em?: string | null;
+  mensagem?: string | null;
+  mensagem_tipo?: 'envio' | 'resposta' | null;
+}
+
+export interface PainelCampanhasPessoasResponse {
+  filtro: 'engajamento' | 'campanha_sem_resposta' | 'campanha_enviados';
+  engajamento: EngajamentoPainel | null;
+  campanha_id: number | null;
+  campanha_nome: string | null;
+  total: number;
+  page?: number;
+  limit?: number;
+  pessoas: PainelCampanhaPessoaItem[];
+}
 
 export interface CampanhaDestinatarioDetalhe {
   id: number;
@@ -138,6 +198,32 @@ function normalizarDetalheCampanhaApi(body: CampanhaDivulgacaoDetalhe): Campanha
 export class CampanhaDivulgacaoService {
   private http = inject(HttpClient);
   private base = `${environment.apiUrl}/campanhas-divulgacao`;
+
+  painel(): Observable<PainelCampanhasResponse> {
+    return this.http.get<PainelCampanhasResponse>(`${this.base}/painel`);
+  }
+
+  painelPessoas(params: {
+    engajamento?: EngajamentoPainel | null;
+    campanha_id?: number | null;
+    filtro?: 'engajamento' | 'campanha_sem_resposta' | 'campanha_enviados';
+    page?: number;
+    limit?: number;
+  }): Observable<PainelCampanhasPessoasResponse> {
+    let httpParams = new HttpParams();
+    if (params.filtro) httpParams = httpParams.set('filtro', params.filtro);
+    if (params.engajamento) httpParams = httpParams.set('engajamento', params.engajamento);
+    if (params.campanha_id != null && params.campanha_id > 0) {
+      httpParams = httpParams.set('campanha_id', String(params.campanha_id));
+    }
+    if (params.page != null && params.page > 0) {
+      httpParams = httpParams.set('page', String(params.page));
+    }
+    if (params.limit != null && params.limit > 0) {
+      httpParams = httpParams.set('limit', String(params.limit));
+    }
+    return this.http.get<PainelCampanhasPessoasResponse>(`${this.base}/painel/pessoas`, { params: httpParams });
+  }
   private noCacheHeaders = new HttpHeaders({
     'Cache-Control': 'no-cache, no-store, must-revalidate',
     Pragma: 'no-cache',

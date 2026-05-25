@@ -148,6 +148,21 @@ import { LayoutUiService } from '../service/layout-ui.service';
           <span class="menu-label">Divulgação</span>
         </a>
       </li>
+      <li *ngIf="auth.isAdmin()">
+        <a
+          [routerLink]="auth.routerSegments('admin', 'painel-campanhas')"
+          routerLinkActive="active-route"
+          [attr.title]="ui.sidebarCollapsed() ? 'Painel - Campanhas' : null"
+          (click)="ui.closeMobileMenu()"
+        >
+          <span class="menu-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M3 3h8v8H3V3zm10 0h8v5h-8V3zM3 13h5v8H3v-8zm7 0h11v8H10v-8z"></path>
+            </svg>
+          </span>
+          <span class="menu-label">Painel - Campanhas</span>
+        </a>
+      </li>
     </ul>
   `
 })

@@ -1,0 +1,198 @@
+<section class="pc-dash page-card" aria-labelledby="pc-dash-title">
+  <header class="pc-hero">
+    <p class="pc-kicker">Campanha</p>
+    <h1 id="pc-dash-title" class="pc-title">Painel — Campanhas</h1>
+    <p class="pc-subtitle">
+      Visão geral do engajamento das pessoas cadastradas e das respostas nas campanhas de divulgação.
+    </p>
+  </header>
+
+  <p class="pc-msg pc-msg--erro" *ngIf="erro">
+    {{ erro }}
+    <button type="button" class="pc-btn-retry" (click)="carregarPainel()">Tentar novamente</button>
+  </p>
+  <p class="pc-msg pc-msg--neutro" *ngIf="carregando && !erro">Carregando painel...</p>
+
+  <ng-container *ngIf="exibirPainel">
+    <div class="pc-totais">
+      <article class="pc-box pc-box--metric">
+        <h2 class="pc-box-title">Pessoas cadastradas</h2>
+        <p class="pc-metric">{{ totalPessoasCadastradas }}</p>
+        <button type="button" class="pc-btn-texto" (click)="verTodasPessoas()">Ver todas</button>
+      </article>
+      <article class="pc-box pc-box--metric">
+        <h2 class="pc-box-title">Campanhas</h2>
+        <p class="pc-metric">{{ totalCampanhas }}</p>
+        <p class="pc-hint">{{ totalCampanhasRealizadas }} fora de rascunho</p>
+      </article>
+    </div>
+
+    <section class="pc-section" aria-labelledby="pc-eng-title">
+      <h2 id="pc-eng-title" class="pc-section-title">Engajamento (cadastro)</h2>
+      <p class="pc-section-desc">Clique em um card para listar as pessoas com esse engajamento.</p>
+      <div class="pc-eng-grid">
+        <button
+          type="button"
+          class="pc-eng-card"
+          *ngFor="let card of cardsEngajamento"
+          [ngClass]="card.css"
+          [class.ativo]="cardEngajamentoAtivo(card.key)"
+          (click)="filtrarPorEngajamento(card.key)"
+        >
+          <span class="pc-eng-label">{{ card.label }}</span>
+          <span class="pc-eng-qtd">{{ quantidadeEngajamento(card.key) }}</span>
+          <span class="pc-eng-pct">{{ percentualEngajamento(card.key) }}% do total</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="pc-section" aria-labelledby="pc-camp-title">
+      <h2 id="pc-camp-title" class="pc-section-title">Campanhas</h2>
+      <div class="pc-table-wrap" *ngIf="campanhas.length">
+        <table class="pc-table">
+          <thead>
+            <tr>
+              <th>Campanha</th>
+              <th>Status</th>
+              <th>Destinatários</th>
+              <th>Enviados</th>
+              <th>Com resposta</th>
+              <th>Sem resposta</th>
+              <th>Pos / Neg / Neu</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let c of campanhas">
+              <td>{{ c.nome }}</td>
+              <td><span class="pc-status">{{ labelStatusCampanha(c.status) }}</span></td>
+              <td>{{ c.total_destinatarios }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="pc-pill env"
+                  [class.ativo]="campanhaEnviadosAtiva(c)"
+                  (click)="filtrarCampanhaEnviados(c)"
+                >
+                  {{ c.total_enviados }}
+                </button>
+              </td>
+              <td>{{ respostasDaCampanha(c).com_resposta }}</td>
+              <td>
+                <button
+                  type="button"
+                  class="pc-pill sem"
+                  [class.ativo]="campanhaSemRespostaAtiva(c)"
+                  (click)="filtrarCampanhaSemResposta(c)"
+                >
+                  {{ respostasDaCampanha(c).sem_resposta }}
+                </button>
+              </td>
+              <td class="pc-mini-eng">
+                <button
+                  type="button"
+                  class="pc-pill pos"
+                  [class.ativo]="campanhaEngajamentoAtiva(c, 'positivo')"
+                  (click)="filtrarCampanhaPorEngajamento(c, 'positivo')"
+                >
+                  {{ respostasDaCampanha(c).positivo }}
+                </button>
+                <button
+                  type="button"
+                  class="pc-pill neg"
+                  [class.ativo]="campanhaEngajamentoAtiva(c, 'negativo')"
+                  (click)="filtrarCampanhaPorEngajamento(c, 'negativo')"
+                >
+                  {{ respostasDaCampanha(c).negativo }}
+                </button>
+                <button
+                  type="button"
+                  class="pc-pill neu"
+                  [class.ativo]="campanhaEngajamentoAtiva(c, 'neutro')"
+                  (click)="filtrarCampanhaPorEngajamento(c, 'neutro')"
+                >
+                  {{ respostasDaCampanha(c).neutro }}
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="pc-msg pc-msg--neutro" *ngIf="!campanhas.length">Nenhuma campanha criada ainda.</p>
+    </section>
+
+    <section class="pc-section pc-lista" aria-labelledby="pc-lista-title">
+      <div class="pc-lista-head">
+        <div>
+          <h2 id="pc-lista-title" class="pc-section-title">{{ listaTitulo }}</h2>
+          <p class="pc-lista-resumo" *ngIf="paramsListaAtual && !carregandoLista">{{ listaResumo }}</p>
+        </div>
+        <label class="pc-paginacao-seletor" *ngIf="paramsListaAtual">
+          <span>Por página</span>
+          <select [(ngModel)]="itensPorPaginaLista" (ngModelChange)="aoAlterarItensPorPaginaLista()">
+            <option *ngFor="let n of opcoesItensPorPaginaLista" [ngValue]="n">{{ n }}</option>
+          </select>
+        </label>
+      </div>
+
+      <p class="pc-msg pc-msg--erro" *ngIf="erroLista">{{ erroLista }}</p>
+      <p class="pc-msg pc-msg--neutro" *ngIf="carregandoLista">Carregando pessoas...</p>
+
+      <div class="pc-table-wrap pc-table-wrap--lista" *ngIf="!carregandoLista && !erroLista && pessoasLista.length">
+        <table class="pc-table pc-table-pessoas">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>WhatsApp</th>
+              <th>Bairro</th>
+              <th>Engajamento</th>
+              <th *ngIf="mostraColunaMensagem()">{{ rotuloColunaMensagem() }}</th>
+              <th *ngIf="mostraColunaEnviadoEm()">Enviado em</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let p of pessoasLista">
+              <td>{{ p.nome }}</td>
+              <td>{{ formatarWhatsapp(p.whatsapp) }}</td>
+              <td>{{ p.bairro || '—' }}</td>
+              <td>
+                <span class="pc-tag" [ngClass]="classeEngajamento(p.engajamento_whatsapp)">
+                  {{ labelEngajamento(p.engajamento_whatsapp) }}
+                </span>
+              </td>
+              <td *ngIf="mostraColunaMensagem()" class="pc-msg-cell" [attr.title]="textoMensagemLista(p)">
+                {{ textoMensagemLista(p) }}
+              </td>
+              <td *ngIf="mostraColunaEnviadoEm()">{{ formatarData(p.enviado_em) }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p
+        class="pc-msg pc-msg--neutro"
+        *ngIf="!carregandoLista && !erroLista && !pessoasLista.length && paramsListaAtual"
+      >
+        Nenhuma pessoa encontrada para este filtro.
+      </p>
+
+      <nav
+        class="pc-paginacao"
+        *ngIf="!carregandoLista && !erroLista && totalLista > 0"
+        aria-label="Paginação da lista de pessoas"
+      >
+        <button type="button" class="pc-pagina-nav" [disabled]="paginaLista === 1" (click)="paginaListaAnterior()">
+          Anterior
+        </button>
+        <span class="pc-paginacao-info">{{ intervaloListaLabel }}</span>
+        <button
+          type="button"
+          class="pc-pagina-nav"
+          [disabled]="paginaLista >= totalPaginasLista"
+          (click)="paginaListaProxima()"
+        >
+          Próxima
+        </button>
+      </nav>
+    </section>
+  </ng-container>
+</section>

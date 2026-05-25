@@ -15,6 +15,7 @@ import { TermoConsentimentoComponent } from './pages/termo-consentimento/termo-c
 import { VotacaoComponent } from './pages/votacao/votacao.component';
 import { OuvidoriaComponent } from './pages/ouvidoria/ouvidoria.component';
 import { WhatsappComponent } from './pages/whatsapp/whatsapp.component';
+import { PainelCampanhasComponent } from './pages/painel-campanhas/painel-campanhas.component';
 
 export const routes: Routes = [
   {
@@ -66,6 +67,10 @@ export const routes: Routes = [
       {
         path: 'divulgacao',
         component: DivulgacaoComponent,
+      },
+      {
+        path: 'painel-campanhas',
+        component: PainelCampanhasComponent,
       },
       {
         path: 'whatsapp',
