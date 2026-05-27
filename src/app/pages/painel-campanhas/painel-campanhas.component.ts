@@ -71,6 +71,19 @@ export class PainelCampanhasComponent implements OnInit {
     { key: 'neutro', label: 'Neutro', css: 'card-neu' },
   ];
 
+  readonly opcoesEdicaoEngajamento: { value: EngajamentoPainel; label: string }[] = [
+    { value: 'positivo', label: 'Positivo' },
+    { value: 'negativo', label: 'Negativo' },
+    { value: 'neutro', label: 'Neutro' },
+    { value: 'sem_resposta', label: 'Sem resposta' },
+  ];
+
+  dialogEngajamentoAberto = false;
+  pessoaDialogEngajamento: PainelCampanhaPessoaItem | null = null;
+  engajamentoDialogValor: EngajamentoPainel = 'positivo';
+  salvandoDialogEngajamento = false;
+  erroDialogEngajamento = '';
+
   ngOnInit(): void {
     this.carregarPainel();
   }
@@ -168,6 +181,60 @@ export class PainelCampanhasComponent implements OnInit {
 
   rotuloColunaMensagem(): string {
     return 'Resposta recebida';
+  }
+
+  mostraColunaEditarEngajamento(): boolean {
+    return this.filtroAtivo.tipo === 'campanha_engajamento';
+  }
+
+  podeEditarEngajamento(p: PainelCampanhaPessoaItem): boolean {
+    return this.mostraColunaEditarEngajamento() && Number(p.destinatario_id) > 0;
+  }
+
+  abrirDialogEngajamento(p: PainelCampanhaPessoaItem): void {
+    this.pessoaDialogEngajamento = p;
+    this.engajamentoDialogValor = this.normalizarEngajamentoKey(p.engajamento_whatsapp);
+    this.erroDialogEngajamento = '';
+    this.dialogEngajamentoAberto = true;
+  }
+
+  fecharDialogEngajamento(): void {
+    if (this.salvandoDialogEngajamento) return;
+    this.dialogEngajamentoAberto = false;
+    this.pessoaDialogEngajamento = null;
+    this.erroDialogEngajamento = '';
+  }
+
+  confirmarDialogEngajamento(): void {
+    const p = this.pessoaDialogEngajamento;
+    const destinatarioId = Number(p?.destinatario_id);
+    if (!destinatarioId) return;
+
+    this.erroDialogEngajamento = '';
+    this.salvandoDialogEngajamento = true;
+
+    this.campanhaService
+      .atualizarEngajamentoDestinatarioPainel({
+        destinatario_id: destinatarioId,
+        engajamento: this.engajamentoDialogValor,
+      })
+      .pipe(
+        finalize(() => {
+          this.salvandoDialogEngajamento = false;
+          this.cdr.detectChanges();
+        }),
+      )
+      .subscribe({
+        next: () => {
+          this.fecharDialogEngajamento();
+          this.carregarPainel();
+          this.recarregarListaAtual();
+        },
+        error: (err) => {
+          this.erroDialogEngajamento =
+            err?.error?.message ?? 'Não foi possível atualizar o engajamento desta resposta.';
+        },
+      });
   }
 
   filtrarPorEngajamento(key: EngajamentoPainel): void {
@@ -444,5 +511,13 @@ export class PainelCampanhasComponent implements OnInit {
   textoMensagemLista(p: PainelCampanhaPessoaItem): string {
     const t = String(p.mensagem ?? '').trim();
     return t || '—';
+  }
+
+  private normalizarEngajamentoKey(value?: string | null): EngajamentoPainel {
+    const k = String(value ?? 'sem_resposta').toLowerCase();
+    if (k === 'positivo' || k === 'negativo' || k === 'neutro' || k === 'sem_resposta') {
+      return k;
+    }
+    return 'sem_resposta';
   }
 }

@@ -146,6 +146,7 @@
               <th>Bairro</th>
               <th>Engajamento</th>
               <th *ngIf="mostraColunaMensagem()">{{ rotuloColunaMensagem() }}</th>
+              <th *ngIf="mostraColunaEditarEngajamento()">Editar Engajamento</th>
               <th *ngIf="mostraColunaEnviadoEm()">Enviado em</th>
             </tr>
           </thead>
@@ -161,6 +162,21 @@
               </td>
               <td *ngIf="mostraColunaMensagem()" class="pc-msg-cell" [attr.title]="textoMensagemLista(p)">
                 {{ textoMensagemLista(p) }}
+              </td>
+              <td *ngIf="mostraColunaEditarEngajamento()" class="pc-editar-eng">
+                <button
+                  *ngIf="podeEditarEngajamento(p); else semEdicaoEng"
+                  type="button"
+                  class="pc-btn-eng-round"
+                  title="Editar engajamento"
+                  (click)="abrirDialogEngajamento(p)"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 20h9"></path>
+                    <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path>
+                  </svg>
+                </button>
+                <ng-template #semEdicaoEng>—</ng-template>
               </td>
               <td *ngIf="mostraColunaEnviadoEm()">{{ formatarData(p.enviado_em) }}</td>
             </tr>
@@ -196,3 +212,48 @@
     </section>
   </ng-container>
 </section>
+
+<div
+  class="pc-dialog-backdrop"
+  *ngIf="dialogEngajamentoAberto"
+  (click)="fecharDialogEngajamento()"
+></div>
+<div
+  class="pc-dialog"
+  *ngIf="dialogEngajamentoAberto && pessoaDialogEngajamento as pessoaDlg"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="pc-dialog-eng-title"
+  (click)="$event.stopPropagation()"
+>
+  <h2 id="pc-dialog-eng-title" class="pc-dialog-title">Editar engajamento</h2>
+  <p class="pc-dialog-sub">
+    <strong>{{ pessoaDlg.nome }}</strong>
+    <span *ngIf="textoMensagemLista(pessoaDlg) !== '—'"> — resposta: «{{ textoMensagemLista(pessoaDlg) }}»</span>
+  </p>
+  <label class="pc-dialog-label">
+    Engajamento na campanha
+    <select [(ngModel)]="engajamentoDialogValor" [disabled]="salvandoDialogEngajamento">
+      <option *ngFor="let op of opcoesEdicaoEngajamento" [ngValue]="op.value">{{ op.label }}</option>
+    </select>
+  </label>
+  <p class="pc-msg pc-msg--erro" *ngIf="erroDialogEngajamento">{{ erroDialogEngajamento }}</p>
+  <div class="pc-dialog-actions">
+    <button
+      type="button"
+      class="pc-dialog-btn pc-dialog-btn--ghost"
+      (click)="fecharDialogEngajamento()"
+      [disabled]="salvandoDialogEngajamento"
+    >
+      Cancelar
+    </button>
+    <button
+      type="button"
+      class="pc-dialog-btn pc-dialog-btn--primary"
+      (click)="confirmarDialogEngajamento()"
+      [disabled]="salvandoDialogEngajamento"
+    >
+      {{ salvandoDialogEngajamento ? 'Salvando…' : 'Salvar' }}
+    </button>
+  </div>
+</div>

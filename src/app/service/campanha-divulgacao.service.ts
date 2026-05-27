@@ -99,6 +99,8 @@ export interface PainelCampanhaPessoaItem {
   engajamento_whatsapp: string;
   bairro?: string | null;
   erro_whatsapp?: boolean;
+  destinatario_id?: number | null;
+  campanha_id?: number | null;
   enviado_em?: string | null;
   mensagem?: string | null;
   mensagem_tipo?: 'envio' | 'resposta' | null;
@@ -224,6 +226,17 @@ export class CampanhaDivulgacaoService {
     }
     return this.http.get<PainelCampanhasPessoasResponse>(`${this.base}/painel/pessoas`, { params: httpParams });
   }
+
+  atualizarEngajamentoDestinatarioPainel(body: {
+    destinatario_id: number;
+    engajamento: EngajamentoPainel;
+  }): Observable<{ pessoa: PainelCampanhaPessoaItem }> {
+    return this.http.patch<{ pessoa: PainelCampanhaPessoaItem }>(
+      `${this.base}/painel/destinatario-engajamento`,
+      body,
+    );
+  }
+
   private noCacheHeaders = new HttpHeaders({
     'Cache-Control': 'no-cache, no-store, must-revalidate',
     Pragma: 'no-cache',
