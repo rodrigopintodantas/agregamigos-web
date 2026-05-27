@@ -8,7 +8,7 @@ import {
 } from '../../service/campanha-divulgacao.service';
 import { AutenticacaoService } from '../../service/autenticacao.service';
 import { ModeloMensagem, ModeloMensagemService } from '../../service/modelo-mensagem.service';
-import { PessoaItem, PessoaService } from '../../service/pessoa.service';
+import { EngajamentoWhatsapp, PessoaItem, PessoaService } from '../../service/pessoa.service';
 import { WhatsappCanal, WhatsappService } from '../../service/whatsapp.service';
 
 type ItemCampanha = {
@@ -215,7 +215,23 @@ export class DivulgacaoComponent implements OnInit {
     return this.campanhas.some((c) => c.status === 'em_andamento');
   }
 
+  engajamentoKey(p: PessoaItem): EngajamentoWhatsapp {
+    const v = String(p.engajamento_whatsapp ?? 'sem_resposta').toLowerCase();
+    if (v === 'positivo' || v === 'negativo' || v === 'neutro') return v;
+    return 'sem_resposta';
+  }
+
+  pessoaSelecionavel(p: PessoaItem): boolean {
+    return this.engajamentoKey(p) !== 'negativo';
+  }
+
+  get pessoasFiltradasSelecionaveis(): PessoaItem[] {
+    return this.pessoasFiltradas.filter((p) => this.pessoaSelecionavel(p));
+  }
+
   togglePessoa(id: number, checked: boolean): void {
+    const pessoa = this.pessoas.find((p) => p.id === id);
+    if (!pessoa || !this.pessoaSelecionavel(pessoa)) return;
     if (checked) this.selecionadosPessoas.add(id);
     else this.selecionadosPessoas.delete(id);
     this.sucesso = '';
@@ -229,13 +245,17 @@ export class DivulgacaoComponent implements OnInit {
 
   selecionarTodasPessoas(checked: boolean): void {
     this.pessoasFiltradas.forEach((p) => {
-      if (checked) this.selecionadosPessoas.add(p.id);
-      else this.selecionadosPessoas.delete(p.id);
+      if (checked) {
+        if (this.pessoaSelecionavel(p)) this.selecionadosPessoas.add(p.id);
+      } else {
+        this.selecionadosPessoas.delete(p.id);
+      }
     });
   }
 
   todasPessoasFiltradasSelecionadas(): boolean {
-    return this.pessoasFiltradas.length > 0 && this.pessoasFiltradas.every((p) => this.selecionadosPessoas.has(p.id));
+    const selecionaveis = this.pessoasFiltradasSelecionaveis;
+    return selecionaveis.length > 0 && selecionaveis.every((p) => this.selecionadosPessoas.has(p.id));
   }
 
   montarCampanha(): void {
@@ -265,7 +285,7 @@ export class DivulgacaoComponent implements OnInit {
     }
 
     const pessoasSelecionadas = this.pessoas
-      .filter((p) => this.selecionadosPessoas.has(p.id))
+      .filter((p) => this.selecionadosPessoas.has(p.id) && this.pessoaSelecionavel(p))
       .sort((a, b) => String(a.nome ?? '').localeCompare(String(b.nome ?? ''), 'pt-BR'));
 
     const modelosSelecionados = this.modelos

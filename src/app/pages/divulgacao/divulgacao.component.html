@@ -251,6 +251,7 @@
           <input
             type="checkbox"
             [checked]="todasPessoasFiltradasSelecionadas()"
+            [disabled]="!pessoasFiltradasSelecionaveis.length"
             (change)="selecionarTodasPessoas($any($event.target).checked)"
           />
           Selecionar filtradas
@@ -266,14 +267,18 @@
       <p class="contador">{{ selecionadosPessoas.size }} selecionada(s)</p>
 
       <div class="lista-scroll">
-        <label class="item-check" *ngFor="let p of pessoasFiltradas">
+        <label class="item-check" *ngFor="let p of pessoasFiltradas" [class.item-check--bloqueado]="!pessoaSelecionavel(p)">
           <input
             type="checkbox"
             [checked]="selecionadosPessoas.has(p.id)"
+            [disabled]="!pessoaSelecionavel(p)"
             (change)="togglePessoa(p.id, $any($event.target).checked)"
           />
           <span class="item-main">{{ p.nome }}</span>
-          <span class="item-sub">{{ p.whatsapp || '—' }} · {{ p.endereco?.bairro || 'Sem bairro' }}</span>
+          <span class="item-sub">
+            {{ p.whatsapp || '—' }} · {{ p.endereco?.bairro || 'Sem bairro' }}
+            <span class="item-aviso-neg" *ngIf="!pessoaSelecionavel(p)"> · Engajamento negativo (não selecionável)</span>
+          </span>
         </label>
         <p class="vazio" *ngIf="!pessoasFiltradas.length">Nenhuma pessoa para os filtros informados.</p>
       </div>

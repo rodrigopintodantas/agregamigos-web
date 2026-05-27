@@ -161,6 +161,15 @@
   border-bottom: 0;
 }
 
+.item-check--bloqueado {
+  opacity: 0.85;
+  cursor: not-allowed;
+
+  .item-main {
+    color: #667085;
+  }
+}
+
 .item-check input {
   grid-area: check;
   margin-top: 0.2rem;
@@ -177,6 +186,11 @@
   font-size: 0.78rem;
   color: #667085;
   word-break: break-word;
+}
+
+.item-aviso-neg {
+  color: #b42318;
+  font-weight: 600;
 }
 
 .vazio {
