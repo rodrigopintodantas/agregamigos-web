@@ -23,6 +23,8 @@ export interface CampanhaDivulgacaoItem {
   total_destinatarios: number;
   total_enviados: number;
   total_pendentes: number;
+  total_cancelados?: number;
+  total_erros?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -260,8 +262,18 @@ export class CampanhaDivulgacaoService {
     return this.http.delete<ExcluirCampanhaResponse>(`${this.base}/${id}`);
   }
 
-  iniciar(id: number): Observable<AcaoCampanhaResponse> {
-    return this.http.post<AcaoCampanhaResponse>(`${this.base}/${id}/iniciar`, {});
+  iniciar(
+    id: number,
+    payload: { modo?: 'agora' | 'agendar'; agendado_para?: string } = { modo: 'agora' },
+  ): Observable<AcaoCampanhaResponse> {
+    return this.http.post<AcaoCampanhaResponse>(`${this.base}/${id}/iniciar`, payload);
+  }
+
+  reiniciar(
+    id: number,
+    payload: { modo?: 'agora' | 'agendar'; agendado_para?: string } = { modo: 'agora' },
+  ): Observable<AcaoCampanhaResponse> {
+    return this.http.post<AcaoCampanhaResponse>(`${this.base}/${id}/reiniciar`, payload);
   }
 
   reprocessarErros(id: number): Observable<AcaoCampanhaResponse> {

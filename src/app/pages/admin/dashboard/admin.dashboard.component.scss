@@ -99,6 +99,20 @@
     flex-direction: column;
     gap: 0.25rem;
   }
+
+  &--aniversariantes {
+    flex-shrink: 0;
+  }
+
+  &--clicavel {
+    cursor: pointer;
+    transition: border-color 0.15s, box-shadow 0.15s;
+
+    &:hover {
+      border-color: #98a2b3;
+      box-shadow: 0 3px 10px rgba(15, 23, 42, 0.1);
+    }
+  }
 }
 
 .ad-box-title {
@@ -244,6 +258,167 @@
 
   p {
     margin: 0;
+  }
+}
+
+.ad-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1100;
+}
+
+.ad-dialog {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(92vw, 520px);
+  z-index: 1110;
+  background: linear-gradient(180deg, #ffffff 0%, #fcfcff 100%);
+  border-radius: 14px;
+  border: 1px solid #e7eaf2;
+  box-shadow: 0 24px 48px rgba(16, 24, 40, 0.22);
+  padding: 1rem 1.1rem;
+  max-height: min(78vh, 680px);
+  overflow: auto;
+}
+
+.ad-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.ad-dialog-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ad-dialog-emoji {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.ad-dialog-title {
+  margin: 0;
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: #101828;
+}
+
+.ad-dialog-subtitle {
+  margin: 0 0 0.9rem;
+  font-size: 0.86rem;
+  color: #667085;
+}
+
+.ad-aniversariantes-lista {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ad-aniversariantes-lista li {
+  display: grid;
+  grid-template-columns: 2rem 1fr auto;
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.55rem 0.35rem;
+  border-bottom: 1px solid #eef1f6;
+
+  &:last-child {
+    border-bottom: 0;
+  }
+
+  &:hover {
+    background: #f8faff;
+    border-radius: 10px;
+  }
+}
+
+.ad-aniversariante-avatar {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 999px;
+  background: #eff4ff;
+  color: #2f4da6;
+  font-size: 0.82rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-transform: uppercase;
+}
+
+.ad-aniversariante-nome {
+  color: #101828;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.ad-aniversariante-whatsapp {
+  color: var(--color-brand-500, #343b8b);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.ad-dialog-actions {
+  margin-top: 0.85rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.ad-dialog-close {
+  border: 0;
+  background: transparent;
+  color: #667085;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+
+  &:hover {
+    background: #f2f4f7;
+    color: #344054;
+  }
+}
+
+.ad-dialog-btn {
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  background: #fff;
+  color: #344054;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+
+  &:hover {
+    background: #f9fafb;
+    border-color: #98a2b3;
+  }
+
+  &--primary {
+    background: var(--color-brand-500, #343b8b);
+    border-color: var(--color-brand-500, #343b8b);
+    color: #fff;
+    margin-right: 0.4rem;
+
+    &:hover {
+      background: var(--color-brand-600, #2b3275);
+      border-color: var(--color-brand-600, #2b3275);
+    }
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
   }
 }
 

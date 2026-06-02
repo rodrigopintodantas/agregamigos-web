@@ -22,6 +22,18 @@
         <p class="ad-box-hint" *ngIf="!auth.isCoordenador()">Total de pessoas cadastradas</p>
       </article>
 
+      <article
+        class="ad-box ad-box--aniversariantes"
+        aria-labelledby="box-aniversariantes-title"
+        [class.ad-box--clicavel]="totalAniversariantesHoje > 0"
+        (click)="abrirDialogAniversariantes()"
+      >
+        <h2 id="box-aniversariantes-title" class="ad-box-title">Aniversariantes do dia</h2>
+        <p class="ad-box-metric" aria-live="polite">{{ totalAniversariantesHoje }}</p>
+        <p class="ad-box-hint" *ngIf="totalAniversariantesHoje > 0">Clique para ver nome e telefone.</p>
+        <p class="ad-box-hint" *ngIf="totalAniversariantesHoje === 0">Nenhum aniversariante hoje.</p>
+      </article>
+
       <article class="ad-box ad-box--alertas" aria-labelledby="box-alertas-title">
         <h2 id="box-alertas-title" class="ad-box-title">Alertas</h2>
         <div class="ad-alertas-vazio">
@@ -74,3 +86,47 @@
     </article>
   </div>
 </section>
+
+<div class="ad-dialog-backdrop" *ngIf="dialogAniversariantesAberto" (click)="fecharDialogAniversariantes()"></div>
+<div
+  class="ad-dialog"
+  *ngIf="dialogAniversariantesAberto"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="ad-dialog-aniversariantes-title"
+  (click)="$event.stopPropagation()"
+>
+  <div class="ad-dialog-header">
+    <div class="ad-dialog-title-wrap">
+      <span class="ad-dialog-emoji" aria-hidden="true">🎉</span>
+      <h2 id="ad-dialog-aniversariantes-title" class="ad-dialog-title">Aniversariantes do dia</h2>
+    </div>
+    <button type="button" class="ad-dialog-close" (click)="fecharDialogAniversariantes()" title="Fechar">
+      ×
+    </button>
+  </div>
+  <p class="ad-dialog-subtitle">{{ totalAniversariantesHoje }} pessoa(s) fazendo aniversário hoje.</p>
+
+  <ul class="ad-aniversariantes-lista" *ngIf="aniversariantesHoje.length; else semAniversariantes">
+    <li *ngFor="let item of aniversariantesHoje">
+      <span class="ad-aniversariante-avatar">{{ item.nome.charAt(0) || '•' }}</span>
+      <span class="ad-aniversariante-nome">{{ item.nome }}</span>
+      <span class="ad-aniversariante-whatsapp">{{ item.whatsapp }}</span>
+    </li>
+  </ul>
+  <ng-template #semAniversariantes>
+    <p class="ad-msg ad-msg--neutro ad-msg--dentro">Nenhum aniversariante hoje.</p>
+  </ng-template>
+
+  <div class="ad-dialog-actions">
+    <button
+      type="button"
+      class="ad-dialog-btn ad-dialog-btn--primary"
+      (click)="parabenizarAniversariantes()"
+      [disabled]="!totalAniversariantesHoje"
+    >
+      Parabenizar
+    </button>
+    <button type="button" class="ad-dialog-btn" (click)="fecharDialogAniversariantes()">Fechar</button>
+  </div>
+</div>

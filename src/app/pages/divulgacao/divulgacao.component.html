@@ -60,11 +60,11 @@
               <td>
                 <div class="acoes-campanha">
                   <button
-                    *ngIf="podeExibirIniciarEnvioCampanha"
+                    *ngIf="podeExibirIniciarEnvioCampanha(c)"
                     type="button"
                     class="btn-acao iniciar"
-                    title="Iniciar envio"
-                    [disabled]="!podeIniciarCampanha(c) || processandoCampanhaId === c.id"
+                    [title]="labelAcaoEnvioCampanha(c)"
+                    [disabled]="!podeAcaoEnvioCampanha(c) || processandoCampanhaId === c.id"
                     (click)="iniciarCampanha(c)"
                   >
                     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -222,7 +222,14 @@
   <section *ngIf="exibindoCriacao">
     <label class="campo">
       <span>Nome da campanha</span>
-      <input [(ngModel)]="nomeCampanha" placeholder="Ex.: Campanha Maio - Convites" />
+      <input
+        [(ngModel)]="nomeCampanha"
+        [readonly]="campanhaAniversariantesAtiva"
+        placeholder="Ex.: Campanha Maio - Convites"
+      />
+      <small class="campo-ajuda" *ngIf="campanhaAniversariantesAtiva">
+        Título fixo para campanha de aniversariantes.
+      </small>
     </label>
     <label class="campo">
       <span>Mensagens por turno (manhã/tarde/noite)</span>
@@ -257,6 +264,9 @@
           Selecionar filtradas
         </label>
       </div>
+      <p class="campo-ajuda" *ngIf="campanhaAniversariantesAtiva">
+        Modo aniversariantes: somente pessoas aniversariando hoje podem ser selecionadas.
+      </p>
       <div class="filtros">
         <input [(ngModel)]="filtroNome" placeholder="Filtrar por nome" />
         <select [(ngModel)]="filtroBairro">
@@ -277,7 +287,7 @@
           <span class="item-main">{{ p.nome }}</span>
           <span class="item-sub">
             {{ p.whatsapp || '—' }} · {{ p.endereco?.bairro || 'Sem bairro' }}
-            <span class="item-aviso-neg" *ngIf="!pessoaSelecionavel(p)"> · Engajamento negativo (não selecionável)</span>
+            <span class="item-aviso-neg" *ngIf="!pessoaSelecionavel(p)"> · {{ motivoBloqueioPessoa(p) }}</span>
           </span>
         </label>
         <p class="vazio" *ngIf="!pessoasFiltradas.length">Nenhuma pessoa para os filtros informados.</p>
@@ -288,7 +298,12 @@
       <div class="bloco-head">
         <h3>Modelos de mensagem</h3>
       </div>
-      <p class="contador">{{ selecionadosModelos.size }} selecionado(s) · obrigatório: 2 ou mais</p>
+      <p class="contador" *ngIf="!campanhaAniversariantesAtiva">
+        {{ selecionadosModelos.size }} selecionado(s) · obrigatório: 2 ou mais
+      </p>
+      <p class="contador" *ngIf="campanhaAniversariantesAtiva">
+        {{ selecionadosModelos.size }} selecionado(s) · obrigatório: exatamente 1
+      </p>
 
       <div class="lista-scroll">
         <label class="item-check" *ngFor="let m of modelos">
@@ -354,8 +369,8 @@
 
 <div
   class="backdrop"
-  *ngIf="dialogMensagemAberto || dialogExcluirAberto"
-  (click)="dialogExcluirAberto ? fecharDialogExcluirCampanha() : fecharDialogMensagem()"
+  *ngIf="dialogMensagemAberto || dialogExcluirAberto || dialogIniciarAberto"
+  (click)="fecharDialogBackdrop()"
 ></div>
 <section class="dialog dialog-mensagem" *ngIf="dialogMensagemAberto" (click)="$event.stopPropagation()">
   <h3>Pré-visualização da mensagem</h3>
@@ -365,6 +380,88 @@
   <div class="actions">
     <button type="button" class="btn-sec" (click)="fecharDialogMensagem()">Fechar</button>
   </div>
+</section>
+
+<section class="dialog dialog-iniciar" *ngIf="dialogIniciarAberto" (click)="$event.stopPropagation()">
+  <h3>{{ dialogEnvioEhReinicio ? 'Reiniciar envio' : 'Iniciar envio' }}</h3>
+  <p class="contador" *ngIf="campanhaParaIniciar">
+    Campanha: <strong>{{ campanhaParaIniciar.nome }}</strong>
+  </p>
+  <p class="contador" *ngIf="dialogEnvioEhReinicio && campanhaParaIniciar">
+    Serão reenviados <strong>{{ totalReiniciaveis(campanhaParaIniciar) }}</strong> destinatário(s) com status
+    cancelado ou erro.
+  </p>
+
+  <ng-container *ngIf="passoDialogIniciar === 'escolha'">
+    <p class="dialog-iniciar-ajuda">
+      {{ dialogEnvioEhReinicio ? 'Como deseja reiniciar o envio desta campanha?' : 'Como deseja disparar esta campanha?' }}
+    </p>
+    <div class="dialog-iniciar-opcoes">
+      <button
+        type="button"
+        class="btn-opcao-iniciar"
+        [disabled]="processandoCampanhaId != null"
+        (click)="confirmarIniciarAgora()"
+      >
+        {{ dialogEnvioEhReinicio ? 'Reiniciar agora' : 'Iniciar agora' }}
+      </button>
+      <button
+        type="button"
+        class="btn-opcao-iniciar"
+        [disabled]="processandoCampanhaId != null"
+        (click)="irParaAgendarInicio()"
+      >
+        Agendar
+      </button>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn-sec" (click)="fecharDialogIniciar()">Cancelar</button>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="passoDialogIniciar === 'agendar'">
+    <p class="dialog-iniciar-ajuda">
+      Escolha a data e a hora em que o primeiro
+      {{ dialogEnvioEhReinicio ? 'reenvio' : 'envio' }} deve começar. Os demais destinatários
+      seguirão a distribuição por turno da campanha.
+    </p>
+    <label class="campo campo-dialog">
+      <span>Data e hora</span>
+      <input
+        type="datetime-local"
+        [(ngModel)]="agendadoParaInput"
+        [min]="agendadoParaMin"
+        [disabled]="processandoCampanhaId != null"
+      />
+    </label>
+    <p class="erro dialog-iniciar-erro" *ngIf="erro">{{ erro }}</p>
+    <div class="actions">
+      <button
+        type="button"
+        class="btn-sec"
+        [disabled]="processandoCampanhaId != null"
+        (click)="voltarEscolhaInicio()"
+      >
+        Voltar
+      </button>
+      <button
+        type="button"
+        class="btn-montar"
+        [disabled]="processandoCampanhaId != null"
+        (click)="confirmarAgendarInicio()"
+      >
+        {{
+          processandoCampanhaId != null
+            ? dialogEnvioEhReinicio
+              ? 'Reiniciando...'
+              : 'Agendando...'
+            : dialogEnvioEhReinicio
+              ? 'Confirmar reinício agendado'
+              : 'Confirmar agendamento'
+        }}
+      </button>
+    </div>
+  </ng-container>
 </section>
 
 <section class="dialog dialog-excluir" *ngIf="dialogExcluirAberto" (click)="$event.stopPropagation()">

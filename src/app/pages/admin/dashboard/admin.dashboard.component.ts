@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
-import { BairroQuantidade, PessoaService } from '../../../service/pessoa.service';
+import { Router } from '@angular/router';
+import { BairroQuantidade, PessoaItem, PessoaService } from '../../../service/pessoa.service';
 import { AutenticacaoService } from '../../../service/autenticacao.service';
 
 @Component({
@@ -13,9 +14,12 @@ import { AutenticacaoService } from '../../../service/autenticacao.service';
 export class AdminDashboardComponent implements OnInit {
   auth = inject(AutenticacaoService);
   private pessoaService = inject(PessoaService);
+  private router = inject(Router);
 
   totalCadastros = 0;
   topBairros: BairroQuantidade[] = [];
+  aniversariantesHoje: { id: number; nome: string; whatsapp: string }[] = [];
+  dialogAniversariantesAberto = false;
   carregando = true;
   erro = '';
 
@@ -24,7 +28,12 @@ export class AdminDashboardComponent implements OnInit {
 
   ngOnInit(): void {
     this.carregarEstatisticas();
+    this.carregarAniversariantesHoje();
     this.carregarLinkDivulgacaoCoordenador();
+  }
+
+  get totalAniversariantesHoje(): number {
+    return this.aniversariantesHoje.length;
   }
 
   private carregarLinkDivulgacaoCoordenador(): void {
@@ -71,11 +80,72 @@ export class AdminDashboardComponent implements OnInit {
     });
   }
 
+  abrirDialogAniversariantes(): void {
+    if (!this.totalAniversariantesHoje) return;
+    this.dialogAniversariantesAberto = true;
+  }
+
+  fecharDialogAniversariantes(): void {
+    this.dialogAniversariantesAberto = false;
+  }
+
+  parabenizarAniversariantes(): void {
+    if (!this.aniversariantesHoje.length) return;
+    const ids = this.aniversariantesHoje.map((p) => p.id).join(',');
+    const hoje = new Date();
+    const data = `${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+    void this.router.navigate(this.auth.routerSegments('admin', 'divulgacao'), {
+      queryParams: {
+        aniversariantes: '1',
+        aniversariante_ids: ids,
+        data,
+      },
+    });
+    this.fecharDialogAniversariantes();
+  }
+
   copiarLinkDivulgacao(): void {
     const t = this.linkCadastroDivulgacaoCoordenador;
     if (!t) return;
     void navigator.clipboard?.writeText(t).catch(() => {
       /* ignore */
     });
+  }
+
+  private carregarAniversariantesHoje(): void {
+    this.pessoaService.listar().subscribe({
+      next: (lista) => {
+        const hoje = new Date();
+        this.aniversariantesHoje = lista
+          .filter((p) => this.ehAniversarianteHoje(p, hoje))
+          .map((p) => ({
+            id: Number(p.id),
+            nome: String(p.nome ?? 'Sem nome'),
+            whatsapp: this.formatarWhatsapp(p.whatsapp),
+          }))
+          .sort((a, b) => a.nome.localeCompare(b.nome, 'pt-BR'));
+      },
+      error: () => {
+        this.aniversariantesHoje = [];
+      },
+    });
+  }
+
+  private ehAniversarianteHoje(pessoa: PessoaItem, hoje: Date): boolean {
+    const raw = String(pessoa.data_nascimento ?? '').trim();
+    if (!raw) return false;
+    const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    if (!match) return false;
+    const mes = Number(match[2]);
+    const dia = Number(match[3]);
+    return mes === hoje.getMonth() + 1 && dia === hoje.getDate();
+  }
+
+  private formatarWhatsapp(value?: string | null): string {
+    const digits = String(value ?? '').replace(/\D/g, '');
+    if (!digits) return '—';
+    if (digits.length === 11) return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    if (digits.length === 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    return digits;
   }
 }

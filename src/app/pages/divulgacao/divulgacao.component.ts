@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import {
   CampanhaDestinatarioDetalhe,
   CampanhaDivulgacaoItem,
@@ -32,10 +33,12 @@ export class DivulgacaoComponent implements OnInit {
   private campanhaService = inject(CampanhaDivulgacaoService);
   private whatsappService = inject(WhatsappService);
   private auth = inject(AutenticacaoService);
+  private route = inject(ActivatedRoute);
 
-  /** Só o login `admin` vê e dispara «Iniciar envio» (alinhado ao menu e à API). */
-  get podeExibirIniciarEnvioCampanha(): boolean {
-    return this.auth.isLoginAdminSistema();
+  /** O login `admin` sempre pode iniciar; em campanha de aniversário, qualquer Administrador pode iniciar. */
+  podeExibirIniciarEnvioCampanha(c: CampanhaDivulgacaoItem): boolean {
+    if (this.auth.isLoginAdminSistema()) return true;
+    return this.auth.isAdmin() && this.campanhaEhAniversariantes(c);
   }
 
   /** Só o login `admin` pode excluir campanhas. */
@@ -80,10 +83,28 @@ export class DivulgacaoComponent implements OnInit {
 
   dialogExcluirAberto = false;
   campanhaParaExcluir: CampanhaDivulgacaoItem | null = null;
+
+  dialogIniciarAberto = false;
+  campanhaParaIniciar: CampanhaDivulgacaoItem | null = null;
+  dialogEnvioEhReinicio = false;
+  passoDialogIniciar: 'escolha' | 'agendar' = 'escolha';
+  agendadoParaInput = '';
+  agendadoParaMin = '';
   erro = '';
   sucesso = '';
+  modoAniversariantes = false;
+  dataAniversariantesLabel = '';
+  aniversarianteIdsAlvo = new Set<number>();
 
   ngOnInit(): void {
+    this.route.queryParamMap.subscribe((params) => {
+      this.modoAniversariantes = params.get('aniversariantes') === '1';
+      this.dataAniversariantesLabel = this.normalizarDataLabelAniversariantes(params.get('data'));
+      this.aniversarianteIdsAlvo = this.parseIds(params.get('aniversariante_ids'));
+      if (this.modoAniversariantes) {
+        this.abrirCriacao();
+      }
+    });
     this.carregarCampanhas();
   }
 
@@ -116,7 +137,10 @@ export class DivulgacaoComponent implements OnInit {
     this.selecionadosModelos.clear();
     this.filtroNome = '';
     this.filtroBairro = '';
-    this.mensagensPorTurno = 2;
+    this.mensagensPorTurno = this.modoAniversariantes ? 15 : 2;
+    if (this.modoAniversariantes) {
+      this.nomeCampanha = `Aniversariantes do dia ${this.dataAniversariantesLabel}`;
+    }
     this.whatsappCanalIdSelecionado = null;
     this.canaisWhatsapp = [];
 
@@ -130,6 +154,9 @@ export class DivulgacaoComponent implements OnInit {
     this.pessoaService.listar().subscribe({
       next: (lista) => {
         this.pessoas = lista.filter((p) => this.normalizarWhatsapp(p.whatsapp).length > 0);
+        if (this.modoAniversariantes) {
+          this.preselecionarAniversariantes();
+        }
         pessoasOk = true;
         finalizar();
       },
@@ -181,6 +208,10 @@ export class DivulgacaoComponent implements OnInit {
     this.sucesso = '';
   }
 
+  get campanhaAniversariantesAtiva(): boolean {
+    return this.modoAniversariantes;
+  }
+
   labelCanalWhatsapp(canal: WhatsappCanal): string {
     const status = canal.conectado ? 'conectado' : canal.status || 'desconectado';
     const numero = canal.numero ? ` · ${canal.numero}` : '';
@@ -198,6 +229,9 @@ export class DivulgacaoComponent implements OnInit {
     const nome = this.filtroNome.trim().toLowerCase();
     const bairro = this.filtroBairro.trim().toLowerCase();
     return this.pessoas.filter((p) => {
+      if (this.campanhaAniversariantesAtiva && !this.aniversarianteIdsAlvo.has(p.id)) {
+        return false;
+      }
       const nomeOk = !nome || String(p.nome ?? '').toLowerCase().includes(nome);
       const bairroPessoa = String(p.endereco?.bairro ?? '').toLowerCase();
       const bairroOk = !bairro || bairroPessoa === bairro;
@@ -222,7 +256,20 @@ export class DivulgacaoComponent implements OnInit {
   }
 
   pessoaSelecionavel(p: PessoaItem): boolean {
-    return this.engajamentoKey(p) !== 'negativo';
+    const engajamentoOk = this.engajamentoKey(p) !== 'negativo';
+    if (!engajamentoOk) return false;
+    if (!this.campanhaAniversariantesAtiva) return true;
+    return this.aniversarianteIdsAlvo.has(p.id);
+  }
+
+  motivoBloqueioPessoa(p: PessoaItem): string {
+    if (this.engajamentoKey(p) === 'negativo') {
+      return 'Engajamento negativo (não selecionável)';
+    }
+    if (this.campanhaAniversariantesAtiva && !this.aniversarianteIdsAlvo.has(p.id)) {
+      return 'Fora dos aniversariantes do dia';
+    }
+    return '';
   }
 
   get pessoasFiltradasSelecionaveis(): PessoaItem[] {
@@ -238,8 +285,17 @@ export class DivulgacaoComponent implements OnInit {
   }
 
   toggleModelo(id: number, checked: boolean): void {
-    if (checked) this.selecionadosModelos.add(id);
-    else this.selecionadosModelos.delete(id);
+    if (this.campanhaAniversariantesAtiva) {
+      if (checked) {
+        this.selecionadosModelos.clear();
+        this.selecionadosModelos.add(id);
+      } else {
+        this.selecionadosModelos.delete(id);
+      }
+    } else {
+      if (checked) this.selecionadosModelos.add(id);
+      else this.selecionadosModelos.delete(id);
+    }
     this.sucesso = '';
   }
 
@@ -271,7 +327,13 @@ export class DivulgacaoComponent implements OnInit {
       this.erro = 'Selecione pelo menos uma pessoa.';
       return;
     }
-    if (this.selecionadosModelos.size < 2) {
+    if (this.campanhaAniversariantesAtiva) {
+      if (this.selecionadosModelos.size !== 1) {
+        this.erro = 'Selecione obrigatoriamente 1 modelo de mensagem para a campanha de aniversariantes.';
+        return;
+      }
+      this.nomeCampanha = `Aniversariantes do dia ${this.dataAniversariantesLabel}`;
+    } else if (this.selecionadosModelos.size < 2) {
       this.erro = 'Selecione obrigatoriamente 2 ou mais modelos diferentes.';
       return;
     }
@@ -319,11 +381,15 @@ export class DivulgacaoComponent implements OnInit {
     this.salvandoCampanha = true;
     if (!this.whatsappCanalIdSelecionado) {
       this.erro = 'Selecione o celular que enviará as mensagens da campanha.';
+      this.salvandoCampanha = false;
       return;
     }
+    const nomeFinal = this.campanhaAniversariantesAtiva
+      ? `Aniversariantes do dia ${this.dataAniversariantesLabel}`
+      : this.nomeCampanha.trim();
     this.campanhaService
       .criar({
-        nome: this.nomeCampanha.trim(),
+        nome: nomeFinal,
         pessoa_ids: [...this.selecionadosPessoas],
         modelo_ids: [...this.selecionadosModelos],
         mensagens_por_turno: this.mensagensPorTurno,
@@ -359,6 +425,31 @@ export class DivulgacaoComponent implements OnInit {
 
   podeIniciarCampanha(c: CampanhaDivulgacaoItem): boolean {
     return c.status === 'montada' || c.status === 'em_andamento';
+  }
+
+  campanhaEhReinicio(c: CampanhaDivulgacaoItem): boolean {
+    return c.status === 'cancelada';
+  }
+
+  totalReiniciaveis(c: CampanhaDivulgacaoItem): number {
+    return (c.total_cancelados ?? 0) + (c.total_erros ?? 0);
+  }
+
+  podeReiniciarCampanha(c: CampanhaDivulgacaoItem): boolean {
+    return this.campanhaEhReinicio(c) && this.totalReiniciaveis(c) > 0;
+  }
+
+  podeAcaoEnvioCampanha(c: CampanhaDivulgacaoItem): boolean {
+    return this.podeIniciarCampanha(c) || this.podeReiniciarCampanha(c);
+  }
+
+  labelAcaoEnvioCampanha(c: CampanhaDivulgacaoItem): string {
+    return this.campanhaEhReinicio(c) ? 'Reiniciar envio' : 'Iniciar envio';
+  }
+
+  campanhaEhAniversariantes(c: CampanhaDivulgacaoItem): boolean {
+    const nome = String(c.nome ?? '').trim();
+    return /^aniversariantes do dia\s+\d{2}\/\d{2}$/i.test(nome);
   }
 
   podeCancelarCampanha(c: CampanhaDivulgacaoItem): boolean {
@@ -426,25 +517,130 @@ export class DivulgacaoComponent implements OnInit {
   iniciarCampanha(c: CampanhaDivulgacaoItem): void {
     this.erro = '';
     this.sucesso = '';
-    if (!this.auth.isLoginAdminSistema()) {
-      this.erro = 'Apenas o utilizador com login admin pode iniciar o envio da campanha.';
+    const reinicio = this.campanhaEhReinicio(c);
+    if (!this.podeExibirIniciarEnvioCampanha(c)) {
+      this.erro = reinicio
+        ? 'Você não tem permissão para reiniciar o envio desta campanha.'
+        : 'Você não tem permissão para iniciar o envio desta campanha.';
       return;
     }
-    if (!this.podeIniciarCampanha(c)) {
-      this.erro = 'A campanha só pode ser iniciada quando estiver montada ou em andamento.';
+    if (!this.podeAcaoEnvioCampanha(c)) {
+      this.erro = reinicio
+        ? 'Não há destinatários cancelados ou com erro para reiniciar nesta campanha.'
+        : 'A campanha só pode ser iniciada quando estiver montada ou em andamento.';
       return;
     }
 
+    if (this.campanhaEhAniversariantes(c)) {
+      this.executarAcaoEnvioCampanha(c, { modo: 'agora' });
+      return;
+    }
+
+    this.abrirDialogIniciar(c, reinicio);
+  }
+
+  abrirDialogIniciar(c: CampanhaDivulgacaoItem, reinicio = false): void {
+    this.erro = '';
+    this.campanhaParaIniciar = c;
+    this.dialogEnvioEhReinicio = reinicio;
+    this.passoDialogIniciar = 'escolha';
+    this.agendadoParaInput = '';
+    this.atualizarMinAgendamento();
+    this.dialogIniciarAberto = true;
+  }
+
+  fecharDialogIniciar(): void {
+    this.dialogIniciarAberto = false;
+    this.campanhaParaIniciar = null;
+    this.dialogEnvioEhReinicio = false;
+    this.passoDialogIniciar = 'escolha';
+    this.agendadoParaInput = '';
+  }
+
+  fecharDialogBackdrop(): void {
+    if (this.dialogIniciarAberto) {
+      this.fecharDialogIniciar();
+      return;
+    }
+    if (this.dialogExcluirAberto) {
+      this.fecharDialogExcluirCampanha();
+      return;
+    }
+    this.fecharDialogMensagem();
+  }
+
+  irParaAgendarInicio(): void {
+    this.erro = '';
+    this.passoDialogIniciar = 'agendar';
+    this.atualizarMinAgendamento();
+    if (!this.agendadoParaInput) {
+      this.agendadoParaInput = this.agendadoParaMin;
+    }
+  }
+
+  voltarEscolhaInicio(): void {
+    this.passoDialogIniciar = 'escolha';
+    this.erro = '';
+  }
+
+  confirmarIniciarAgora(): void {
+    const c = this.campanhaParaIniciar;
+    if (!c) return;
+    this.executarAcaoEnvioCampanha(c, { modo: 'agora' });
+  }
+
+  confirmarAgendarInicio(): void {
+    const c = this.campanhaParaIniciar;
+    if (!c) return;
+    if (!this.agendadoParaInput) {
+      this.erro = 'Informe a data e a hora do agendamento.';
+      return;
+    }
+    const agendado = new Date(this.agendadoParaInput);
+    if (Number.isNaN(agendado.getTime())) {
+      this.erro = 'Data ou hora inválida.';
+      return;
+    }
+    if (agendado.getTime() < Date.now() + 60_000) {
+      this.erro = 'O agendamento deve ser pelo menos 1 minuto no futuro.';
+      return;
+    }
+    this.executarAcaoEnvioCampanha(c, {
+      modo: 'agendar',
+      agendado_para: agendado.toISOString(),
+    });
+  }
+
+  private atualizarMinAgendamento(): void {
+    const d = new Date(Date.now() + 60_000);
+    const pad = (n: number) => String(n).padStart(2, '0');
+    this.agendadoParaMin = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  private executarAcaoEnvioCampanha(
+    c: CampanhaDivulgacaoItem,
+    payload: { modo: 'agora' | 'agendar'; agendado_para?: string },
+  ): void {
+    this.erro = '';
     this.processandoCampanhaId = c.id;
-    this.campanhaService.iniciar(c.id).subscribe({
+    const reinicio = this.campanhaEhReinicio(c);
+    const req = reinicio
+      ? this.campanhaService.reiniciar(c.id, payload)
+      : this.campanhaService.iniciar(c.id, payload);
+    req.subscribe({
       next: (ret) => {
         this.processandoCampanhaId = null;
-        this.sucesso = ret?.message ?? 'Campanha processada com sucesso.';
+        this.fecharDialogIniciar();
+        this.sucesso = ret?.message ?? (reinicio ? 'Campanha reiniciada com sucesso.' : 'Campanha processada com sucesso.');
         this.carregarCampanhas();
       },
       error: (err) => {
         this.processandoCampanhaId = null;
-        this.erro = err?.error?.message ?? 'Não foi possível iniciar o envio da campanha.';
+        this.erro =
+          err?.error?.message ??
+          (reinicio
+            ? 'Não foi possível reiniciar o envio da campanha.'
+            : 'Não foi possível iniciar o envio da campanha.');
       },
     });
   }
@@ -611,5 +807,31 @@ export class DivulgacaoComponent implements OnInit {
       .replace(/\{\{\s*nome_coordenador\s*\}\}/gi, nomeCoordenador)
       .replace(/XXXX/g, nomeCompleto)
       .trim();
+  }
+
+  private parseIds(raw: string | null): Set<number> {
+    if (!raw) return new Set<number>();
+    return new Set(
+      raw
+        .split(',')
+        .map((x) => Number(x.trim()))
+        .filter((n) => Number.isInteger(n) && n > 0),
+    );
+  }
+
+  private normalizarDataLabelAniversariantes(raw: string | null): string {
+    const t = String(raw ?? '').trim();
+    if (/^\d{2}\/\d{2}$/.test(t)) return t;
+    const hoje = new Date();
+    return `${String(hoje.getDate()).padStart(2, '0')}/${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+  }
+
+  private preselecionarAniversariantes(): void {
+    this.selecionadosPessoas.clear();
+    for (const p of this.pessoas) {
+      if (this.aniversarianteIdsAlvo.has(p.id) && this.pessoaSelecionavel(p)) {
+        this.selecionadosPessoas.add(p.id);
+      }
+    }
   }
 }

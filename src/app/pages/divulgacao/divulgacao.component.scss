@@ -304,18 +304,63 @@ th {
   background: #b42318;
 }
 
-.dialog-excluir .dialog-excluir-aviso {
-  margin: 0.5rem 0 0;
+.dialog-iniciar .dialog-iniciar-ajuda {
+  margin: 0.5rem 0 0.85rem;
   font-size: 0.85rem;
   color: #667085;
   line-height: 1.45;
 }
 
+.dialog-iniciar-opcoes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-bottom: 0.25rem;
+}
+
+.btn-opcao-iniciar {
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 0.65rem 0.85rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #101828;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+}
+
+.btn-opcao-iniciar:hover:not(:disabled) {
+  border-color: #84adff;
+  background: #f5f8ff;
+}
+
+.dialog-iniciar .campo-dialog {
+  margin-bottom: 0.5rem;
+}
+
+.dialog-iniciar .campo-dialog input {
+  max-width: none;
+}
+
+.dialog-iniciar-erro {
+  margin: 0.35rem 0 0;
+  font-size: 0.85rem;
+}
+
+.dialog-iniciar .actions,
 .dialog-excluir .actions {
   display: flex;
   justify-content: flex-end;
   gap: 0.6rem;
   margin-top: 1rem;
+}
+
+.dialog-excluir .dialog-excluir-aviso {
+  margin: 0.5rem 0 0;
+  font-size: 0.85rem;
+  color: #667085;
+  line-height: 1.45;
 }
 
 .btn-excluir-confirmar {
