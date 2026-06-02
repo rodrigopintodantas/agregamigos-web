@@ -27,6 +27,21 @@ import { LayoutUiService } from '../service/layout-ui.service';
           <span class="menu-label">Dashboard</span>
         </a>
       </li>
+      <li *ngIf="auth.isAdmin()">
+        <a
+          [routerLink]="auth.routerSegments('admin', 'multiplicadores')"
+          routerLinkActive="active-route"
+          [attr.title]="ui.sidebarCollapsed() ? 'Multiplicadores' : null"
+          (click)="ui.closeMobileMenu()"
+        >
+          <span class="menu-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <path d="M4 19V5h4v14H4zm6 0V9h4v10h-4zm6 0V3h4v16h-4z"></path>
+            </svg>
+          </span>
+          <span class="menu-label">Multiplicadores</span>
+        </a>
+      </li>
       <li>
         <a
           [routerLink]="auth.routerSegments(auth.areaLogadaSegmento(), 'pessoas')"

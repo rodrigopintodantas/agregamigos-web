@@ -34,8 +34,14 @@ export class CriarUsuarioComponent implements OnInit {
   }
 
   get papeisSelecionaveis(): PapelItem[] {
-    if (this.auth.isLoginAdminSistema()) return this.papeis;
-    return this.papeis.filter((p) => p.nome !== 'Administrador');
+    const semUsuario = this.papeis.filter((p) => p.nome !== 'Usuario');
+    if (this.auth.isLoginAdminSistema()) return semUsuario;
+    return semUsuario.filter((p) => p.nome !== 'Administrador');
+  }
+
+  private papelPadraoFormulario(): PapelItem | null {
+    const lista = this.papeisSelecionaveis;
+    return lista.find((p) => p.nome === 'Coordenador') ?? lista[0] ?? null;
   }
 
   carregarPapeis(): void {
@@ -43,8 +49,7 @@ export class CriarUsuarioComponent implements OnInit {
     this.usuarioService.listarPapeis().subscribe({
       next: (papeis) => {
         this.papeis = papeis;
-        const lista = this.papeisSelecionaveis;
-        const papelPadrao = lista.find((p) => p.nome === 'Usuario') ?? lista[0] ?? null;
+        const papelPadrao = this.papelPadraoFormulario();
         this.form.papel_id = papelPadrao?.id ?? null;
         this.carregandoPapeis = false;
       },
@@ -98,8 +103,7 @@ export class CriarUsuarioComponent implements OnInit {
           this.form.login = '';
           this.form.email = '';
           this.form.senha = '';
-          const lista = this.papeisSelecionaveis;
-          const papelPadrao = lista.find((p) => p.nome === 'Usuario') ?? lista[0] ?? null;
+          const papelPadrao = this.papelPadraoFormulario();
           this.form.papel_id = papelPadrao?.id ?? null;
         },
         error: (err) => {

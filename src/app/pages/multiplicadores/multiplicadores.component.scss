@@ -1,0 +1,287 @@
+:host {
+  display: block;
+  min-width: 0;
+  color: #101828;
+}
+
+.mult-page {
+  max-width: 1200px;
+}
+
+.mult-hero {
+  margin-bottom: 1.25rem;
+}
+
+.mult-kicker {
+  margin: 0 0 0.25rem;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #667085;
+}
+
+.mult-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+}
+
+.mult-subtitle {
+  margin: 0;
+  font-size: 0.92rem;
+  color: #475467;
+}
+
+.mult-msg {
+  margin: 0.5rem 0;
+
+  &--erro {
+    color: #b42318;
+  }
+
+  &--neutro {
+    color: #667085;
+  }
+}
+
+.mult-totais {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.mult-box {
+  background: #fff;
+  border: 1px solid #eaecf0;
+  border-radius: 12px;
+  padding: 1rem 1.1rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+
+  &--destaque {
+    border-color: #b2ddff;
+    background: linear-gradient(180deg, #f5faff 0%, #fff 100%);
+  }
+}
+
+.mult-box-label {
+  display: block;
+  font-size: 0.8rem;
+  color: #667085;
+  margin-bottom: 0.35rem;
+}
+
+.mult-box-valor {
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: #101828;
+  font-variant-numeric: tabular-nums;
+}
+
+.mult-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  align-items: start;
+}
+
+.mult-panel {
+  background: #fff;
+  border: 1px solid #eaecf0;
+  border-radius: 12px;
+  padding: 1.1rem 1.15rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+
+  &--full {
+    margin-bottom: 1rem;
+  }
+}
+
+.mult-panel-titulo {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.mult-panel-desc {
+  margin: 0 0 0.85rem;
+  font-size: 0.85rem;
+  color: #667085;
+}
+
+.mult-table-wrap {
+  overflow-x: auto;
+}
+
+.mult-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+
+  th,
+  td {
+    padding: 0.5rem 0.55rem;
+    border-bottom: 1px solid #eaecf0;
+    text-align: left;
+  }
+
+  th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #667085;
+    font-weight: 600;
+  }
+
+  .col-num {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+  }
+}
+
+.mult-barras {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.mult-barras-linha {
+  display: grid;
+  grid-template-columns: minmax(5.5rem, 28%) 1fr 2.5rem;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.mult-barras-rotulo {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #344054;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mult-barras-track-wrap {
+  min-width: 0;
+}
+
+.mult-barras-track {
+  height: 1.35rem;
+  background: #f2f4f7;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.mult-barras-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #2e90fa, #1570ef);
+  border-radius: 6px;
+  min-width: 2px;
+  transition: width 0.35s ease;
+}
+
+.mult-barras-valor {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.mult-chart-wrap {
+  width: 100%;
+  margin-top: 0.35rem;
+  overflow-x: auto;
+}
+
+.mult-chart-svg {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  height: auto;
+  max-height: 420px;
+}
+
+.mult-chart-grid-line {
+  stroke: #eaecf0;
+  stroke-width: 1;
+}
+
+.mult-chart-axis {
+  stroke: #d0d5dd;
+  stroke-width: 1.5;
+}
+
+.mult-chart-axis-y {
+  font-size: 10px;
+  fill: #667085;
+}
+
+.mult-chart-axis-x {
+  font-size: 11px;
+  fill: #475467;
+}
+
+.mult-chart-linha {
+  vector-effect: non-scaling-stroke;
+}
+
+.mult-legenda {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.85rem;
+  margin-top: 0.75rem;
+  padding-top: 0.65rem;
+  border-top: 1px solid #eaecf0;
+}
+
+.mult-legenda-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: min(100%, 18rem);
+}
+
+.mult-legenda-swatch {
+  width: 0.65rem;
+  height: 0.65rem;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.mult-legenda-texto {
+  font-size: 0.72rem;
+  color: #344054;
+  font-weight: 500;
+}
+
+.mult-vazio {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #667085;
+}
+
+@media (max-width: 900px) {
+  .mult-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .mult-barras-linha {
+    grid-template-columns: 1fr 2.5rem;
+    grid-template-rows: auto auto;
+  }
+
+  .mult-barras-rotulo {
+    grid-column: 1 / -1;
+  }
+
+  .mult-barras-track-wrap {
+    grid-column: 1;
+  }
+
+  .mult-barras-valor {
+    grid-column: 2;
+    grid-row: 2;
+  }
+}

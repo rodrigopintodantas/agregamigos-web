@@ -16,6 +16,7 @@ import { VotacaoComponent } from './pages/votacao/votacao.component';
 import { OuvidoriaComponent } from './pages/ouvidoria/ouvidoria.component';
 import { WhatsappComponent } from './pages/whatsapp/whatsapp.component';
 import { PainelCampanhasComponent } from './pages/painel-campanhas/painel-campanhas.component';
+import { MultiplicadoresComponent } from './pages/multiplicadores/multiplicadores.component';
 
 export const routes: Routes = [
   {
@@ -51,6 +52,10 @@ export const routes: Routes = [
       {
         path: '',
         component: AdminDashboardComponent,
+      },
+      {
+        path: 'multiplicadores',
+        component: MultiplicadoresComponent,
       },
       {
         path: 'pessoas',
