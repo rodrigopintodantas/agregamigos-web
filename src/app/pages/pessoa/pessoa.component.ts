@@ -10,6 +10,14 @@ import {
   RegistroNaoImportadoCsv,
 } from '../../service/pessoa.service';
 import { AutenticacaoService } from '../../service/autenticacao.service';
+import {
+  lerArquivoTextoCsv,
+  normalizarCabecalhoCsv,
+  parseCsvPessoa,
+  possuiColunaNomeCsv,
+  possuiColunaTelefoneCsv,
+  prepararTelefonesCsv,
+} from '../../utils/importar-csv-pessoa.util';
 
 const CHAVE_VAZIO = '__vazio__';
 const STORAGE_ULTIMA_IMPORTACAO_CSV = 'agregamigos_ultima_importacao_csv';
@@ -396,8 +404,8 @@ export class PessoaComponent implements OnInit, OnDestroy {
     this.importandoCsv = true;
 
     try {
-      const csv = await this.lerArquivoTexto(file);
-      const registros = this.parseCsv(csv);
+      const csv = await lerArquivoTextoCsv(file);
+      const registros = parseCsvPessoa(csv);
       if (!registros.length) {
         this.importandoCsv = false;
         this.erro = 'CSV vazio ou sem linhas válidas.';
@@ -405,8 +413,8 @@ export class PessoaComponent implements OnInit, OnDestroy {
         return;
       }
 
-      const headers = Object.keys(registros[0]).map((h) => this.normalizarCabecalho(h));
-      if (!this.possuiColunaNome(headers)) {
+      const headers = Object.keys(registros[0]).map((h) => normalizarCabecalhoCsv(h));
+      if (!possuiColunaNomeCsv(headers)) {
         this.importandoCsv = false;
         this.erro =
           "CSV inválido: coluna de nome não encontrada. Use 'Nome Completo:' (ou variações como 'nome' e 'nome_completo').";
@@ -414,7 +422,7 @@ export class PessoaComponent implements OnInit, OnDestroy {
         return;
       }
 
-      if (!this.possuiColunaTelefone(headers)) {
+      if (!possuiColunaTelefoneCsv(headers)) {
         const continuar = window.confirm(
           'Não foi encontrada uma coluna de telefone/WhatsApp neste CSV (ex.: "Telefone com DDD", "Celular", "WhatsApp").\n\nSe continuar, os cadastros serão importados sem telefone.\n\nDeseja continuar mesmo assim?',
         );
@@ -425,13 +433,7 @@ export class PessoaComponent implements OnInit, OnDestroy {
         }
       }
 
-      registros.forEach((row) => {
-        for (const key of Object.keys(row)) {
-          if (this.ehColunaTelefone(key)) {
-            row[key] = (row[key] ?? '').replace(/\D/g, '');
-          }
-        }
-      });
+      prepararTelefonesCsv(registros);
 
       this.pessoaService.importarCsv({ registros }).subscribe({
         next: (resp) => {
@@ -509,15 +511,6 @@ export class PessoaComponent implements OnInit, OnDestroy {
     const digits = String(value ?? '').replace(/\D/g, '');
     if (!digits) return '—';
     return this.formatarWhatsapp(digits);
-  }
-
-  private ehColunaTelefone(header: string): boolean {
-    const h = this.normalizarCabecalho(header);
-    if (!h || h.includes('instagram')) return false;
-    if (h.includes('email') || h.includes('e mail')) return false;
-    if (h.includes('telefone') || h.includes('whatsapp') || h.includes('celular')) return true;
-    if (h === 'fone' || (h.includes('fone') && !h.includes('microfone'))) return true;
-    return false;
   }
 
   private chaveStorageUltimaImportacaoCsv(): string {
@@ -1058,90 +1051,4 @@ export class PessoaComponent implements OnInit, OnDestroy {
     return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
   }
 
-  private parseCsv(content: string): Record<string, string>[] {
-    const lines = content
-      .replace(/^\uFEFF/, '')
-      .split(/\r?\n/)
-      .map((line) => line.trim())
-      .filter((line) => line.length > 0);
-
-    if (lines.length < 2) return [];
-
-    const tabCount = lines[0].match(/\t/g)?.length ?? 0;
-    const semicolonCount = lines[0].match(/;/g)?.length ?? 0;
-    const commaCount = lines[0].match(/,/g)?.length ?? 0;
-    const separator = tabCount >= semicolonCount && tabCount >= commaCount ? '\t' : semicolonCount > commaCount ? ';' : ',';
-    const headers = this.parseCsvLine(lines[0], separator).map((h) => this.sanitizarCabecalhoCsv(h));
-
-    return lines.slice(1).map((line) => {
-      const values = this.parseCsvLine(line, separator);
-      const row: Record<string, string> = {};
-      headers.forEach((header, index) => {
-        row[header] = values[index] ?? '';
-      });
-      return row;
-    });
-  }
-
-  private parseCsvLine(line: string, separator: string): string[] {
-    const result: string[] = [];
-    let current = '';
-    let insideQuotes = false;
-
-    for (let i = 0; i < line.length; i += 1) {
-      const char = line[i];
-      const nextChar = line[i + 1];
-
-      if (char === '"') {
-        if (insideQuotes && nextChar === '"') {
-          current += '"';
-          i += 1;
-        } else {
-          insideQuotes = !insideQuotes;
-        }
-      } else if (char === separator && !insideQuotes) {
-        result.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
-    }
-
-    result.push(current.trim());
-    return result;
-  }
-
-  private normalizarCabecalho(value: string): string {
-    return String(value ?? '')
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-zA-Z0-9]+/g, ' ')
-      .replace(/\s+/g, ' ')
-      .trim()
-      .toLowerCase();
-  }
-
-  private possuiColunaNome(headers: string[]): boolean {
-    const aliases = new Set(['nome completo', 'nome', 'nomecompleto']);
-    return headers.some((header) => aliases.has(header.replace(/\s+/g, ' ').trim()));
-  }
-
-  private possuiColunaTelefone(headers: string[]): boolean {
-    return headers.some((header) => this.ehColunaTelefone(header));
-  }
-
-  /** Remove BOM/zero-width para o nome da coluna bater com o esperado (ex.: `email`). */
-  private sanitizarCabecalhoCsv(value: string): string {
-    return String(value ?? '')
-      .replace(/^\uFEFF/g, '')
-      .replace(/[\u200B-\u200D\uFEFF]/g, '')
-      .trim();
-  }
-
-  private async lerArquivoTexto(file: File): Promise<string> {
-    const buffer = await file.arrayBuffer();
-    const utf8 = new TextDecoder('utf-8').decode(buffer);
-    if (!utf8.includes('\uFFFD')) return utf8;
-    return new TextDecoder('windows-1252').decode(buffer);
-  }
 }

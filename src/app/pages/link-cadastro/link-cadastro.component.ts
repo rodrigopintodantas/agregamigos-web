@@ -3,6 +3,7 @@ import { Component, inject, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
 import { combineLatest, distinctUntilChanged, map } from 'rxjs';
+import { BAIRROS_DISTRITO_FEDERAL } from '../../data/bairros-distrito-federal';
 import { PessoaPayload, PessoaService } from '../../service/pessoa.service';
 
 type ViaCepResponse = {
@@ -35,6 +36,8 @@ export class LinkCadastroComponent implements OnInit {
   coordenadorTravado = false;
   nomeCoordenadorTravado = '';
   avisoCoordenadorUrl = '';
+  tokenEvento = '';
+  nomeEvento = '';
 
   ngOnInit(): void {
     combineLatest([
@@ -58,6 +61,8 @@ export class LinkCadastroComponent implements OnInit {
         this.avisoCoordenadorUrl = '';
         this.coordenadorTravado = false;
         this.nomeCoordenadorTravado = '';
+        this.tokenEvento = '';
+        this.nomeEvento = '';
         this.candidatoSlug = slug;
 
         if (!slug) {
@@ -98,6 +103,11 @@ export class LinkCadastroComponent implements OnInit {
         this.candidatoTitulo = (ctx.candidato?.nome ?? '').trim() || slug;
         this.coordenadores = Array.isArray(ctx.coordenadores) ? ctx.coordenadores : [];
         this.idCoordenadorSelecionado = null;
+        this.tokenEvento = ctx.evento?.token_cadastro ?? queryObj['evento']?.trim() ?? '';
+        this.nomeEvento = ctx.evento?.nome?.trim() ?? '';
+        if (this.nomeEvento) {
+          this.candidatoTitulo = this.nomeEvento;
+        }
         this.carregandoContexto = false;
         const pre = ctx.preselected_coordenador_id;
         if (pre != null && Number.isInteger(Number(pre)) && Number(pre) > 0) {
@@ -170,43 +180,7 @@ export class LinkCadastroComponent implements OnInit {
   sucesso = '';
   erro = '';
   bairroDetectadoCep: string | null = null;
-  readonly bairrosDistritoFederal: string[] = [
-    'Aguas Claras',
-    'Arniqueira',
-    'Asa Norte',
-    'Asa Sul',
-    'Brasilia',
-    'Brazlandia',
-    'Candangolandia',
-    'Ceilandia',
-    'Cruzeiro',
-    'Fercal',
-    'Gama',
-    'Guara',
-    'Itapoa',
-    'Jardim Botanico',
-    'Lago Norte',
-    'Lago Sul',
-    'Nucleo Bandeirante',
-    'Park Way',
-    'Paranoa',
-    'Planaltina',
-    'Recanto das Emas',
-    'Riacho Fundo',
-    'Riacho Fundo II',
-    'Samambaia',
-    'Santa Maria',
-    'Sao Sebastiao',
-    'SCIA/Estrutural',
-    'SIA',
-    'Sobradinho',
-    'Sobradinho II',
-    'Sol Nascente/Por do Sol',
-    'Sudoeste/Octogonal',
-    'Taguatinga',
-    'Varjao',
-    'Vicente Pires',
-  ];
+  readonly bairrosDistritoFederal = [...BAIRROS_DISTRITO_FEDERAL];
 
   form: PessoaPayload = {
     nome: '',
@@ -214,12 +188,9 @@ export class LinkCadastroComponent implements OnInit {
     email: null,
     whatsapp: null,
     instagram: null,
-    indicacao: null,
     endereco: {
       cep: null,
       logradouro: null,
-      numero: null,
-      complemento: null,
       bairro: null,
       cidade: null,
       uf: null,
@@ -242,7 +213,6 @@ export class LinkCadastroComponent implements OnInit {
         ...this.form.endereco,
         cep,
         logradouro: data.logradouro ?? null,
-        complemento: data.complemento ?? null,
         bairro: this.mapearBairroCepParaLista(data.bairro ?? null),
         cidade: data.localidade ?? null,
         uf: data.uf ?? null,
@@ -297,18 +267,11 @@ export class LinkCadastroComponent implements OnInit {
       this.erro = 'Link de cadastro inválido (candidato não informado na URL).';
       return;
     }
-    if (this.idCoordenadorSelecionado == null) {
-      this.erro = 'Selecione um coordenador.';
-      return;
-    }
-    if (!this.coordenadorTravado && !this.coordenadores.length) {
-      this.erro = 'Não há coordenadores disponíveis para concluir o cadastro.';
-      return;
-    }
     this.salvando = true;
     const payload: PessoaPayload = {
       ...this.form,
-      id_coordenador: this.idCoordenadorSelecionado,
+      id_coordenador: this.idCoordenadorSelecionado ?? null,
+      token_evento: this.tokenEvento || null,
       whatsapp: this.form.whatsapp ? this.form.whatsapp.replace(/\D/g, '') : null,
       endereco: {
         ...this.form.endereco,
@@ -330,12 +293,9 @@ export class LinkCadastroComponent implements OnInit {
           email: null,
           whatsapp: null,
           instagram: null,
-          indicacao: null,
           endereco: {
             cep: null,
             logradouro: null,
-            numero: null,
-            complemento: null,
             bairro: null,
             cidade: null,
             uf: null,

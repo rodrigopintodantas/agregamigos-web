@@ -34,13 +34,6 @@
         <p class="ad-box-hint" *ngIf="totalAniversariantesHoje === 0">Nenhum aniversariante hoje.</p>
       </article>
 
-      <article class="ad-box ad-box--alertas" aria-labelledby="box-alertas-title">
-        <h2 id="box-alertas-title" class="ad-box-title">Alertas</h2>
-        <div class="ad-alertas-vazio">
-          <p>Nenhum alerta no momento.</p>
-        </div>
-      </article>
-
       <article
         *ngIf="auth.isCoordenador() && linkCadastroDivulgacaoCoordenador"
         class="ad-box ad-box--link-divulgacao"
@@ -59,6 +52,13 @@
             >{{ linkCadastroDivulgacaoCoordenador }}</a
           >
           <button type="button" class="ad-link-divulgacao-copiar" (click)="copiarLinkDivulgacao()">Copiar link</button>
+        </div>
+      </article>
+
+      <article class="ad-box ad-box--alertas" aria-labelledby="box-alertas-title">
+        <h2 id="box-alertas-title" class="ad-box-title">Alertas</h2>
+        <div class="ad-alertas-vazio">
+          <p>Nenhum alerta no momento.</p>
         </div>
       </article>
     </div>

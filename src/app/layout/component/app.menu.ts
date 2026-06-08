@@ -42,6 +42,22 @@ import { LayoutUiService } from '../service/layout-ui.service';
           <span class="menu-label">Multiplicadores</span>
         </a>
       </li>
+      <li *ngIf="auth.isAdmin() || auth.isCoordenador()">
+        <a
+          [routerLink]="auth.routerSegments(auth.areaLogadaSegmento(), 'eventos')"
+          routerLinkActive="active-route"
+          [attr.title]="ui.sidebarCollapsed() ? 'Eventos' : null"
+          (click)="ui.closeMobileMenu()"
+        >
+          <span class="menu-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24">
+              <rect x="3" y="4" width="18" height="17" rx="2"></rect>
+              <path d="M8 2v4M16 2v4M3 10h18"></path>
+            </svg>
+          </span>
+          <span class="menu-label">Eventos</span>
+        </a>
+      </li>
       <li>
         <a
           [routerLink]="auth.routerSegments(auth.areaLogadaSegmento(), 'pessoas')"

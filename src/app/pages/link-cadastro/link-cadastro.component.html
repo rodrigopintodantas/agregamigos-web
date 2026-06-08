@@ -1,6 +1,7 @@
 <section class="card">
   <h1>{{ candidatoTitulo }}</h1>
-  <p class="subtitulo">Preencha os dados para concluir seu cadastro.</p>
+  <p class="subtitulo" *ngIf="nomeEvento">Preencha os dados para se inscrever neste evento.</p>
+  <p class="subtitulo" *ngIf="!nomeEvento">Preencha os dados para concluir seu cadastro.</p>
 
   <p class="msg neutro" *ngIf="carregandoContexto">Carregando informações do link…</p>
   <p class="msg erro" *ngIf="erroContexto && !carregandoContexto">{{ erroContexto }}</p>
@@ -13,23 +14,19 @@
     <p class="campo-coordenador-valor">{{ nomeCoordenadorTravado }}</p>
   </div>
 
-  <label *ngIf="!coordenadorTravado">
+  <label *ngIf="!coordenadorTravado && coordenadores.length">
     Coordenador
-    <select [(ngModel)]="idCoordenadorSelecionado" [disabled]="!coordenadores.length">
-      <option [ngValue]="null">Selecione um coordenador</option>
+    <select [(ngModel)]="idCoordenadorSelecionado">
+      <option [ngValue]="null">Nenhum</option>
       <option *ngFor="let c of coordenadores" [ngValue]="c.id">{{ c.nome }}</option>
     </select>
   </label>
-  <p class="campo-ajuda" *ngIf="!coordenadorTravado && !coordenadores.length">
-    Não há coordenadores disponíveis para este candidato no momento. Tente mais tarde ou contate o apoio da campanha.
-  </p>
 
   <label>Nome completo <input [(ngModel)]="form.nome" /></label>
   <label>Data de nascimento <input type="date" [(ngModel)]="form.data_nascimento" /></label>
   <label>E-mail <input type="email" [(ngModel)]="form.email" /></label>
   <label>WhatsApp <input [(ngModel)]="form.whatsapp" (ngModelChange)="aplicarMascaraWhatsapp()" /></label>
   <label>Instagram <input [(ngModel)]="form.instagram" /></label>
-  <label>Indicação <input [(ngModel)]="form.indicacao" /></label>
 
   <p class="cep-help">
     Para descobrir o seu CEP,
@@ -38,13 +35,9 @@
     </a>
   </p>
 
-  <div class="grid bloco-cep">
-    <label>CEP <input [(ngModel)]="form.endereco!.cep" (ngModelChange)="aplicarMascaraCep()" (blur)="buscarCep()" /></label>
-    <label>Número <input [(ngModel)]="form.endereco!.numero" /></label>
-  </div>
+  <label class="bloco-cep">CEP <input [(ngModel)]="form.endereco!.cep" (ngModelChange)="aplicarMascaraCep()" (blur)="buscarCep()" /></label>
 
   <label>Logradouro <input [(ngModel)]="form.endereco!.logradouro" /></label>
-  <label>Complemento <input [(ngModel)]="form.endereco!.complemento" /></label>
 
   <div class="grid">
     <label>
@@ -56,10 +49,6 @@
       </select>
     </label>
     <label>Cidade <input [(ngModel)]="form.endereco!.cidade" /></label>
-  </div>
-
-  <div class="grid">
-    <label>UF <input [(ngModel)]="form.endereco!.uf" /></label>
   </div>
 
   <div class="consentimento-box">
@@ -78,7 +67,7 @@
   <p class="msg erro" *ngIf="erro">{{ erro }}</p>
   <p class="msg sucesso" *ngIf="sucesso">{{ sucesso }}</p>
 
-  <button type="button" [disabled]="salvando || idCoordenadorSelecionado == null" (click)="salvar()">
+  <button type="button" [disabled]="salvando" (click)="salvar()">
     {{ salvando ? 'Enviando...' : 'Finalizar cadastro' }}
   </button>
   </ng-container>

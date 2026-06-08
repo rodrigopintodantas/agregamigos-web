@@ -17,6 +17,7 @@ import { OuvidoriaComponent } from './pages/ouvidoria/ouvidoria.component';
 import { WhatsappComponent } from './pages/whatsapp/whatsapp.component';
 import { PainelCampanhasComponent } from './pages/painel-campanhas/painel-campanhas.component';
 import { MultiplicadoresComponent } from './pages/multiplicadores/multiplicadores.component';
+import { EventoComponent } from './pages/evento/evento.component';
 
 export const routes: Routes = [
   {
@@ -56,6 +57,10 @@ export const routes: Routes = [
       {
         path: 'multiplicadores',
         component: MultiplicadoresComponent,
+      },
+      {
+        path: 'eventos',
+        component: EventoComponent,
       },
       {
         path: 'pessoas',
@@ -120,6 +125,10 @@ export const routes: Routes = [
       {
         path: 'pessoas',
         component: PessoaComponent,
+      },
+      {
+        path: 'eventos',
+        component: EventoComponent,
       },
     ],
   },

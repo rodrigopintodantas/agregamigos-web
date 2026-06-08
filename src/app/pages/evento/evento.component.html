@@ -1,0 +1,278 @@
+<section class="page-card evt-page">
+  <header class="head">
+    <h2>Eventos</h2>
+    <p class="head-desc">Crie eventos e gere links de cadastro vinculados a cada um.</p>
+  </header>
+
+  <div class="top-actions">
+    <button type="button" class="btn-montar" *ngIf="!exibindoCriacao" (click)="abrirCriacao()">
+      Criar evento
+    </button>
+    <button type="button" class="btn-sec" *ngIf="exibindoCriacao" (click)="cancelarCriacao()">
+      Voltar para lista
+    </button>
+  </div>
+
+  <p class="msg" *ngIf="carregando && !exibindoCriacao">Carregando eventos…</p>
+  <p class="msg erro" *ngIf="erro">{{ erro }}</p>
+  <p class="msg sucesso" *ngIf="sucesso">{{ sucesso }}</p>
+
+  <article class="bloco criacao" *ngIf="exibindoCriacao">
+    <h3>Novo evento</h3>
+    <label class="campo">
+      <span>Nome do evento *</span>
+      <input [(ngModel)]="form.nome" [disabled]="salvando" />
+    </label>
+    <label class="campo">
+      <span>Descrição</span>
+      <textarea rows="3" [(ngModel)]="form.descricao" [disabled]="salvando"></textarea>
+    </label>
+    <div class="campo">
+      <span>Local</span>
+      <div class="dropdown-locais-wrap">
+        <button
+          type="button"
+          class="dropdown-locais-trigger"
+          [class.ativo]="dropdownLocaisAberto || form.locais.length"
+          [attr.aria-expanded]="dropdownLocaisAberto"
+          [attr.aria-haspopup]="true"
+          [disabled]="salvando"
+          (click)="alternarDropdownLocais($event)"
+        >
+          <span class="dropdown-locais-resumo">{{ resumoLocais() }}</span>
+          <span class="dropdown-locais-caret" aria-hidden="true"></span>
+        </button>
+        <div
+          *ngIf="dropdownLocaisAberto"
+          class="dropdown-locais-panel"
+          (click)="$event.stopPropagation()"
+          role="listbox"
+          aria-label="Selecionar bairros"
+        >
+          <div class="dropdown-locais-busca-wrap">
+            <span class="dropdown-locais-busca-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <circle cx="11" cy="11" r="7"></circle>
+                <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+              </svg>
+            </span>
+            <input
+              type="search"
+              class="dropdown-locais-busca-input"
+              placeholder="Pesquisar bairros…"
+              [(ngModel)]="buscaLocal"
+              (click)="$event.stopPropagation()"
+              autocomplete="off"
+              spellcheck="false"
+              aria-label="Pesquisar bairros"
+            />
+          </div>
+          <p class="dropdown-locais-hint">Marque um ou mais bairros.</p>
+          <div class="dropdown-locais-scroll">
+            <label *ngFor="let bairro of bairrosLocalFiltrados()" class="dropdown-locais-opcao">
+              <input
+                type="checkbox"
+                [checked]="localSelecionado(bairro)"
+                (change)="alternarLocal(bairro, $any($event.target).checked)"
+              />
+              <span>{{ bairro }}</span>
+            </label>
+            <p *ngIf="bairrosLocalFiltrados().length === 0" class="dropdown-locais-vazio">
+              Nenhum bairro corresponde à busca.
+            </p>
+          </div>
+          <div class="dropdown-locais-rodape">
+            <button type="button" class="dropdown-locais-link" (click)="limparLocais($event)">
+              Limpar seleção
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <label class="campo">
+      <span>Data do evento</span>
+      <input type="date" [(ngModel)]="form.data_evento" [disabled]="salvando" />
+    </label>
+    <div class="campo" *ngIf="coordenadores.length">
+      <span>Coordenadores do evento (opcional)</span>
+      <p class="campo-hint">Quem se cadastrar pelo link poderá escolher entre os selecionados. Se nenhum for marcado, aparecem todos os coordenadores do candidato.</p>
+      <ul class="lista-coordenadores">
+        <li *ngFor="let c of coordenadores">
+          <label class="check-coord">
+            <input
+              type="checkbox"
+              [checked]="coordenadorSelecionado(c.id)"
+              [disabled]="salvando"
+              (change)="alternarCoordenador(c.id, $any($event.target).checked)"
+            />
+            <span>{{ c.nome }}</span>
+          </label>
+        </li>
+      </ul>
+    </div>
+    <div class="actions">
+      <button type="button" class="btn-montar" [disabled]="salvando" (click)="salvarEvento()">
+        {{ salvando ? 'Salvando…' : 'Salvar evento' }}
+      </button>
+    </div>
+  </article>
+
+  <article class="bloco resultado" *ngIf="!exibindoCriacao && !carregando">
+    <h3>Eventos cadastrados</h3>
+    <div class="table-wrap">
+      <table *ngIf="eventos.length; else vazioEventos">
+        <thead>
+          <tr>
+            <th>Evento</th>
+            <th>Data</th>
+            <th>Local</th>
+            <th>Status</th>
+            <th>Inscritos</th>
+            <th>Coordenadores</th>
+            <th>Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let e of eventos">
+            <td>{{ e.nome }}</td>
+            <td>{{ e.data_evento ? (e.data_evento | date: 'dd/MM/yyyy') : '—' }}</td>
+            <td>{{ e.local || '—' }}</td>
+            <td>
+              <span class="status-badge status-{{ e.status }}">{{ labelStatus(e.status) }}</span>
+            </td>
+            <td>{{ e.total_inscritos }}</td>
+            <td>{{ nomesCoordenadores(e) }}</td>
+            <td>
+              <div class="acoes">
+                <button
+                  type="button"
+                  class="btn-acao detalhar"
+                  title="Detalhar evento"
+                  (click)="detalharEvento(e)"
+                >
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path>
+                    <circle cx="12" cy="12" r="3"></circle>
+                  </svg>
+                </button>
+                <button
+                  *ngIf="e.status === 'ativo'"
+                  type="button"
+                  class="btn-acao encerrar"
+                  title="Encerrar evento"
+                  [disabled]="encerrandoEventoId === e.id || excluindoEventoId === e.id"
+                  (click)="encerrarEvento(e)"
+                >
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <circle cx="12" cy="12" r="9"></circle>
+                    <line x1="8" y1="8" x2="16" y2="16"></line>
+                    <line x1="16" y1="8" x2="8" y2="16"></line>
+                  </svg>
+                </button>
+                <button
+                  *ngIf="auth.isAdmin()"
+                  type="button"
+                  class="btn-acao excluir"
+                  title="Excluir evento"
+                  [disabled]="excluindoEventoId === e.id || encerrandoEventoId === e.id"
+                  (click)="excluirEvento(e)"
+                >
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <polyline points="3 6 5 6 21 6"></polyline>
+                    <path d="M8 6v-2a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2"></path>
+                    <path d="M19 6l-1 14a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1L5 6"></path>
+                  </svg>
+                </button>
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+      <ng-template #vazioEventos>
+        <p class="vazio">Nenhum evento cadastrado ainda.</p>
+      </ng-template>
+    </div>
+  </article>
+</section>
+
+<div class="backdrop" *ngIf="dialogDetalheAberto" (click)="fecharDetalhe()"></div>
+<section class="dialog dialog-detalhe" *ngIf="dialogDetalheAberto" (click)="$event.stopPropagation()">
+  <h3>Detalhe do evento</h3>
+  <p class="msg neutro" *ngIf="carregandoDetalhe">Carregando…</p>
+
+  <ng-container *ngIf="!carregandoDetalhe && eventoDetalhe as det">
+    <p class="contador"><strong>{{ det.nome }}</strong></p>
+    <p class="contador" *ngIf="det.descricao">{{ det.descricao }}</p>
+    <p class="contador">
+      <span *ngIf="det.data_evento">Data: {{ det.data_evento | date: 'dd/MM/yyyy' }}</span>
+      <span *ngIf="det.local"> · Local: {{ det.local }}</span>
+      · Status: {{ labelStatus(det.status) }}
+      · Inscritos: {{ det.total_inscritos }}
+    </p>
+    <p class="contador" *ngIf="det.coordenadores?.length">
+      Coordenadores: <strong>{{ nomesCoordenadores(det) }}</strong>
+    </p>
+
+    <div class="link-box" *ngIf="det.link_cadastro_path && det.status === 'ativo'">
+      <span class="link-label">Link de cadastro</span>
+      <p class="link-coordenador" *ngIf="auth.isCoordenador()">
+        Coordenador do link: <strong>{{ nomeCoordenadorLinkEvento() }}</strong>
+      </p>
+      <code class="link-url">{{ linkCadastroAbsoluto(det) }}</code>
+      <button type="button" class="btn-sec btn-copiar" (click)="copiarLinkCadastro()">
+        {{ linkCopiado ? 'Copiado!' : 'Copiar link' }}
+      </button>
+    </div>
+
+    <p class="msg sucesso" *ngIf="sucessoImportacaoCsv">{{ sucessoImportacaoCsv }}</p>
+    <p class="msg erro" *ngIf="erroImportacaoCsv">{{ erroImportacaoCsv }}</p>
+
+    <h4 class="subtitulo-inscritos">Pessoas cadastradas neste evento</h4>
+    <div class="table-wrap table-inscritos" *ngIf="det.inscritos.length; else semInscritos">
+      <table>
+        <thead>
+          <tr>
+            <th>Nome</th>
+            <th>WhatsApp</th>
+            <th>E-mail</th>
+            <th>Bairro</th>
+            <th>Coordenador</th>
+            <th>Inscrito em</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let p of det.inscritos">
+            <td>{{ p.nome }}</td>
+            <td>{{ p.whatsapp || '—' }}</td>
+            <td>{{ p.email || '—' }}</td>
+            <td>{{ p.bairro || '—' }}</td>
+            <td>{{ p.coordenador_nome || '—' }}</td>
+            <td>{{ p.inscrito_em | date: 'dd/MM/yyyy HH:mm' }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <ng-template #semInscritos>
+      <p class="vazio">Ainda não há inscrições por este link.</p>
+    </ng-template>
+
+    <div class="actions">
+      <input
+        #csvEventoInput
+        type="file"
+        accept=".csv,text/csv"
+        class="input-csv"
+        (change)="importarCsvEvento($event)"
+      />
+      <button
+        type="button"
+        class="btn-montar"
+        [disabled]="importandoCsvEvento"
+        (click)="abrirSeletorCsvEvento(csvEventoInput)"
+      >
+        {{ importandoCsvEvento ? 'Importando CSV…' : 'Adicionar CSV' }}
+      </button>
+      <button type="button" class="btn-sec" (click)="fecharDetalhe()">Fechar</button>
+    </div>
+  </ng-container>
+</section>
