@@ -9,18 +9,10 @@
   <ng-container *ngIf="!carregandoContexto && !erroContexto">
   <p class="msg aviso" *ngIf="avisoCoordenadorUrl">{{ avisoCoordenadorUrl }}</p>
 
-  <div class="campo-coordenador-fixo" *ngIf="coordenadorTravado">
+  <div class="campo-coordenador-fixo" *ngIf="linkDeCoordenador && coordenadorTravado">
     <span class="campo-coordenador-label">Coordenador</span>
     <p class="campo-coordenador-valor">{{ nomeCoordenadorTravado }}</p>
   </div>
-
-  <label *ngIf="!coordenadorTravado && coordenadores.length">
-    Coordenador
-    <select [(ngModel)]="idCoordenadorSelecionado">
-      <option [ngValue]="null">Nenhum</option>
-      <option *ngFor="let c of coordenadores" [ngValue]="c.id">{{ c.nome }}</option>
-    </select>
-  </label>
 
   <label>Nome completo <input [(ngModel)]="form.nome" /></label>
   <label>Data de nascimento <input type="date" [(ngModel)]="form.data_nascimento" /></label>

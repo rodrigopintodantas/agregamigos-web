@@ -35,6 +35,8 @@ export class LinkCadastroComponent implements OnInit {
   /** Quando a URL traz chave de divulgação opaca ou `?coordenador=id` válido, o campo não pode ser alterado. */
   coordenadorTravado = false;
   nomeCoordenadorTravado = '';
+  /** Link de divulgação de coordenador (chave opaca ou `?coordenador=`); link padrão do admin não exibe o campo. */
+  linkDeCoordenador = false;
   avisoCoordenadorUrl = '';
   tokenEvento = '';
   nomeEvento = '';
@@ -61,6 +63,7 @@ export class LinkCadastroComponent implements OnInit {
         this.avisoCoordenadorUrl = '';
         this.coordenadorTravado = false;
         this.nomeCoordenadorTravado = '';
+        this.linkDeCoordenador = false;
         this.tokenEvento = '';
         this.nomeEvento = '';
         this.candidatoSlug = slug;
@@ -108,6 +111,7 @@ export class LinkCadastroComponent implements OnInit {
         if (this.nomeEvento) {
           this.candidatoTitulo = this.nomeEvento;
         }
+        this.linkDeCoordenador = this.isLinkDeCoordenador(queryObj);
         this.carregandoContexto = false;
         const pre = ctx.preselected_coordenador_id;
         if (pre != null && Number.isInteger(Number(pre)) && Number(pre) > 0) {
@@ -123,6 +127,21 @@ export class LinkCadastroComponent implements OnInit {
         this.candidatoTitulo = 'Cadastro';
       },
     });
+  }
+
+  private isLinkDeCoordenador(queryObj: Record<string, string>): boolean {
+    if (String(queryObj['coordenador'] ?? '').trim()) return true;
+    return this.temChaveDivulgacaoNaQuery(queryObj);
+  }
+
+  private temChaveDivulgacaoNaQuery(queryObj: Record<string, string>): boolean {
+    const reservados = new Set(['coordenador', 'evento']);
+    for (const k of Object.keys(queryObj)) {
+      if (!k || reservados.has(k)) continue;
+      if (String(queryObj[k] ?? '').trim() !== '') continue;
+      if (/^[A-Za-z0-9]{10,32}$/.test(k)) return true;
+    }
+    return false;
   }
 
   private aplicarPreselecaoServidor(id: number): void {
@@ -162,8 +181,7 @@ export class LinkCadastroComponent implements OnInit {
       this.coordenadorTravado = false;
       this.nomeCoordenadorTravado = '';
       this.idCoordenadorSelecionado = null;
-      this.avisoCoordenadorUrl =
-        'Este link aponta para um coordenador que não está disponível neste cadastro. Escolha um coordenador na lista.';
+      this.avisoCoordenadorUrl = 'Link de divulgação inválido ou desatualizado.';
       return;
     }
     this.idCoordenadorSelecionado = id;
