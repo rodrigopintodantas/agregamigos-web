@@ -12,7 +12,8 @@
   <p class="ad-msg ad-msg--neutro" *ngIf="carregando && !erro">Carregando painel...</p>
 
   <div class="ad-dash-grid" *ngIf="!carregando && !erro">
-    <div class="ad-dash-col ad-dash-col--stack">
+    <div class="ad-dash-row-top">
+      <div class="ad-dash-col ad-dash-col--stack">
       <article class="ad-box ad-box--cadastros" aria-labelledby="box-cadastros-title">
         <h2 id="box-cadastros-title" class="ad-box-title">Quantidade de Cadastros</h2>
         <p class="ad-box-metric" aria-live="polite">{{ totalCadastros }}</p>
@@ -51,19 +52,47 @@
             rel="noopener noreferrer"
             >{{ linkCadastroDivulgacaoCoordenador }}</a
           >
-          <button type="button" class="ad-link-divulgacao-copiar" (click)="copiarLinkDivulgacao()">Copiar link</button>
+          <button type="button" class="ad-link-divulgacao-copiar" (click)="copiarLinkCadastroPainel()">
+            Copiar link
+          </button>
         </div>
       </article>
 
-      <article class="ad-box ad-box--alertas" aria-labelledby="box-alertas-title">
-        <h2 id="box-alertas-title" class="ad-box-title">Alertas</h2>
-        <div class="ad-alertas-vazio">
-          <p>Nenhum alerta no momento.</p>
+      <article
+        *ngIf="auth.isAdmin() && linkCadastroPainel"
+        class="ad-box ad-box--link-divulgacao"
+        aria-labelledby="box-link-cadastro-admin-title"
+      >
+        <h2 id="box-link-cadastro-admin-title" class="ad-box-title">Link de cadastro</h2>
+        <p class="ad-box-subtitle ad-box-subtitle--tight">
+          Compartilhe este endereço para novos cadastros neste candidato.
+        </p>
+        <div class="ad-link-divulgacao-inner">
+          <a
+            class="ad-link-divulgacao-url"
+            [href]="linkCadastroPainel"
+            target="_blank"
+            rel="noopener noreferrer"
+            >{{ linkCadastroPainel }}</a
+          >
+          <div class="ad-link-divulgacao-acoes">
+            <button type="button" class="ad-link-divulgacao-copiar" (click)="copiarLinkCadastroPainel()">
+              Copiar link
+            </button>
+            <button
+              type="button"
+              class="ad-link-divulgacao-copiar"
+              (click)="abrirDialogQrcodeLinkCadastro()"
+              [disabled]="gerandoQrcodeLink"
+            >
+              {{ gerandoQrcodeLink ? 'Gerando...' : 'Gerar Qrcode' }}
+            </button>
+          </div>
         </div>
       </article>
-    </div>
+      </div>
 
-    <article class="ad-box ad-box--lista" aria-labelledby="box-bairros-title">
+      <article class="ad-box ad-box--lista" aria-labelledby="box-bairros-title">
       <h2 id="box-bairros-title" class="ad-box-title">Quantidade por Bairro</h2>
       <p class="ad-box-subtitle" *ngIf="auth.isCoordenador()">
         Distribuição entre os cadastros vinculados a você (por bairro informado).
@@ -84,6 +113,16 @@
         Nenhum bairro informado nos endereços ainda.
       </p>
     </article>
+    </div>
+
+    <div class="ad-dash-row-bottom">
+      <article class="ad-box ad-box--alertas" aria-labelledby="box-alertas-title">
+        <h2 id="box-alertas-title" class="ad-box-title">Alertas</h2>
+        <div class="ad-alertas-vazio">
+          <p>Nenhum alerta no momento.</p>
+        </div>
+      </article>
+    </div>
   </div>
 </section>
 
@@ -128,5 +167,37 @@
       Parabenizar
     </button>
     <button type="button" class="ad-dialog-btn" (click)="fecharDialogAniversariantes()">Fechar</button>
+  </div>
+</div>
+
+<div class="ad-dialog-backdrop" *ngIf="dialogQrcodeLinkAberto" (click)="fecharDialogQrcodeLinkCadastro()"></div>
+<div
+  class="ad-dialog ad-dialog--qrcode"
+  *ngIf="dialogQrcodeLinkAberto"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="ad-dialog-qrcode-link-title"
+  (click)="$event.stopPropagation()"
+>
+  <div class="ad-dialog-header">
+    <div class="ad-dialog-title-wrap">
+      <h2 id="ad-dialog-qrcode-link-title" class="ad-dialog-title">QR Code — Link de cadastro</h2>
+    </div>
+    <button type="button" class="ad-dialog-close" (click)="fecharDialogQrcodeLinkCadastro()" title="Fechar">
+      ×
+    </button>
+  </div>
+  <p class="ad-dialog-subtitle">Escaneie o código para abrir o link de cadastro.</p>
+  <div class="ad-qrcode-wrap" *ngIf="linkCadastroQrcodeDataUrl">
+    <img
+      class="ad-qrcode-img"
+      [src]="linkCadastroQrcodeDataUrl"
+      alt="QR Code do link de cadastro"
+      width="280"
+      height="280"
+    />
+  </div>
+  <div class="ad-dialog-actions">
+    <button type="button" class="ad-dialog-btn" (click)="fecharDialogQrcodeLinkCadastro()">Fechar</button>
   </div>
 </div>

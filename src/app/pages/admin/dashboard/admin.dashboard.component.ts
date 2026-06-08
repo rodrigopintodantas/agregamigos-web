@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
+import QRCode from 'qrcode';
 import { BairroQuantidade, PessoaItem, PessoaService } from '../../../service/pessoa.service';
 import { AutenticacaoService } from '../../../service/autenticacao.service';
 
@@ -26,30 +27,46 @@ export class AdminDashboardComponent implements OnInit {
   /** URL absoluta do link de cadastro com chave opaca estável (`?ChaveAleatoria`); legado `?coordenador=` se a chave não puder ser obtida. */
   linkCadastroDivulgacaoCoordenador = '';
 
+  /** Link público de cadastro do candidato (painel administrador, sem vínculo a coordenador). */
+  linkCadastroPainel = '';
+
+  dialogQrcodeLinkAberto = false;
+  linkCadastroQrcodeDataUrl = '';
+  gerandoQrcodeLink = false;
+
   ngOnInit(): void {
     this.carregarEstatisticas();
     this.carregarAniversariantesHoje();
-    this.carregarLinkDivulgacaoCoordenador();
+    this.carregarLinkCadastroPainel();
   }
 
   get totalAniversariantesHoje(): number {
     return this.aniversariantesHoje.length;
   }
 
-  private carregarLinkDivulgacaoCoordenador(): void {
-    if (!this.auth.isCoordenador()) {
-      this.linkCadastroDivulgacaoCoordenador = '';
-      return;
-    }
+  private carregarLinkCadastroPainel(): void {
+    this.linkCadastroDivulgacaoCoordenador = '';
+    this.linkCadastroPainel = '';
+
     const path = this.auth.rotaComCandidato('link-cadastro');
     if (!path || path === '/selecionar-candidato') {
-      this.linkCadastroDivulgacaoCoordenador = '';
       return;
     }
+
     const origin =
       typeof globalThis !== 'undefined' && 'location' in globalThis
         ? (globalThis as unknown as { location: { origin: string } }).location.origin
         : '';
+
+    if (this.auth.isAdmin()) {
+      this.linkCadastroPainel = `${origin}${path}`;
+      return;
+    }
+
+    if (!this.auth.isCoordenador()) {
+      return;
+    }
+
     const id = this.auth.getUsuario()?.id;
     const legado =
       id != null ? `${origin}${path}?coordenador=${encodeURIComponent(String(id))}` : '';
@@ -104,12 +121,39 @@ export class AdminDashboardComponent implements OnInit {
     this.fecharDialogAniversariantes();
   }
 
-  copiarLinkDivulgacao(): void {
-    const t = this.linkCadastroDivulgacaoCoordenador;
+  copiarLinkCadastroPainel(): void {
+    const t = this.auth.isCoordenador()
+      ? this.linkCadastroDivulgacaoCoordenador
+      : this.linkCadastroPainel;
     if (!t) return;
     void navigator.clipboard?.writeText(t).catch(() => {
       /* ignore */
     });
+  }
+
+  abrirDialogQrcodeLinkCadastro(): void {
+    if (!this.linkCadastroPainel || this.gerandoQrcodeLink) return;
+
+    this.gerandoQrcodeLink = true;
+    void QRCode.toDataURL(this.linkCadastroPainel, {
+      width: 280,
+      margin: 2,
+      errorCorrectionLevel: 'M',
+    })
+      .then((dataUrl) => {
+        this.linkCadastroQrcodeDataUrl = dataUrl;
+        this.dialogQrcodeLinkAberto = true;
+      })
+      .catch(() => {
+        this.linkCadastroQrcodeDataUrl = '';
+      })
+      .finally(() => {
+        this.gerandoQrcodeLink = false;
+      });
+  }
+
+  fecharDialogQrcodeLinkCadastro(): void {
+    this.dialogQrcodeLinkAberto = false;
   }
 
   private carregarAniversariantesHoje(): void {
