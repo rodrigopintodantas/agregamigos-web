@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import { Router } from '@angular/router';
-import QRCode from 'qrcode';
 import { BairroQuantidade, PessoaItem, PessoaService } from '../../../service/pessoa.service';
+import { gerarQrcodeDataUrl } from '../../../utils/gerar-qrcode-link.util';
 import { AutenticacaoService } from '../../../service/autenticacao.service';
 
 @Component({
@@ -135,11 +135,7 @@ export class AdminDashboardComponent implements OnInit {
     if (!this.linkCadastroPainel || this.gerandoQrcodeLink) return;
 
     this.gerandoQrcodeLink = true;
-    void QRCode.toDataURL(this.linkCadastroPainel, {
-      width: 280,
-      margin: 2,
-      errorCorrectionLevel: 'M',
-    })
+    void gerarQrcodeDataUrl(this.linkCadastroPainel)
       .then((dataUrl) => {
         this.linkCadastroQrcodeDataUrl = dataUrl;
         this.dialogQrcodeLinkAberto = true;
