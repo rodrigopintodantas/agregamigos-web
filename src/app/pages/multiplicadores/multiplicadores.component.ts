@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject } from '@angular/core';
 import {
+  MultiplicadorComparativoEventoItem,
   MultiplicadorComparativoItem,
   MultiplicadorCoordenadorItem,
   MultiplicadoresPainelResponse,
@@ -21,6 +22,7 @@ export class MultiplicadoresComponent implements OnInit {
   carregando = true;
   erro = '';
   painel: MultiplicadoresPainelResponse | null = null;
+  dialogCoordenadoresAberto = false;
 
   readonly evolucaoSvgW = 840;
   readonly evolucaoSvgH = 400;
@@ -49,16 +51,36 @@ export class MultiplicadoresComponent implements OnInit {
     return this.painel?.comparativo ?? [];
   }
 
-  get coordenadores(): MultiplicadorCoordenadorItem[] {
-    return this.painel?.coordenadores ?? [];
+  get comparativoEventos(): MultiplicadorComparativoEventoItem[] {
+    return this.painel?.comparativo_eventos ?? [];
+  }
+
+  get coordenadoresAtivos(): MultiplicadorCoordenadorItem[] {
+    return (this.painel?.coordenadores ?? []).filter((c) => c.id > 0);
+  }
+
+  abrirDialogCoordenadores(): void {
+    this.dialogCoordenadoresAberto = true;
+  }
+
+  fecharDialogCoordenadores(): void {
+    this.dialogCoordenadoresAberto = false;
   }
 
   get maxComparativo(): number {
-    return Math.max(1, ...this.comparativo.map((c) => c.total));
+    return this.maxBarraTotal(this.comparativo.map((c) => c.total));
+  }
+
+  get maxComparativoEventos(): number {
+    return this.maxBarraTotal(this.comparativoEventos.map((e) => e.total));
   }
 
   percBarraComparativo(total: number): number {
-    return Math.round((total / this.maxComparativo) * 1000) / 10;
+    return this.percBarra(total, this.maxComparativo);
+  }
+
+  percBarraComparativoEvento(total: number): number {
+    return this.percBarra(total, this.maxComparativoEventos);
   }
 
   labelMes(mes: string): string {
@@ -123,6 +145,19 @@ export class MultiplicadoresComponent implements OnInit {
 
   trackByComparativo(_: number, c: MultiplicadorComparativoItem): number {
     return c.coordenador_id;
+  }
+
+  trackByComparativoEvento(_: number, e: MultiplicadorComparativoEventoItem): number {
+    return e.evento_id;
+  }
+
+  private maxBarraTotal(valores: number[]): number {
+    if (!valores.length) return 1;
+    return Math.max(1, ...valores);
+  }
+
+  private percBarra(total: number, max: number): number {
+    return Math.round((total / Math.max(1, max)) * 1000) / 10;
   }
 
   private arredondarSvg(n: number): number {

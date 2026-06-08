@@ -78,6 +78,27 @@
   font-variant-numeric: tabular-nums;
 }
 
+.mult-box-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  color: #667085;
+}
+
+.mult-box--clicavel {
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:hover {
+    border-color: #98a2b3;
+    box-shadow: 0 3px 10px rgba(15, 23, 42, 0.1);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-brand-500, #343b8b);
+    outline-offset: 2px;
+  }
+}
+
 .mult-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -180,6 +201,10 @@
   border-radius: 6px;
   min-width: 2px;
   transition: width 0.35s ease;
+
+  &--evento {
+    background: linear-gradient(90deg, #7a5af8, #5925dc);
+  }
 }
 
 .mult-barras-valor {
@@ -260,6 +285,97 @@
   margin: 0;
   font-size: 0.88rem;
   color: #667085;
+}
+
+.mult-dialog-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  z-index: 1100;
+}
+
+.mult-dialog {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(94vw, 720px);
+  max-height: min(88vh, 640px);
+  overflow: auto;
+  z-index: 1110;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #eaecf0;
+  box-shadow: 0 24px 48px rgba(16, 24, 40, 0.18);
+  padding: 1rem 1.1rem;
+}
+
+.mult-dialog-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.mult-dialog-title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #101828;
+}
+
+.mult-dialog-subtitle {
+  margin: 0 0 0.85rem;
+  font-size: 0.86rem;
+  color: #667085;
+}
+
+.mult-dialog-close {
+  border: 0;
+  background: transparent;
+  color: #667085;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+
+  &:hover {
+    background: #f2f4f7;
+    color: #344054;
+  }
+}
+
+.mult-dialog-table {
+  max-height: min(50vh, 22rem);
+  overflow: auto;
+}
+
+.mult-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #eaecf0;
+}
+
+.mult-dialog-btn {
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #fff;
+  color: #344054;
+  padding: 0.45rem 0.85rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+
+  &:hover {
+    background: #f9fafb;
+    border-color: #98a2b3;
+  }
 }
 
 @media (max-width: 900px) {

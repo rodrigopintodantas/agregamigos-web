@@ -257,21 +257,23 @@
     </ng-template>
 
     <div class="actions">
-      <input
-        #csvEventoInput
-        type="file"
-        accept=".csv,text/csv"
-        class="input-csv"
-        (change)="importarCsvEvento($event)"
-      />
-      <button
-        type="button"
-        class="btn-montar"
-        [disabled]="importandoCsvEvento"
-        (click)="abrirSeletorCsvEvento(csvEventoInput)"
-      >
-        {{ importandoCsvEvento ? 'Importando CSV…' : 'Adicionar CSV' }}
-      </button>
+      <ng-container *ngIf="auth.isLoginAdminSistema()">
+        <input
+          #csvEventoInput
+          type="file"
+          accept=".csv,text/csv"
+          class="input-csv"
+          (change)="importarCsvEvento($event)"
+        />
+        <button
+          type="button"
+          class="btn-montar"
+          [disabled]="importandoCsvEvento"
+          (click)="abrirSeletorCsvEvento(csvEventoInput)"
+        >
+          {{ importandoCsvEvento ? 'Importando CSV…' : 'Adicionar CSV' }}
+        </button>
+      </ng-container>
       <button type="button" class="btn-sec" (click)="fecharDetalhe()">Fechar</button>
     </div>
   </ng-container>

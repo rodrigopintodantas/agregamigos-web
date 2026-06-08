@@ -18,6 +18,12 @@ export interface MultiplicadorComparativoItem {
   total: number;
 }
 
+export interface MultiplicadorComparativoEventoItem {
+  evento_id: number;
+  nome: string;
+  total: number;
+}
+
 export interface MultiplicadorSerieMensal {
   coordenador_id: number;
   nome: string;
@@ -32,6 +38,7 @@ export interface MultiplicadoresPainelResponse {
   };
   coordenadores: MultiplicadorCoordenadorItem[];
   comparativo: MultiplicadorComparativoItem[];
+  comparativo_eventos: MultiplicadorComparativoEventoItem[];
   evolucao_mensal: {
     meses: string[];
     series: MultiplicadorSerieMensal[];

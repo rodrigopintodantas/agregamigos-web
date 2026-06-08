@@ -1,167 +1,220 @@
-<section class="mult-page">
-  <header class="mult-hero">
-    <p class="mult-kicker">Coordenadores</p>
-    <h1 class="mult-title">Multiplicadores</h1>
-    <p class="mult-subtitle">
-      Painel com cadastros por coordenador/multiplicador e evolução mensal das indicações.
-    </p>
-  </header>
-
-  <p class="mult-msg mult-msg--erro" *ngIf="erro">{{ erro }}</p>
-  <p class="mult-msg mult-msg--neutro" *ngIf="carregando">Carregando painel…</p>
-
-  <ng-container *ngIf="!carregando && !erro && painel as p">
-    <div class="mult-totais">
-      <article class="mult-box mult-box--destaque">
-        <span class="mult-box-label">Pessoas cadastradas</span>
-        <strong class="mult-box-valor">{{ p.totais.cadastros }}</strong>
-      </article>
-      <article class="mult-box">
-        <span class="mult-box-label">Coordenadores ativos</span>
-        <strong class="mult-box-valor">{{ p.totais.coordenadores }}</strong>
-      </article>
-    </div>
-
-    <div class="mult-grid">
-      <article class="mult-panel">
-        <h2 class="mult-panel-titulo">Coordenadores / multiplicadores</h2>
-        <p class="mult-panel-desc">Lista com totais de pessoas vinculadas a cada coordenador.</p>
-        <div class="mult-table-wrap" *ngIf="coordenadores.length; else vazioCoord">
-          <table class="mult-table">
-            <thead>
-              <tr>
-                <th>Nome</th>
-                <th>Login</th>
-                <th>E-mail</th>
-                <th class="col-num">Cadastros</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let c of coordenadores; trackBy: trackByCoordenadorId">
-                <td>{{ c.nome }}</td>
-                <td>{{ c.login || '—' }}</td>
-                <td>{{ c.email || '—' }}</td>
-                <td class="col-num">{{ c.total_cadastros }}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <ng-template #vazioCoord>
-          <p class="mult-vazio">Nenhum coordenador cadastrado para este candidato.</p>
-        </ng-template>
-      </article>
-
-      <article class="mult-panel">
-        <h2 class="mult-panel-titulo">Comparativo de cadastros</h2>
-        <p class="mult-panel-desc">Quantidade de pessoas cadastradas por coordenador.</p>
-        <div class="mult-barras" *ngIf="comparativo.length; else vazioComparativo" role="list">
-          <div
-            class="mult-barras-linha"
-            *ngFor="let row of comparativo; trackBy: trackByComparativo"
-            role="listitem"
-          >
-            <div class="mult-barras-rotulo" [title]="row.nome">{{ row.nome }}</div>
-            <div class="mult-barras-track-wrap">
-              <div class="mult-barras-track">
-                <div class="mult-barras-fill" [style.width.%]="percBarraComparativo(row.total)"></div>
-              </div>
-            </div>
-            <div class="mult-barras-valor">{{ row.total }}</div>
-          </div>
-        </div>
-        <ng-template #vazioComparativo>
-          <p class="mult-vazio">Sem dados para comparativo.</p>
-        </ng-template>
-      </article>
-    </div>
-
-    <article class="mult-panel mult-panel--full">
-      <h2 class="mult-panel-titulo">Evolução mensal de cadastros</h2>
-      <p class="mult-panel-desc">
-        Cadastros realizados por mês e por coordenador (últimos 12 meses).
-      </p>
-      <ng-container *ngIf="p.evolucao_mensal.series.length; else vazioEvolucao">
-        <div class="mult-chart-wrap" role="img" [attr.aria-label]="evolucaoAriaLabel()">
-          <svg
-            class="mult-chart-svg"
-            [attr.viewBox]="'0 0 ' + evolucaoSvgW + ' ' + evolucaoSvgH"
-            preserveAspectRatio="xMidYMid meet"
-          >
-            <g class="mult-chart-grid" *ngFor="let tick of evolucaoTicksY(p.evolucao_mensal.max_y)">
-              <line
-                class="mult-chart-grid-line"
-                [attr.x1]="evolucaoPad.l"
-                [attr.x2]="evolucaoSvgW - evolucaoPad.r"
-                [attr.y1]="evolucaoPlotY(tick, p.evolucao_mensal.max_y)"
-                [attr.y2]="evolucaoPlotY(tick, p.evolucao_mensal.max_y)"
-              />
-              <text
-                class="mult-chart-axis-y"
-                [attr.x]="evolucaoPad.l - 8"
-                [attr.y]="evolucaoPlotY(tick, p.evolucao_mensal.max_y) + 4"
-                text-anchor="end"
-              >
-                {{ tick }}
-              </text>
-            </g>
-            <line
-              class="mult-chart-axis"
-              [attr.x1]="evolucaoPad.l"
-              [attr.y1]="evolucaoSvgH - evolucaoPad.b"
-              [attr.x2]="evolucaoSvgW - evolucaoPad.r"
-              [attr.y2]="evolucaoSvgH - evolucaoPad.b"
-            />
-            <line
-              class="mult-chart-axis"
-              [attr.x1]="evolucaoPad.l"
-              [attr.y1]="evolucaoPad.t"
-              [attr.x2]="evolucaoPad.l"
-              [attr.y2]="evolucaoSvgH - evolucaoPad.b"
-            />
-            <g *ngFor="let s of p.evolucao_mensal.series; let si = index">
-              <polyline
-                class="mult-chart-linha"
-                fill="none"
-                [attr.stroke]="evolucaoCorSerie(si)"
-                stroke-width="2.5"
-                stroke-linejoin="round"
-                stroke-linecap="round"
-                [attr.points]="evolucaoPolylinePoints(s)"
-              />
-              <circle
-                *ngFor="let mes of p.evolucao_mensal.meses; let mi = index"
-                class="mult-chart-ponto"
-                r="4"
-                [attr.cx]="evolucaoPlotX(mi, p.evolucao_mensal.meses.length)"
-                [attr.cy]="evolucaoPlotY(s.totais[mi], p.evolucao_mensal.max_y)"
-                [attr.fill]="evolucaoCorSerie(si)"
-              />
-            </g>
-            <text
-              *ngFor="let mes of p.evolucao_mensal.meses; let mi = index"
-              class="mult-chart-axis-x"
-              [attr.x]="evolucaoPlotX(mi, p.evolucao_mensal.meses.length)"
-              [attr.y]="evolucaoSvgH - evolucaoPad.b + 22"
-              text-anchor="middle"
-            >
-              {{ labelMes(mes) }}
-            </text>
-          </svg>
-        </div>
-        <div class="mult-legenda">
-          <span
-            class="mult-legenda-item"
-            *ngFor="let s of p.evolucao_mensal.series; let si = index"
-            [title]="s.nome"
-          >
-            <span class="mult-legenda-swatch" [style.background]="evolucaoCorSerie(si)"></span>
-            <span class="mult-legenda-texto">{{ evolucaoLegendaCurta(s.nome) }}</span>
-          </span>
-        </div>
-      </ng-container>
-      <ng-template #vazioEvolucao>
-        <p class="mult-vazio">Sem cadastros nos últimos 12 meses para exibir a evolução.</p>
-      </ng-template>
-    </article>
-  </ng-container>
-</section>
+<section class="mult-page">
+  <header class="mult-hero">
+    <p class="mult-kicker">Coordenadores</p>
+    <h1 class="mult-title">Multiplicadores</h1>
+    <p class="mult-subtitle">
+      Painel com cadastros por coordenador/multiplicador e evolução mensal das indicações.
+    </p>
+  </header>
+
+  <p class="mult-msg mult-msg--erro" *ngIf="erro">{{ erro }}</p>
+  <p class="mult-msg mult-msg--neutro" *ngIf="carregando">Carregando painel…</p>
+
+  <ng-container *ngIf="!carregando && !erro && painel as p">
+    <div class="mult-totais">
+      <article class="mult-box mult-box--destaque">
+        <span class="mult-box-label">Pessoas cadastradas</span>
+        <strong class="mult-box-valor">{{ p.totais.cadastros }}</strong>
+      </article>
+      <article
+        class="mult-box mult-box--clicavel"
+        role="button"
+        tabindex="0"
+        (click)="abrirDialogCoordenadores()"
+        (keydown.enter)="abrirDialogCoordenadores()"
+        (keydown.space)="abrirDialogCoordenadores(); $event.preventDefault()"
+      >
+        <span class="mult-box-label">Coordenadores ativos</span>
+        <strong class="mult-box-valor">{{ p.totais.coordenadores }}</strong>
+        <p class="mult-box-hint" *ngIf="p.totais.coordenadores > 0">Clique para ver a lista.</p>
+        <p class="mult-box-hint" *ngIf="p.totais.coordenadores === 0">Nenhum coordenador cadastrado.</p>
+      </article>
+    </div>
+
+    <div class="mult-grid">
+      <article class="mult-panel">
+        <h2 class="mult-panel-titulo">Comparativo de cadastros</h2>
+        <p class="mult-panel-desc">Quantidade de pessoas cadastradas por coordenador.</p>
+        <div class="mult-barras" *ngIf="comparativo.length; else vazioComparativo" role="list">
+          <div
+            class="mult-barras-linha"
+            *ngFor="let row of comparativo; trackBy: trackByComparativo"
+            role="listitem"
+          >
+            <div class="mult-barras-rotulo" [title]="row.nome">{{ row.nome }}</div>
+            <div class="mult-barras-track-wrap">
+              <div class="mult-barras-track">
+                <div class="mult-barras-fill" [style.width.%]="percBarraComparativo(row.total)"></div>
+              </div>
+            </div>
+            <div class="mult-barras-valor">{{ row.total }}</div>
+          </div>
+        </div>
+        <ng-template #vazioComparativo>
+          <p class="mult-vazio">Sem dados para comparativo.</p>
+        </ng-template>
+      </article>
+
+      <article class="mult-panel">
+        <h2 class="mult-panel-titulo">Cadastros por Evento</h2>
+        <p class="mult-panel-desc">Quantidade de pessoas inscritas em cada evento.</p>
+        <div class="mult-barras" *ngIf="comparativoEventos.length; else vazioComparativoEventos" role="list">
+          <div
+            class="mult-barras-linha"
+            *ngFor="let row of comparativoEventos; trackBy: trackByComparativoEvento"
+            role="listitem"
+          >
+            <div class="mult-barras-rotulo" [title]="row.nome">{{ row.nome }}</div>
+            <div class="mult-barras-track-wrap">
+              <div class="mult-barras-track">
+                <div
+                  class="mult-barras-fill mult-barras-fill--evento"
+                  [style.width.%]="percBarraComparativoEvento(row.total)"
+                ></div>
+              </div>
+            </div>
+            <div class="mult-barras-valor">{{ row.total }}</div>
+          </div>
+        </div>
+        <ng-template #vazioComparativoEventos>
+          <p class="mult-vazio">Nenhum evento cadastrado para este candidato.</p>
+        </ng-template>
+      </article>
+    </div>
+
+    <article class="mult-panel mult-panel--full">
+      <h2 class="mult-panel-titulo">Evolução mensal de cadastros</h2>
+      <p class="mult-panel-desc">
+        Cadastros realizados por mês e por coordenador (últimos 12 meses).
+      </p>
+      <ng-container *ngIf="p.evolucao_mensal.series.length; else vazioEvolucao">
+        <div class="mult-chart-wrap" role="img" [attr.aria-label]="evolucaoAriaLabel()">
+          <svg
+            class="mult-chart-svg"
+            [attr.viewBox]="'0 0 ' + evolucaoSvgW + ' ' + evolucaoSvgH"
+            preserveAspectRatio="xMidYMid meet"
+          >
+            <g class="mult-chart-grid" *ngFor="let tick of evolucaoTicksY(p.evolucao_mensal.max_y)">
+              <line
+                class="mult-chart-grid-line"
+                [attr.x1]="evolucaoPad.l"
+                [attr.x2]="evolucaoSvgW - evolucaoPad.r"
+                [attr.y1]="evolucaoPlotY(tick, p.evolucao_mensal.max_y)"
+                [attr.y2]="evolucaoPlotY(tick, p.evolucao_mensal.max_y)"
+              />
+              <text
+                class="mult-chart-axis-y"
+                [attr.x]="evolucaoPad.l - 8"
+                [attr.y]="evolucaoPlotY(tick, p.evolucao_mensal.max_y) + 4"
+                text-anchor="end"
+              >
+                {{ tick }}
+              </text>
+            </g>
+            <line
+              class="mult-chart-axis"
+              [attr.x1]="evolucaoPad.l"
+              [attr.y1]="evolucaoSvgH - evolucaoPad.b"
+              [attr.x2]="evolucaoSvgW - evolucaoPad.r"
+              [attr.y2]="evolucaoSvgH - evolucaoPad.b"
+            />
+            <line
+              class="mult-chart-axis"
+              [attr.x1]="evolucaoPad.l"
+              [attr.y1]="evolucaoPad.t"
+              [attr.x2]="evolucaoPad.l"
+              [attr.y2]="evolucaoSvgH - evolucaoPad.b"
+            />
+            <g *ngFor="let s of p.evolucao_mensal.series; let si = index">
+              <polyline
+                class="mult-chart-linha"
+                fill="none"
+                [attr.stroke]="evolucaoCorSerie(si)"
+                stroke-width="2.5"
+                stroke-linejoin="round"
+                stroke-linecap="round"
+                [attr.points]="evolucaoPolylinePoints(s)"
+              />
+              <circle
+                *ngFor="let mes of p.evolucao_mensal.meses; let mi = index"
+                class="mult-chart-ponto"
+                r="4"
+                [attr.cx]="evolucaoPlotX(mi, p.evolucao_mensal.meses.length)"
+                [attr.cy]="evolucaoPlotY(s.totais[mi], p.evolucao_mensal.max_y)"
+                [attr.fill]="evolucaoCorSerie(si)"
+              />
+            </g>
+            <text
+              *ngFor="let mes of p.evolucao_mensal.meses; let mi = index"
+              class="mult-chart-axis-x"
+              [attr.x]="evolucaoPlotX(mi, p.evolucao_mensal.meses.length)"
+              [attr.y]="evolucaoSvgH - evolucaoPad.b + 22"
+              text-anchor="middle"
+            >
+              {{ labelMes(mes) }}
+            </text>
+          </svg>
+        </div>
+        <div class="mult-legenda">
+          <span
+            class="mult-legenda-item"
+            *ngFor="let s of p.evolucao_mensal.series; let si = index"
+            [title]="s.nome"
+          >
+            <span class="mult-legenda-swatch" [style.background]="evolucaoCorSerie(si)"></span>
+            <span class="mult-legenda-texto">{{ evolucaoLegendaCurta(s.nome) }}</span>
+          </span>
+        </div>
+      </ng-container>
+      <ng-template #vazioEvolucao>
+        <p class="mult-vazio">Sem cadastros nos últimos 12 meses para exibir a evolução.</p>
+      </ng-template>
+    </article>
+  </ng-container>
+</section>
+
+<div class="mult-dialog-backdrop" *ngIf="dialogCoordenadoresAberto" (click)="fecharDialogCoordenadores()"></div>
+<div
+  class="mult-dialog"
+  *ngIf="dialogCoordenadoresAberto"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="mult-dialog-coordenadores-title"
+  (click)="$event.stopPropagation()"
+>
+  <div class="mult-dialog-header">
+    <h2 id="mult-dialog-coordenadores-title" class="mult-dialog-title">Coordenadores / multiplicadores</h2>
+    <button type="button" class="mult-dialog-close" (click)="fecharDialogCoordenadores()" title="Fechar">
+      ×
+    </button>
+  </div>
+  <p class="mult-dialog-subtitle" *ngIf="painel as p">
+    {{ p.totais.coordenadores }} coordenador(es) ativo(s) neste candidato.
+  </p>
+  <div class="mult-table-wrap mult-dialog-table" *ngIf="coordenadoresAtivos.length; else vazioCoordDialog">
+    <table class="mult-table">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Login</th>
+          <th>E-mail</th>
+          <th class="col-num">Cadastros</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let c of coordenadoresAtivos; trackBy: trackByCoordenadorId">
+          <td>{{ c.nome }}</td>
+          <td>{{ c.login || '—' }}</td>
+          <td>{{ c.email || '—' }}</td>
+          <td class="col-num">{{ c.total_cadastros }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+  <ng-template #vazioCoordDialog>
+    <p class="mult-vazio">Nenhum coordenador cadastrado para este candidato.</p>
+  </ng-template>
+  <div class="mult-dialog-actions">
+    <button type="button" class="mult-dialog-btn" (click)="fecharDialogCoordenadores()">Fechar</button>
+  </div>
+</div>
