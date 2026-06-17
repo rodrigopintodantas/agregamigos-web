@@ -92,6 +92,138 @@
   color: #667085;
 }
 
+.tipo-opcoes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.tipo-opcao {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+  color: #344054;
+  cursor: pointer;
+}
+
+.lista-botoes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.lista-botoes li {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.lista-botoes input {
+  flex: 1;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+.btn-remover-botao {
+  border: 1px solid #d0d5dd;
+  background: #fff;
+  color: #667085;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.btn-remover-botao:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.btn-add-botao {
+  margin-top: 0.45rem;
+  border: 1px dashed #98a2b3;
+  background: #fff;
+  color: #344054;
+  border-radius: 8px;
+  padding: 0.4rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-add-botao:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.preview-wa {
+  margin-top: 0.75rem;
+}
+
+.preview-wa-label {
+  margin: 0 0 0.35rem;
+  font-size: 0.76rem;
+  color: #667085;
+}
+
+.preview-wa-bubble {
+  max-width: 18rem;
+  background: #fff;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.06);
+}
+
+.preview-wa-texto {
+  margin: 0 0 0.55rem;
+  font-size: 0.88rem;
+  color: #101828;
+  white-space: pre-wrap;
+}
+
+.preview-wa-botoes {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.preview-wa-botao {
+  display: block;
+  text-align: center;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 0.4rem 0.55rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #2f4da6;
+  background: #f8faff;
+}
+
+.badge-tipo {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: #f2f4f7;
+  color: #475467;
+}
+
+.badge-tipo--botoes {
+  background: #eff8ff;
+  color: #175cd3;
+}
+
 .form-actions {
   display: flex;
   gap: 0.5rem;

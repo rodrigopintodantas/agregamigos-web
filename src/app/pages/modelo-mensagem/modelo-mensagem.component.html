@@ -12,14 +12,42 @@
       <span>Título</span>
       <input type="text" [(ngModel)]="titulo" name="titulo" maxlength="255" placeholder="Ex.: Modelo Campanha Asa Norte v1.0" />
     </label>
+
+    <div class="field">
+      <span>Formato</span>
+      <div class="tipo-opcoes">
+        <label class="tipo-opcao">
+          <input
+            type="radio"
+            name="tipoMensagem"
+            [checked]="tipoMensagem === 'texto'"
+            (change)="alterarTipoMensagem('texto')"
+          />
+          Texto simples
+        </label>
+        <label class="tipo-opcao">
+          <input
+            type="radio"
+            name="tipoMensagem"
+            [checked]="tipoMensagem === 'botoes'"
+            (change)="alterarTipoMensagem('botoes')"
+          />
+          Texto com botões
+        </label>
+      </div>
+      <p class="var-help" *ngIf="modeloComBotoes">
+        O destinatário verá o texto abaixo e poderá tocar em uma das opções (até {{ maxBotoes }} botões, {{ maxTextoBotao }} caracteres cada).
+      </p>
+    </div>
+
     <label class="field">
-      <span>Texto</span>
+      <span>{{ modeloComBotoes ? 'Pergunta ou texto principal' : 'Texto' }}</span>
       <textarea
         #corpoInput
         [(ngModel)]="corpo"
         name="corpo"
         rows="6"
-        placeholder="Corpo da mensagem…"
+        [placeholder]="modeloComBotoes ? 'Ex.: Você gosta de mim?' : 'Corpo da mensagem…'"
       ></textarea>
       <div class="variaveis-wrap">
         <span>Variáveis disponíveis:</span>
@@ -34,11 +62,54 @@
           {{ '{' }}{{ '{' }}nome_coordenador{{ '}' }}{{ '}' }}
         </button>
       </div>
-      <p class="var-help">
+      <p class="var-help" *ngIf="!modeloComBotoes">
         Ex.: <code>Bom dia, {{ '{' }}{{ '{' }}nome{{ '}' }}{{ '}' }}! hoje nosso encontro será no {{ '{' }}{{ '{' }}bairro{{ '}' }}{{ '}' }}!</code>
-
       </p>
     </label>
+
+    <div class="field" *ngIf="modeloComBotoes">
+      <span>Botões</span>
+      <ul class="lista-botoes">
+        <li *ngFor="let opcao of opcoesBotoes; let i = index; trackBy: trackByOpcaoBotao">
+          <input
+            type="text"
+            [ngModel]="opcao.texto"
+            (ngModelChange)="atualizarTextoOpcaoBotao(opcao.id, $event)"
+            [name]="'opcaoBotao' + opcao.id"
+            [maxlength]="maxTextoBotao"
+            [placeholder]="i === 0 ? 'Ex.: Sim' : i === 1 ? 'Ex.: Não' : 'Opção ' + (i + 1)"
+          />
+          <button
+            type="button"
+            class="btn-remover-botao"
+            title="Remover botão"
+            [disabled]="opcoesBotoes.length <= minBotoes"
+            (click)="removerOpcaoBotao(opcao.id)"
+          >
+            ×
+          </button>
+        </li>
+      </ul>
+      <button
+        type="button"
+        class="btn-add-botao"
+        [disabled]="opcoesBotoes.length >= maxBotoes"
+        (click)="adicionarOpcaoBotao()"
+      >
+        Adicionar botão
+      </button>
+
+      <div class="preview-wa" *ngIf="corpo.trim() || opcoesBotoesPreview().length">
+        <p class="preview-wa-label">Prévia</p>
+        <div class="preview-wa-bubble">
+          <p class="preview-wa-texto">{{ corpo.trim() || '…' }}</p>
+          <div class="preview-wa-botoes" *ngIf="opcoesBotoesPreview().length">
+            <span class="preview-wa-botao" *ngFor="let b of opcoesBotoesPreview()">{{ b }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="form-actions">
       <button type="button" *ngIf="editandoId != null" class="ghost" (click)="limparForm()" [disabled]="salvando">
         Cancelar
@@ -58,6 +129,7 @@
       <thead>
         <tr>
           <th>Título</th>
+          <th>Formato</th>
           <th>Prévia</th>
           <th>Atualizado</th>
           <th>Ações</th>
@@ -66,7 +138,10 @@
       <tbody>
         <tr *ngFor="let m of modelos">
           <td class="td-titulo">{{ m.titulo }}</td>
-          <td class="td-previa">{{ preview(m.corpo) }}</td>
+          <td>
+            <span class="badge-tipo" [class.badge-tipo--botoes]="m.tipo_mensagem === 'botoes'">{{ labelTipo(m) }}</span>
+          </td>
+          <td class="td-previa">{{ preview(m) }}</td>
           <td>{{ m.updatedAt | date: 'dd/MM/yyyy HH:mm' }}</td>
           <td>
             <div class="acoes">

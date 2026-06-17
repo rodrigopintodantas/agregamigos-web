@@ -3,10 +3,14 @@ import { Injectable, inject } from '@angular/core';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
 
+export type ModeloMensagemTipo = 'texto' | 'botoes';
+
 export interface ModeloMensagem {
   id: number;
   titulo: string;
   corpo: string;
+  tipo_mensagem: ModeloMensagemTipo;
+  opcoes_botoes: string[];
   createdAt: string;
   updatedAt: string;
 }
@@ -14,6 +18,8 @@ export interface ModeloMensagem {
 export interface ModeloMensagemPayload {
   titulo: string;
   corpo: string;
+  tipo_mensagem: ModeloMensagemTipo;
+  opcoes_botoes?: string[];
 }
 
 @Injectable({ providedIn: 'root' })
