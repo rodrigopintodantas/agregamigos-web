@@ -156,6 +156,20 @@
                   </svg>
                 </button>
                 <button
+                  *ngIf="auth.isAdmin()"
+                  type="button"
+                  class="btn-acao campanha-divulgacao"
+                  [disabled]="!whatsappConectado"
+                  [title]="tituloBotaoCampanhaDivulgacao()"
+                  (click)="criarCampanhaDivulgacao(e)"
+                >
+                  <svg viewBox="0 0 24 24" focusable="false" aria-hidden="true">
+                    <path d="M3 11v2a1 1 0 0 0 1 1h1l4 4V6L5 10H4a1 1 0 0 0-1 1z"></path>
+                    <path d="M16 8.5a5 5 0 0 1 0 7"></path>
+                    <path d="M19.5 5.5a9 9 0 0 1 0 13"></path>
+                  </svg>
+                </button>
+                <button
                   *ngIf="e.status === 'ativo'"
                   type="button"
                   class="btn-acao encerrar"

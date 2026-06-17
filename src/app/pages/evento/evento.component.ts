@@ -1,9 +1,11 @@
 import { CommonModule } from '@angular/common';
 import { Component, HostListener, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Router } from '@angular/router';
 import { BAIRROS_DISTRITO_FEDERAL } from '../../data/bairros-distrito-federal';
 import { AutenticacaoService } from '../../service/autenticacao.service';
 import { PessoaService } from '../../service/pessoa.service';
+import { WhatsappService } from '../../service/whatsapp.service';
 import {
   EventoCoordenadorResumo,
   EventoDetalhe,
@@ -30,6 +32,8 @@ export class EventoComponent implements OnInit {
   auth = inject(AutenticacaoService);
   private eventoService = inject(EventoService);
   private pessoaService = inject(PessoaService);
+  private whatsappService = inject(WhatsappService);
+  private router = inject(Router);
 
   carregando = true;
   salvando = false;
@@ -62,11 +66,42 @@ export class EventoComponent implements OnInit {
   erroImportacaoCsv = '';
   /** Sufixo do link de cadastro do evento para o coordenador logado (`&chave` ou `&coordenador=id`). */
   sufixoCoordenadorLinkEvento = '';
+  whatsappConectado = false;
 
   ngOnInit(): void {
     this.carregarEventos();
     this.carregarCoordenadores();
     this.carregarSufixoCoordenadorLinkEvento();
+    this.carregarStatusWhatsapp();
+  }
+
+  private carregarStatusWhatsapp(): void {
+    this.whatsappService.listarCanais().subscribe({
+      next: (lista) => {
+        this.whatsappConectado = lista.some((c) => c.conectado === true);
+      },
+      error: () => {
+        this.whatsappConectado = false;
+      },
+    });
+  }
+
+  criarCampanhaDivulgacao(evento: EventoItem): void {
+    if (!this.whatsappConectado || !this.auth.isAdmin()) return;
+    void this.router.navigate(this.auth.routerSegments('admin', 'divulgacao'), {
+      queryParams: {
+        evento_campanha: '1',
+        evento_id: evento.id,
+        evento_nome: evento.nome,
+      },
+    });
+  }
+
+  tituloBotaoCampanhaDivulgacao(): string {
+    if (this.whatsappConectado) {
+      return 'Criar Campanha de Divulgação';
+    }
+    return 'Conecte um celular em WhatsApp para criar campanhas de divulgação';
   }
 
   private carregarSufixoCoordenadorLinkEvento(): void {

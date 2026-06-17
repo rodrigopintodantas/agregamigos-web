@@ -10,6 +10,7 @@ import {
 import { AutenticacaoService } from '../../service/autenticacao.service';
 import { ModeloMensagem, ModeloMensagemService } from '../../service/modelo-mensagem.service';
 import { EngajamentoWhatsapp, PessoaItem, PessoaService } from '../../service/pessoa.service';
+import { EventoService } from '../../service/evento.service';
 import { WhatsappCanal, WhatsappService } from '../../service/whatsapp.service';
 
 type ItemCampanha = {
@@ -32,6 +33,7 @@ export class DivulgacaoComponent implements OnInit {
   private modeloService = inject(ModeloMensagemService);
   private campanhaService = inject(CampanhaDivulgacaoService);
   private whatsappService = inject(WhatsappService);
+  private eventoService = inject(EventoService);
   private auth = inject(AutenticacaoService);
   private route = inject(ActivatedRoute);
 
@@ -93,15 +95,23 @@ export class DivulgacaoComponent implements OnInit {
   erro = '';
   sucesso = '';
   modoAniversariantes = false;
+  modoEvento = false;
+  eventoIdAlvo: number | null = null;
+  eventoNomeAlvo = '';
   dataAniversariantesLabel = '';
   aniversarianteIdsAlvo = new Set<number>();
+  eventoPessoaIdsAlvo = new Set<number>();
 
   ngOnInit(): void {
     this.route.queryParamMap.subscribe((params) => {
       this.modoAniversariantes = params.get('aniversariantes') === '1';
+      this.modoEvento = params.get('evento_campanha') === '1';
+      this.eventoIdAlvo = this.parseIdUnico(params.get('evento_id'));
+      this.eventoNomeAlvo = String(params.get('evento_nome') ?? '').trim();
       this.dataAniversariantesLabel = this.normalizarDataLabelAniversariantes(params.get('data'));
       this.aniversarianteIdsAlvo = this.parseIds(params.get('aniversariante_ids'));
-      if (this.modoAniversariantes) {
+      this.eventoPessoaIdsAlvo = new Set<number>();
+      if (this.modoAniversariantes || this.modoEvento) {
         this.abrirCriacao();
       }
     });
@@ -140,6 +150,8 @@ export class DivulgacaoComponent implements OnInit {
     this.mensagensPorTurno = this.modoAniversariantes ? 15 : 2;
     if (this.modoAniversariantes) {
       this.nomeCampanha = `Aniversariantes do dia ${this.dataAniversariantesLabel}`;
+    } else if (this.modoEvento && this.eventoNomeAlvo) {
+      this.nomeCampanha = `Evento: ${this.eventoNomeAlvo}`;
     }
     this.whatsappCanalIdSelecionado = null;
     this.canaisWhatsapp = [];
@@ -147,8 +159,9 @@ export class DivulgacaoComponent implements OnInit {
     let pessoasOk = false;
     let modelosOk = false;
     let canaisOk = false;
+    let eventoOk = !this.modoEvento || !this.eventoIdAlvo;
     const finalizar = () => {
-      if (pessoasOk && modelosOk && canaisOk) this.carregandoCriacao = false;
+      if (pessoasOk && modelosOk && canaisOk && eventoOk) this.carregandoCriacao = false;
     };
 
     this.pessoaService.listar().subscribe({
@@ -156,9 +169,18 @@ export class DivulgacaoComponent implements OnInit {
         this.pessoas = lista.filter((p) => this.normalizarWhatsapp(p.whatsapp).length > 0);
         if (this.modoAniversariantes) {
           this.preselecionarAniversariantes();
+          pessoasOk = true;
+          finalizar();
+        } else if (this.modoEvento && this.eventoIdAlvo) {
+          this.preselecionarPessoasEvento(() => {
+            eventoOk = true;
+            pessoasOk = true;
+            finalizar();
+          });
+        } else {
+          pessoasOk = true;
+          finalizar();
         }
-        pessoasOk = true;
-        finalizar();
       },
       error: (err) => {
         this.erro = err?.error?.message ?? 'Não foi possível carregar as pessoas.';
@@ -212,6 +234,10 @@ export class DivulgacaoComponent implements OnInit {
     return this.modoAniversariantes;
   }
 
+  get campanhaEventoAtiva(): boolean {
+    return this.modoEvento;
+  }
+
   labelCanalWhatsapp(canal: WhatsappCanal): string {
     const status = canal.conectado ? 'conectado' : canal.status || 'desconectado';
     const numero = canal.numero ? ` · ${canal.numero}` : '';
@@ -230,6 +256,9 @@ export class DivulgacaoComponent implements OnInit {
     const bairro = this.filtroBairro.trim().toLowerCase();
     return this.pessoas.filter((p) => {
       if (this.campanhaAniversariantesAtiva && !this.aniversarianteIdsAlvo.has(p.id)) {
+        return false;
+      }
+      if (this.campanhaEventoAtiva && !this.eventoPessoaIdsAlvo.has(p.id)) {
         return false;
       }
       const nomeOk = !nome || String(p.nome ?? '').toLowerCase().includes(nome);
@@ -258,8 +287,13 @@ export class DivulgacaoComponent implements OnInit {
   pessoaSelecionavel(p: PessoaItem): boolean {
     const engajamentoOk = this.engajamentoKey(p) !== 'negativo';
     if (!engajamentoOk) return false;
-    if (!this.campanhaAniversariantesAtiva) return true;
-    return this.aniversarianteIdsAlvo.has(p.id);
+    if (this.campanhaAniversariantesAtiva) {
+      return this.aniversarianteIdsAlvo.has(p.id);
+    }
+    if (this.campanhaEventoAtiva) {
+      return this.eventoPessoaIdsAlvo.has(p.id);
+    }
+    return true;
   }
 
   motivoBloqueioPessoa(p: PessoaItem): string {
@@ -268,6 +302,9 @@ export class DivulgacaoComponent implements OnInit {
     }
     if (this.campanhaAniversariantesAtiva && !this.aniversarianteIdsAlvo.has(p.id)) {
       return 'Fora dos aniversariantes do dia';
+    }
+    if (this.campanhaEventoAtiva && !this.eventoPessoaIdsAlvo.has(p.id)) {
+      return 'Fora dos inscritos do evento';
     }
     return '';
   }
@@ -819,6 +856,11 @@ export class DivulgacaoComponent implements OnInit {
     );
   }
 
+  private parseIdUnico(raw: string | null): number | null {
+    const id = Number(String(raw ?? '').trim());
+    return Number.isInteger(id) && id > 0 ? id : null;
+  }
+
   private normalizarDataLabelAniversariantes(raw: string | null): string {
     const t = String(raw ?? '').trim();
     if (/^\d{2}\/\d{2}$/.test(t)) return t;
@@ -833,5 +875,41 @@ export class DivulgacaoComponent implements OnInit {
         this.selecionadosPessoas.add(p.id);
       }
     }
+  }
+
+  private preselecionarPessoasEvento(onDone?: () => void): void {
+    const eventoId = this.eventoIdAlvo;
+    if (!eventoId) {
+      onDone?.();
+      return;
+    }
+
+    this.eventoService.detalhe(eventoId).subscribe({
+      next: (det) => {
+        if (!this.eventoNomeAlvo) {
+          this.eventoNomeAlvo = det.nome;
+        }
+        this.nomeCampanha = `Evento: ${this.eventoNomeAlvo || det.nome}`;
+
+        const idsInscritos = new Set<number>();
+        for (const inscrito of det.inscritos ?? []) {
+          if (!this.normalizarWhatsapp(inscrito.whatsapp)) continue;
+          idsInscritos.add(inscrito.id);
+        }
+        this.eventoPessoaIdsAlvo = idsInscritos;
+
+        this.selecionadosPessoas.clear();
+        for (const p of this.pessoas) {
+          if (idsInscritos.has(p.id) && this.pessoaSelecionavel(p)) {
+            this.selecionadosPessoas.add(p.id);
+          }
+        }
+        onDone?.();
+      },
+      error: () => {
+        this.erro = 'Não foi possível carregar os inscritos do evento para a campanha.';
+        onDone?.();
+      },
+    });
   }
 }

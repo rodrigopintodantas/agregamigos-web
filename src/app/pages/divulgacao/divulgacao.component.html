@@ -267,6 +267,9 @@
       <p class="campo-ajuda" *ngIf="campanhaAniversariantesAtiva">
         Modo aniversariantes: somente pessoas aniversariando hoje podem ser selecionadas.
       </p>
+      <p class="campo-ajuda" *ngIf="campanhaEventoAtiva">
+        Modo evento: inscritos com WhatsApp do evento <strong>{{ eventoNomeAlvo || 'selecionado' }}</strong> já vêm marcados.
+      </p>
       <div class="filtros">
         <input [(ngModel)]="filtroNome" placeholder="Filtrar por nome" />
         <select [(ngModel)]="filtroBairro">
