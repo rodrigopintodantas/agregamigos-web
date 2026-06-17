@@ -23,6 +23,8 @@ export class ModeloMensagemComponent implements OnInit {
   readonly maxBotoes = 3;
   readonly minBotoes = 2;
   readonly maxTextoBotao = 20;
+  /** Desabilitar temporariamente a criação de modelos com botões no formulário. */
+  readonly formatoBotoesHabilitado = false;
 
   modelos: ModeloMensagem[] = [];
   titulo = '';
@@ -84,6 +86,7 @@ export class ModeloMensagemComponent implements OnInit {
   }
 
   alterarTipoMensagem(tipo: ModeloMensagemTipo): void {
+    if (tipo === 'botoes' && !this.formatoBotoesHabilitado) return;
     this.tipoMensagem = tipo;
     if (tipo === 'botoes' && this.opcoesBotoes.length < this.minBotoes) {
       this.opcoesBotoes = this.criarOpcoesBotoesVazias();

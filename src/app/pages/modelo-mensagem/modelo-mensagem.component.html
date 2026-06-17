@@ -13,28 +13,36 @@
       <input type="text" [(ngModel)]="titulo" name="titulo" maxlength="255" placeholder="Ex.: Modelo Campanha Asa Norte v1.0" />
     </label>
 
-    <div class="field">
+    <div class="field field-formato">
       <span>Formato</span>
-      <div class="tipo-opcoes">
-        <label class="tipo-opcao">
-          <input
-            type="radio"
-            name="tipoMensagem"
-            [checked]="tipoMensagem === 'texto'"
-            (change)="alterarTipoMensagem('texto')"
-          />
-          Texto simples
-        </label>
-        <label class="tipo-opcao">
-          <input
-            type="radio"
-            name="tipoMensagem"
-            [checked]="tipoMensagem === 'botoes'"
-            (change)="alterarTipoMensagem('botoes')"
-          />
-          Texto com botões
-        </label>
-      </div>
+      <ul class="tipo-opcoes" role="radiogroup" aria-label="Formato da mensagem">
+        <li class="tipo-opcao">
+          <label>
+            <input
+              type="radio"
+              name="tipoMensagem"
+              [checked]="tipoMensagem === 'texto'"
+              (change)="alterarTipoMensagem('texto')"
+            />
+            Texto simples
+          </label>
+        </li>
+        <li class="tipo-opcao" [class.tipo-opcao--desabilitada]="!formatoBotoesHabilitado">
+          <label>
+            <input
+              type="radio"
+              name="tipoMensagem"
+              [checked]="tipoMensagem === 'botoes'"
+              [disabled]="!formatoBotoesHabilitado"
+              (change)="alterarTipoMensagem('botoes')"
+            />
+            Texto com botões
+          </label>
+        </li>
+      </ul>
+      <p class="var-help" *ngIf="!formatoBotoesHabilitado">
+        A opção com botões está temporariamente indisponível.
+      </p>
       <p class="var-help" *ngIf="modeloComBotoes">
         O destinatário verá o texto abaixo e poderá tocar em uma das opções (até {{ maxBotoes }} botões, {{ maxTextoBotao }} caracteres cada).
       </p>
