@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AutenticacaoService } from '../../service/autenticacao.service';
 import { WhatsappCanal, WhatsappService } from '../../service/whatsapp.service';
@@ -80,6 +80,23 @@ import { WhatsappCanal, WhatsappService } from '../../service/whatsapp.service';
         align-items: flex-end;
         margin-bottom: 1rem;
       }
+      .wa-auto-status {
+        margin: 0.35rem 0 0.75rem;
+        font-size: 0.88rem;
+        color: #475467;
+      }
+      .wa-auto-status strong {
+        color: #1570ef;
+      }
+      .wa-qr-loading {
+        margin-top: 12px;
+        padding: 1rem;
+        border: 1px dashed #84caff;
+        border-radius: 8px;
+        background: #f0f9ff;
+        color: #175cd3;
+        font-size: 0.92rem;
+      }
       @media (max-width: 520px) {
         .wa-actions {
           flex-direction: column;
@@ -96,9 +113,13 @@ import { WhatsappCanal, WhatsappService } from '../../service/whatsapp.service';
     `,
   ],
 })
-export class WhatsappComponent implements OnInit {
+export class WhatsappComponent implements OnInit, OnDestroy {
   private whatsappService = inject(WhatsappService);
   private auth = inject(AutenticacaoService);
+
+  private readonly pollingIntervalMs = 2500;
+  private pollingTimer: ReturnType<typeof setInterval> | null = null;
+  private pollingCanalId: number | null = null;
 
   /** Só o login `admin` pode cadastrar novos celulares/canais. */
   get podeAdicionarCelular(): boolean {
@@ -110,6 +131,8 @@ export class WhatsappComponent implements OnInit {
   desconectando = false;
   trocandoTelefone = false;
   criandoCanal = false;
+  atualizandoStatus = false;
+  pollingAtivo = false;
   erro = '';
   sucesso = '';
 
@@ -122,8 +145,18 @@ export class WhatsappComponent implements OnInit {
     return this.canais.find((c) => c.id === this.canalSelecionadoId) ?? null;
   }
 
+  get aguardandoQrCode(): boolean {
+    const canal = this.canalSelecionado;
+    if (!canal || canal.conectado) return false;
+    return this.pollingAtivo && !canal.qrCode && this.statusEmAndamento(canal.status);
+  }
+
   ngOnInit(): void {
     this.carregarCanais();
+  }
+
+  ngOnDestroy(): void {
+    this.pararPolling();
   }
 
   carregarCanais(selecionarId?: number | null): void {
@@ -141,6 +174,7 @@ export class WhatsappComponent implements OnInit {
           this.canalSelecionadoId = null;
         }
         this.carregando = false;
+        this.sincronizarPollingCanalSelecionado();
       },
       error: (err) => {
         this.erro = err?.error?.message ?? 'Não foi possível carregar os canais WhatsApp.';
@@ -153,6 +187,7 @@ export class WhatsappComponent implements OnInit {
     this.canalSelecionadoId = id;
     this.sucesso = '';
     this.erro = '';
+    this.sincronizarPollingCanalSelecionado();
   }
 
   criarCanal(): void {
@@ -194,17 +229,18 @@ export class WhatsappComponent implements OnInit {
       return;
     }
     this.erro = '';
-    this.sucesso = '';
+    this.sucesso = 'Iniciando conexão…';
     this.conectando = true;
     this.whatsappService.conectarCanal(canal.id, { nomePerfil: canal.nome }).subscribe({
       next: (ret) => {
         this.atualizarCanalNaLista(ret);
-        this.sucesso = ret.message;
         this.conectando = false;
+        this.tratarRetornoAcaoConexao(ret);
       },
       error: (err) => {
         this.erro = err?.error?.message ?? 'Não foi possível conectar o WhatsApp.';
         this.conectando = false;
+        this.pararPolling();
       },
     });
   }
@@ -214,6 +250,7 @@ export class WhatsappComponent implements OnInit {
     if (!canal) return;
     this.erro = '';
     this.sucesso = '';
+    this.pararPolling();
     this.desconectando = true;
     this.whatsappService.desconectarCanal(canal.id).subscribe({
       next: (ret) => {
@@ -238,19 +275,114 @@ export class WhatsappComponent implements OnInit {
     if (!ok) return;
 
     this.erro = '';
-    this.sucesso = '';
+    this.sucesso = 'Preparando novo QR Code…';
     this.trocandoTelefone = true;
     this.whatsappService.trocarTelefoneCanal(canal.id, { nomePerfil: canal.nome }).subscribe({
       next: (ret) => {
         this.atualizarCanalNaLista(ret);
-        this.sucesso = ret.message;
         this.trocandoTelefone = false;
+        this.tratarRetornoAcaoConexao(ret);
       },
       error: (err) => {
         this.erro = err?.error?.message ?? 'Não foi possível trocar o telefone do WhatsApp.';
         this.trocandoTelefone = false;
+        this.pararPolling();
       },
     });
+  }
+
+  private statusEmAndamento(status: string | null | undefined): boolean {
+    const s = String(status ?? '');
+    return s === 'aguardando_qr' || s === 'conectando' || s === 'reconectando';
+  }
+
+  private deveManterPolling(canal: WhatsappCanal | null | undefined): boolean {
+    if (!canal) return false;
+    if (canal.conectado) return false;
+    return this.statusEmAndamento(canal.status) || Boolean(canal.qrCode);
+  }
+
+  private sincronizarPollingCanalSelecionado(): void {
+    const canal = this.canalSelecionado;
+    if (this.deveManterPolling(canal)) {
+      this.iniciarPolling(canal!.id);
+      return;
+    }
+    this.pararPolling();
+  }
+
+  private iniciarPolling(canalId: number): void {
+    if (this.pollingCanalId === canalId && this.pollingTimer) return;
+
+    this.pararPolling();
+    this.pollingCanalId = canalId;
+    this.pollingAtivo = true;
+    this.consultarStatusCanal(canalId);
+    this.pollingTimer = setInterval(() => this.consultarStatusCanal(canalId), this.pollingIntervalMs);
+  }
+
+  private pararPolling(): void {
+    if (this.pollingTimer) {
+      clearInterval(this.pollingTimer);
+      this.pollingTimer = null;
+    }
+    this.pollingCanalId = null;
+    this.pollingAtivo = false;
+    this.atualizandoStatus = false;
+  }
+
+  private consultarStatusCanal(canalId: number): void {
+    this.atualizandoStatus = true;
+    this.whatsappService.statusCanal(canalId).subscribe({
+      next: (ret) => {
+        this.atualizarCanalNaLista(ret);
+        this.atualizandoStatus = false;
+
+        if (ret.conectado) {
+          this.sucesso = ret.numero
+            ? `WhatsApp conectado com sucesso (${ret.numero}).`
+            : 'WhatsApp conectado com sucesso.';
+          this.pararPolling();
+          return;
+        }
+
+        if (ret.qrCode) {
+          this.sucesso = 'Escaneie o QR Code no WhatsApp deste aparelho.';
+          return;
+        }
+
+        if (ret.status === 'conectando' || ret.status === 'reconectando') {
+          this.sucesso = 'Aguardando conexão…';
+          return;
+        }
+
+        if (ret.status === 'desconectado') {
+          this.pararPolling();
+        }
+      },
+      error: () => {
+        this.atualizandoStatus = false;
+      },
+    });
+  }
+
+  private tratarRetornoAcaoConexao(ret: WhatsappCanal & { message?: string }): void {
+    if (ret.conectado) {
+      this.sucesso = ret.numero
+        ? `WhatsApp conectado com sucesso (${ret.numero}).`
+        : ret.message || 'WhatsApp conectado com sucesso.';
+      this.pararPolling();
+      return;
+    }
+
+    if (ret.qrCode) {
+      this.sucesso = ret.message || 'Escaneie o QR Code no WhatsApp deste aparelho.';
+      this.iniciarPolling(ret.id);
+      return;
+    }
+
+    this.sucesso = ret.message || 'Aguardando conexão…';
+    this.iniciarPolling(ret.id);
   }
 
   private atualizarCanalNaLista(ret: WhatsappCanal): void {

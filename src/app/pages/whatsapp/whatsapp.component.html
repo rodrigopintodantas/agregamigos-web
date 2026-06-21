@@ -59,6 +59,18 @@
       </span>
     </p>
     <p class="contador">Número ativo: {{ canalSelecionado.numero || '—' }}</p>
+
+    <p class="wa-auto-status" *ngIf="pollingAtivo">
+      <strong>Atualizando automaticamente</strong>
+      <span *ngIf="atualizandoStatus">…</span>
+      <span *ngIf="!atualizandoStatus">.</span>
+      O QR Code e o status da conexão aparecem aqui sem precisar clicar em atualizar.
+    </p>
+
+    <div class="wa-qr-loading" *ngIf="aguardandoQrCode">
+      Gerando QR Code… Aguarde alguns segundos.
+    </div>
+
     <div *ngIf="canalSelecionado.qrCode" style="margin-top: 12px">
       <p class="contador">Escaneie o QR Code no WhatsApp deste aparelho:</p>
       <img [src]="canalSelecionado.qrCode" alt="QR Code de conexão do WhatsApp" width="280" height="280" />
@@ -75,7 +87,14 @@
         <button type="button" class="btn-sec" [disabled]="desconectando" (click)="desconectar()">
           {{ desconectando ? 'Desconectando...' : 'Desconectar' }}
         </button>
-        <button type="button" class="btn-sec" (click)="carregarCanais(canalSelecionadoId)">Atualizar lista</button>
+        <button
+          type="button"
+          class="btn-sec"
+          [disabled]="carregando"
+          (click)="carregarCanais(canalSelecionadoId)"
+        >
+          {{ carregando ? 'Atualizando...' : 'Atualizar lista' }}
+        </button>
       </div>
       <div class="wa-actions-aside">
         <button
