@@ -100,7 +100,7 @@ export interface DashboardEstatisticas {
 }
 
 export interface LinkCadastroContexto {
-  candidato: { nome: string; slug: string };
+  candidato: { nome: string; slug: string; imagem_og?: string | null };
   coordenadores: { id: number; nome: string }[];
   /** Quando a URL pública envia a chave opaca de divulgação, o backend devolve o id do coordenador já validado. */
   preselected_coordenador_id?: number | null;

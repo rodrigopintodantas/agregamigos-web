@@ -1,5 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, OnInit } from '@angular/core';
+import { Meta, Title } from '@angular/platform-browser';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, ParamMap, RouterLink } from '@angular/router';
 import { combineLatest, distinctUntilChanged, map } from 'rxjs';
@@ -26,6 +27,8 @@ type ViaCepResponse = {
 export class LinkCadastroComponent implements OnInit {
   private pessoaService = inject(PessoaService);
   private route = inject(ActivatedRoute);
+  private title = inject(Title);
+  private meta = inject(Meta);
   candidatoSlug = '';
   candidatoTitulo = 'Cadastro';
   carregandoContexto = true;
@@ -111,6 +114,7 @@ export class LinkCadastroComponent implements OnInit {
         if (this.nomeEvento) {
           this.candidatoTitulo = this.nomeEvento;
         }
+        this.atualizarMetaCompartilhamento(ctx.candidato?.nome ?? slug, ctx.candidato?.imagem_og ?? null);
         this.linkDeCoordenador = this.isLinkDeCoordenador(queryObj);
         this.carregandoContexto = false;
         const pre = ctx.preselected_coordenador_id;
@@ -127,6 +131,28 @@ export class LinkCadastroComponent implements OnInit {
         this.candidatoTitulo = 'Cadastro';
       },
     });
+  }
+
+  private atualizarMetaCompartilhamento(nomeCandidato: string, imagemOg: string | null): void {
+    const nome = (nomeCandidato ?? '').trim() || this.candidatoSlug || 'Cadastro';
+    const titulo = `Cadastro — ${nome}`;
+    const descricao = `Preencha seus dados para se cadastrar na campanha de ${nome}.`;
+
+    this.title.setTitle(titulo);
+    this.meta.updateTag({ name: 'description', content: descricao });
+    this.meta.updateTag({ property: 'og:title', content: titulo });
+    this.meta.updateTag({ property: 'og:description', content: descricao });
+    this.meta.updateTag({ property: 'og:type', content: 'website' });
+
+    const imagem = (imagemOg ?? '').trim();
+    if (imagem) {
+      const origin =
+        typeof globalThis !== 'undefined' && 'location' in globalThis
+          ? (globalThis as unknown as { location: { origin: string } }).location.origin
+          : '';
+      const urlImagem = /^https?:\/\//i.test(imagem) ? imagem : `${origin}${imagem.startsWith('/') ? imagem : `/${imagem}`}`;
+      this.meta.updateTag({ property: 'og:image', content: urlImagem });
+    }
   }
 
   private isLinkDeCoordenador(queryObj: Record<string, string>): boolean {
