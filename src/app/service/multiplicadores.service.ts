@@ -38,6 +38,7 @@ export interface MultiplicadoresPainelResponse {
   };
   coordenadores: MultiplicadorCoordenadorItem[];
   comparativo: MultiplicadorComparativoItem[];
+  distribuicao_coordenador: MultiplicadorComparativoItem[];
   comparativo_eventos: MultiplicadorComparativoEventoItem[];
   evolucao_mensal: {
     meses: string[];

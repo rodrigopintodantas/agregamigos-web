@@ -44,4 +44,116 @@
 
   <p class="msg erro" *ngIf="erro">{{ erro }}</p>
   <p class="msg sucesso" *ngIf="sucesso">{{ sucesso }}</p>
+
+  <p class="msg" *ngIf="carregandoUsuarios">Carregando usuários…</p>
+  <p class="msg erro" *ngIf="!carregandoUsuarios && erroLista">{{ erroLista }}</p>
+  <p class="msg erro" *ngIf="!carregandoBairros && erroBairros">{{ erroBairros }}</p>
+
+  <div class="table-wrap" *ngIf="!carregandoUsuarios && !erroLista">
+    <table *ngIf="usuarios.length">
+      <thead>
+        <tr>
+          <th>Nome</th>
+          <th>Login</th>
+          <th>Perfil</th>
+          <th>Vincular Bairro</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let usuario of usuarios">
+          <td class="td-nome">{{ usuario.nome }}</td>
+          <td>{{ usuario.login }}</td>
+          <td>
+            <span class="badge-perfil">{{ usuario.papel.nome }}</span>
+          </td>
+          <td class="td-bairro">
+            <ng-container *ngIf="ehCoordenador(usuario); else semVinculoBairro">
+              <div class="bairro-col-wrap">
+                <button
+                  type="button"
+                  class="filtro-dropdown-trigger"
+                  [class.ativo]="painelBairroAbertoPara(usuario) || (usuario.bairros?.length ?? 0) > 0"
+                  [disabled]="carregandoBairros || salvandoBairrosUsuarioId === usuario.id"
+                  [attr.aria-expanded]="painelBairroAbertoPara(usuario)"
+                  [attr.aria-haspopup]="true"
+                  (click)="alternarPainelBairro(usuario, $event)"
+                >
+                  <span class="filtro-resumo">
+                    {{
+                      salvandoBairrosUsuarioId === usuario.id ? 'Salvando…' : resumoBairros(usuario)
+                    }}
+                  </span>
+                  <span class="filtro-caret" aria-hidden="true"></span>
+                </button>
+                <p class="erro-bairro-linha" *ngIf="erroBairrosPorUsuario[usuario.id]">
+                  {{ erroBairrosPorUsuario[usuario.id] }}
+                </p>
+              </div>
+            </ng-container>
+            <ng-template #semVinculoBairro>
+              <span class="bairro-na">—</span>
+            </ng-template>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="msg vazio" *ngIf="!usuarios.length">Nenhum usuário vinculado a este candidato.</p>
+  </div>
+
+  <ng-container *ngIf="bairroPainelUsuarioId != null">
+    <div
+      *ngIf="bairroPainelEstilo"
+      class="filtro-dropdown-panel filtro-dropdown-panel--portal cu-bairro-panel"
+      [ngStyle]="bairroPainelEstilo"
+      (click)="$event.stopPropagation()"
+      role="listbox"
+      aria-label="Vincular bairros ao coordenador"
+    >
+      <div class="filtro-dropdown-busca-wrap">
+        <span class="filtro-dropdown-busca-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+          </svg>
+        </span>
+        <input
+          type="search"
+          class="filtro-dropdown-busca-input"
+          placeholder="Pesquisar bairros…"
+          [(ngModel)]="termoBuscaBairro"
+          (click)="$event.stopPropagation()"
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="Pesquisar bairros"
+        />
+      </div>
+      <p class="filtro-dropdown-hint">Marque um ou mais bairros com pessoas cadastradas.</p>
+      <div class="filtro-dropdown-scroll">
+        <label *ngFor="let item of opcoesBairroFiltradas()" class="filtro-opcao">
+          <input
+            type="checkbox"
+            [checked]="usuarioPainelBairro && bairroMarcado(usuarioPainelBairro, item.bairro)"
+            (change)="usuarioPainelBairro && alternarBairroUsuario(usuarioPainelBairro, item.bairro)"
+          />
+          <span>{{ item.bairro }} ({{ item.quantidade }})</span>
+        </label>
+        <p *ngIf="opcoesBairroFiltradas().length === 0" class="filtro-dropdown-vazio">
+          {{
+            termoBuscaBairro.trim()
+              ? 'Nenhum bairro corresponde à busca.'
+              : 'Nenhum bairro com pessoas cadastradas.'
+          }}
+        </p>
+      </div>
+      <div class="filtro-dropdown-rodape">
+        <button
+          type="button"
+          class="filtro-link"
+          (click)="usuarioPainelBairro && limparBairrosUsuario(usuarioPainelBairro, $event)"
+        >
+          Limpar seleção
+        </button>
+      </div>
+    </div>
+  </ng-container>
 </section>

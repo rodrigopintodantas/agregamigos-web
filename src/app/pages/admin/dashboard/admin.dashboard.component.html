@@ -14,11 +14,21 @@
   <div class="ad-dash-grid" *ngIf="!carregando && !erro">
     <div class="ad-dash-row-top">
       <div class="ad-dash-col ad-dash-col--stack">
+      <article
+        *ngIf="auth.isCoordenador()"
+        class="ad-box ad-box--cadastros ad-box--responsavel"
+        aria-labelledby="box-cadastros-responsavel-title"
+      >
+        <h2 id="box-cadastros-responsavel-title" class="ad-box-title">Pessoas</h2>
+        <p class="ad-box-metric" aria-live="polite">{{ totalCadastrosResponsavel }}</p>
+        <p class="ad-box-hint">Pessoas em que você é o coordenador neste candidato.</p>
+      </article>
+
       <article class="ad-box ad-box--cadastros" aria-labelledby="box-cadastros-title">
         <h2 id="box-cadastros-title" class="ad-box-title">Quantidade de Cadastros</h2>
         <p class="ad-box-metric" aria-live="polite">{{ totalCadastros }}</p>
         <p class="ad-box-hint" *ngIf="auth.isCoordenador()">
-          Pessoas em que você é o coordenador neste candidato.
+          Pessoas que se cadastraram com o seu link.
         </p>
         <p class="ad-box-hint" *ngIf="!auth.isCoordenador()">Total de pessoas cadastradas</p>
       </article>

@@ -18,6 +18,7 @@ export class AdminDashboardComponent implements OnInit {
   private router = inject(Router);
 
   totalCadastros = 0;
+  totalCadastrosResponsavel = 0;
   topBairros: BairroQuantidade[] = [];
   aniversariantesHoje: { id: number; nome: string; whatsapp: string }[] = [];
   dialogAniversariantesAberto = false;
@@ -87,6 +88,7 @@ export class AdminDashboardComponent implements OnInit {
     this.pessoaService.estatisticas().subscribe({
       next: (data) => {
         this.totalCadastros = data.total_cadastros;
+        this.totalCadastrosResponsavel = data.total_cadastros_responsavel ?? 0;
         this.topBairros = data.bairros ?? [];
         this.carregando = false;
       },

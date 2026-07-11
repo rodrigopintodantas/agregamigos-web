@@ -51,6 +51,10 @@ export class MultiplicadoresComponent implements OnInit {
     return this.painel?.comparativo ?? [];
   }
 
+  get distribuicaoCoordenador(): MultiplicadorComparativoItem[] {
+    return this.painel?.distribuicao_coordenador ?? [];
+  }
+
   get comparativoEventos(): MultiplicadorComparativoEventoItem[] {
     return this.painel?.comparativo_eventos ?? [];
   }
@@ -71,12 +75,20 @@ export class MultiplicadoresComponent implements OnInit {
     return this.maxBarraTotal(this.comparativo.map((c) => c.total));
   }
 
+  get maxDistribuicaoCoordenador(): number {
+    return this.maxBarraTotal(this.distribuicaoCoordenador.map((c) => c.total));
+  }
+
   get maxComparativoEventos(): number {
     return this.maxBarraTotal(this.comparativoEventos.map((e) => e.total));
   }
 
   percBarraComparativo(total: number): number {
     return this.percBarra(total, this.maxComparativo);
+  }
+
+  percBarraDistribuicaoCoordenador(total: number): number {
+    return this.percBarra(total, this.maxDistribuicaoCoordenador);
   }
 
   percBarraComparativoEvento(total: number): number {
@@ -144,6 +156,10 @@ export class MultiplicadoresComponent implements OnInit {
   }
 
   trackByComparativo(_: number, c: MultiplicadorComparativoItem): number {
+    return c.coordenador_id;
+  }
+
+  trackByDistribuicaoCoordenador(_: number, c: MultiplicadorComparativoItem): number {
     return c.coordenador_id;
   }
 

@@ -96,6 +96,7 @@ export interface BairroQuantidade {
 
 export interface DashboardEstatisticas {
   total_cadastros: number;
+  total_cadastros_responsavel?: number | null;
   bairros: BairroQuantidade[];
 }
 

@@ -80,7 +80,7 @@ import { LayoutUiService } from '../service/layout-ui.service';
         <a
           [routerLink]="auth.routerSegments('admin', 'criar-usuario')"
           routerLinkActive="active-route"
-          [attr.title]="ui.sidebarCollapsed() ? 'Criar usuário' : null"
+          [attr.title]="ui.sidebarCollapsed() ? 'Usuários' : null"
           (click)="ui.closeMobileMenu()"
         >
           <span class="menu-icon" aria-hidden="true">
@@ -88,7 +88,7 @@ import { LayoutUiService } from '../service/layout-ui.service';
               <path d="M11 5h2v6h6v2h-6v6h-2v-6H5v-2h6z"></path>
             </svg>
           </span>
-          <span class="menu-label">Criar usuário</span>
+          <span class="menu-label">Usuários</span>
         </a>
       </li>
       <li *ngIf="auth.isAdmin()">
