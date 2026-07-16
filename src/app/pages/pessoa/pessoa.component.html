@@ -340,7 +340,14 @@
   <label>Logradouro <input [(ngModel)]="form.endereco!.logradouro" /></label>
   <label>Complemento <input [(ngModel)]="form.endereco!.complemento" /></label>
   <div class="grid">
-    <label>Bairro <input [(ngModel)]="form.endereco!.bairro" /></label>
+    <label>
+      Bairro
+      <select [(ngModel)]="form.endereco!.bairro">
+        <option [ngValue]="null">Selecione um bairro</option>
+        <option *ngIf="bairroDetectadoCep" [value]="bairroDetectadoCep">{{ bairroDetectadoCep }}</option>
+        <option *ngFor="let bairro of bairrosDistritoFederal" [value]="bairro">{{ bairro }}</option>
+      </select>
+    </label>
     <label>Cidade <input [(ngModel)]="form.endereco!.cidade" /></label>
   </div>
   <div class="grid">

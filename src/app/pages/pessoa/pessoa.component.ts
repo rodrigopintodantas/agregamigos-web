@@ -10,6 +10,7 @@ import {
   RegistroNaoImportadoCsv,
 } from '../../service/pessoa.service';
 import { AutenticacaoService } from '../../service/autenticacao.service';
+import { BAIRROS_DISTRITO_FEDERAL } from '../../data/bairros-distrito-federal';
 import {
   lerArquivoTextoCsv,
   normalizarCabecalhoCsv,
@@ -94,6 +95,8 @@ export class PessoaComponent implements OnInit, OnDestroy {
     { value: 'negativo', label: 'Negativo' },
     { value: 'neutro', label: 'Neutro' },
   ];
+  readonly bairrosDistritoFederal = [...BAIRROS_DISTRITO_FEDERAL];
+  bairroDetectadoCep: string | null = null;
 
   form: PessoaPayload = {
     nome: '',
@@ -207,6 +210,7 @@ export class PessoaComponent implements OnInit, OnDestroy {
     this.dialogAberto = true;
     this.erroDialog = '';
     this.editandoId = null;
+    this.bairroDetectadoCep = null;
     this.form = {
       nome: '',
       data_nascimento: null,
@@ -468,6 +472,7 @@ export class PessoaComponent implements OnInit, OnDestroy {
     this.dialogAberto = true;
     this.erroDialog = '';
     this.editandoId = pessoa.id;
+    const bairro = this.mapearBairroCepParaLista(pessoa.endereco?.bairro ?? null);
     this.form = {
       nome: pessoa.nome ?? '',
       data_nascimento: pessoa.data_nascimento ?? null,
@@ -481,7 +486,7 @@ export class PessoaComponent implements OnInit, OnDestroy {
         logradouro: pessoa.endereco?.logradouro ?? null,
         numero: pessoa.endereco?.numero ?? null,
         complemento: pessoa.endereco?.complemento ?? null,
-        bairro: pessoa.endereco?.bairro ?? null,
+        bairro,
         cidade: pessoa.endereco?.cidade ?? null,
         uf: pessoa.endereco?.uf ?? null,
         ibge: pessoa.endereco?.ibge ?? null,
@@ -492,6 +497,7 @@ export class PessoaComponent implements OnInit, OnDestroy {
   fecharDialog(): void {
     this.dialogAberto = false;
     this.editandoId = null;
+    this.bairroDetectadoCep = null;
   }
 
   fecharDialogDuplicados(): void {
@@ -654,7 +660,7 @@ export class PessoaComponent implements OnInit, OnDestroy {
         cep,
         logradouro: data.logradouro ?? null,
         complemento: data.complemento ?? null,
-        bairro: data.bairro ?? null,
+        bairro: this.mapearBairroCepParaLista(data.bairro ?? null),
         cidade: data.localidade ?? null,
         uf: data.uf ?? null,
         ibge: data.ibge ?? null,
@@ -663,6 +669,30 @@ export class PessoaComponent implements OnInit, OnDestroy {
     } catch {
       this.erroDialog = 'Não foi possível consultar o CEP.';
     }
+  }
+
+  private normalizarBairro(value: string): string {
+    return String(value ?? '')
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim();
+  }
+
+  private mapearBairroCepParaLista(bairro: string | null): string | null {
+    const normalizado = this.normalizarBairro(bairro ?? '');
+    if (!normalizado) return null;
+    const encontrado = this.bairrosDistritoFederal.find(
+      (item) => this.normalizarBairro(item) === normalizado,
+    );
+    if (encontrado) {
+      this.bairroDetectadoCep = null;
+      return encontrado;
+    }
+
+    const valorOriginal = String(bairro ?? '').trim();
+    this.bairroDetectadoCep = valorOriginal || null;
+    return this.bairroDetectadoCep;
   }
 
   salvar(): void {
