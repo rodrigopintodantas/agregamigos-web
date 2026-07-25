@@ -11,6 +11,7 @@ import { AutenticacaoService } from '../../service/autenticacao.service';
 import { ModeloMensagem, ModeloMensagemService } from '../../service/modelo-mensagem.service';
 import { EngajamentoWhatsapp, PessoaItem, PessoaService } from '../../service/pessoa.service';
 import { EventoService } from '../../service/evento.service';
+import { GrupoService } from '../../service/grupo.service';
 import { WhatsappCanal, WhatsappService } from '../../service/whatsapp.service';
 
 type ItemCampanha = {
@@ -34,6 +35,7 @@ export class DivulgacaoComponent implements OnInit {
   private campanhaService = inject(CampanhaDivulgacaoService);
   private whatsappService = inject(WhatsappService);
   private eventoService = inject(EventoService);
+  private grupoService = inject(GrupoService);
   private auth = inject(AutenticacaoService);
   private route = inject(ActivatedRoute);
 
@@ -96,22 +98,30 @@ export class DivulgacaoComponent implements OnInit {
   sucesso = '';
   modoAniversariantes = false;
   modoEvento = false;
+  modoGrupo = false;
   eventoIdAlvo: number | null = null;
   eventoNomeAlvo = '';
+  grupoIdAlvo: number | null = null;
+  grupoNomeAlvo = '';
   dataAniversariantesLabel = '';
   aniversarianteIdsAlvo = new Set<number>();
   eventoPessoaIdsAlvo = new Set<number>();
+  grupoPessoaIdsAlvo = new Set<number>();
 
   ngOnInit(): void {
     this.route.queryParamMap.subscribe((params) => {
       this.modoAniversariantes = params.get('aniversariantes') === '1';
       this.modoEvento = params.get('evento_campanha') === '1';
+      this.modoGrupo = params.get('grupo_campanha') === '1';
       this.eventoIdAlvo = this.parseIdUnico(params.get('evento_id'));
       this.eventoNomeAlvo = String(params.get('evento_nome') ?? '').trim();
+      this.grupoIdAlvo = this.parseIdUnico(params.get('grupo_id'));
+      this.grupoNomeAlvo = String(params.get('grupo_nome') ?? '').trim();
       this.dataAniversariantesLabel = this.normalizarDataLabelAniversariantes(params.get('data'));
       this.aniversarianteIdsAlvo = this.parseIds(params.get('aniversariante_ids'));
       this.eventoPessoaIdsAlvo = new Set<number>();
-      if (this.modoAniversariantes || this.modoEvento) {
+      this.grupoPessoaIdsAlvo = new Set<number>();
+      if (this.modoAniversariantes || this.modoEvento || this.modoGrupo) {
         this.abrirCriacao();
       }
     });
@@ -152,6 +162,8 @@ export class DivulgacaoComponent implements OnInit {
       this.nomeCampanha = `Aniversariantes do dia ${this.dataAniversariantesLabel}`;
     } else if (this.modoEvento && this.eventoNomeAlvo) {
       this.nomeCampanha = `Evento: ${this.eventoNomeAlvo}`;
+    } else if (this.modoGrupo && this.grupoNomeAlvo) {
+      this.nomeCampanha = `Grupo: ${this.grupoNomeAlvo}`;
     }
     this.whatsappCanalIdSelecionado = null;
     this.canaisWhatsapp = [];
@@ -160,8 +172,9 @@ export class DivulgacaoComponent implements OnInit {
     let modelosOk = false;
     let canaisOk = false;
     let eventoOk = !this.modoEvento || !this.eventoIdAlvo;
+    let grupoOk = !this.modoGrupo || !this.grupoIdAlvo;
     const finalizar = () => {
-      if (pessoasOk && modelosOk && canaisOk && eventoOk) this.carregandoCriacao = false;
+      if (pessoasOk && modelosOk && canaisOk && eventoOk && grupoOk) this.carregandoCriacao = false;
     };
 
     this.pessoaService.listar().subscribe({
@@ -174,6 +187,12 @@ export class DivulgacaoComponent implements OnInit {
         } else if (this.modoEvento && this.eventoIdAlvo) {
           this.preselecionarPessoasEvento(() => {
             eventoOk = true;
+            pessoasOk = true;
+            finalizar();
+          });
+        } else if (this.modoGrupo && this.grupoIdAlvo) {
+          this.preselecionarPessoasGrupo(() => {
+            grupoOk = true;
             pessoasOk = true;
             finalizar();
           });
@@ -238,6 +257,10 @@ export class DivulgacaoComponent implements OnInit {
     return this.modoEvento;
   }
 
+  get campanhaGrupoAtiva(): boolean {
+    return this.modoGrupo;
+  }
+
   labelCanalWhatsapp(canal: WhatsappCanal): string {
     const status = canal.conectado ? 'conectado' : canal.status || 'desconectado';
     const numero = canal.numero ? ` · ${canal.numero}` : '';
@@ -259,6 +282,9 @@ export class DivulgacaoComponent implements OnInit {
         return false;
       }
       if (this.campanhaEventoAtiva && !this.eventoPessoaIdsAlvo.has(p.id)) {
+        return false;
+      }
+      if (this.campanhaGrupoAtiva && !this.grupoPessoaIdsAlvo.has(p.id)) {
         return false;
       }
       const nomeOk = !nome || String(p.nome ?? '').toLowerCase().includes(nome);
@@ -293,6 +319,9 @@ export class DivulgacaoComponent implements OnInit {
     if (this.campanhaEventoAtiva) {
       return this.eventoPessoaIdsAlvo.has(p.id);
     }
+    if (this.campanhaGrupoAtiva) {
+      return this.grupoPessoaIdsAlvo.has(p.id);
+    }
     return true;
   }
 
@@ -305,6 +334,9 @@ export class DivulgacaoComponent implements OnInit {
     }
     if (this.campanhaEventoAtiva && !this.eventoPessoaIdsAlvo.has(p.id)) {
       return 'Fora dos inscritos do evento';
+    }
+    if (this.campanhaGrupoAtiva && !this.grupoPessoaIdsAlvo.has(p.id)) {
+      return 'Fora dos membros do grupo';
     }
     return '';
   }
@@ -908,6 +940,42 @@ export class DivulgacaoComponent implements OnInit {
       },
       error: () => {
         this.erro = 'Não foi possível carregar os inscritos do evento para a campanha.';
+        onDone?.();
+      },
+    });
+  }
+
+  private preselecionarPessoasGrupo(onDone?: () => void): void {
+    const grupoId = this.grupoIdAlvo;
+    if (!grupoId) {
+      onDone?.();
+      return;
+    }
+
+    this.grupoService.detalhe(grupoId).subscribe({
+      next: (det) => {
+        if (!this.grupoNomeAlvo) {
+          this.grupoNomeAlvo = det.nome;
+        }
+        this.nomeCampanha = `Grupo: ${this.grupoNomeAlvo || det.nome}`;
+
+        const idsMembros = new Set<number>();
+        for (const membro of det.inscritos ?? []) {
+          if (!this.normalizarWhatsapp(membro.whatsapp)) continue;
+          idsMembros.add(membro.id);
+        }
+        this.grupoPessoaIdsAlvo = idsMembros;
+
+        this.selecionadosPessoas.clear();
+        for (const p of this.pessoas) {
+          if (idsMembros.has(p.id) && this.pessoaSelecionavel(p)) {
+            this.selecionadosPessoas.add(p.id);
+          }
+        }
+        onDone?.();
+      },
+      error: () => {
+        this.erro = 'Não foi possível carregar os membros do grupo para a campanha.';
         onDone?.();
       },
     });

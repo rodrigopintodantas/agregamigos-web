@@ -570,6 +570,40 @@
   border: 1px solid #eaecf0;
 }
 
+.dialog-pessoa {
+  display: flex;
+  flex-direction: column;
+  max-height: min(90dvh, 720px);
+  padding: 0;
+  overflow: hidden;
+}
+
+.dialog-pessoa-head {
+  flex-shrink: 0;
+  padding: 1rem 1rem 0.65rem;
+  border-bottom: 1px solid #eaecf0;
+
+  h3 {
+    margin: 0;
+  }
+}
+
+.dialog-pessoa-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.85rem 1rem;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dialog-pessoa-actions {
+  flex-shrink: 0;
+  margin: 0 !important;
+  padding: 0.75rem 1rem 1rem;
+  border-top: 1px solid #eaecf0;
+  background: #fff;
+}
+
 .dialog label {
   display: flex;
   flex-direction: column;
@@ -632,6 +666,206 @@
   grid-column: 1 / -1;
 }
 
+.campo-grupos {
+  margin: 0.35rem 0 0.75rem;
+}
+
+.campo-grupos-label {
+  display: block;
+  font-size: 0.85rem;
+  color: #344054;
+  margin-bottom: 0.2rem;
+}
+
+.campo-grupos-hint,
+.campo-grupos-vazio {
+  margin: 0 0 0.45rem;
+  font-size: 0.78rem;
+  color: #667085;
+}
+
+.dropdown-grupos-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.dropdown-grupos-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  background: #fff;
+  color: #475467;
+  font-size: 0.88rem;
+  padding: 0.52rem 0.65rem;
+  cursor: pointer;
+  text-align: left;
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  &:hover:not(:disabled) {
+    border-color: #98a2b3;
+    background: #f9fafb;
+  }
+
+  &.ativo {
+    border-color: var(--color-brand-500, #7c3aed);
+    background: #f5f3ff;
+    color: #344054;
+  }
+}
+
+.dropdown-grupos-resumo {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdown-grupos-caret {
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 6px solid #667085;
+}
+
+.dropdown-grupos-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid #eaecf0;
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12);
+}
+
+.dropdown-grupos-busca-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0.5rem 0;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  background: #fff;
+}
+
+.dropdown-grupos-busca-icon {
+  width: 0.9rem;
+  height: 0.9rem;
+  color: #667085;
+  display: inline-flex;
+  flex-shrink: 0;
+
+  svg {
+    width: 100%;
+    height: 100%;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+}
+
+.dropdown-grupos-busca-input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: #344054;
+  background: transparent;
+  padding: 0 !important;
+
+  &::placeholder {
+    color: #98a2b3;
+  }
+}
+
+.dropdown-grupos-hint {
+  margin: 0.4rem 0.5rem 0.15rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #667085;
+}
+
+.dropdown-grupos-scroll {
+  max-height: 11rem;
+  overflow: auto;
+  padding: 0.25rem 0.5rem 0.45rem;
+}
+
+.dropdown-grupos-opcao {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #344054;
+  padding: 0.3rem 0;
+  cursor: pointer;
+  user-select: none;
+  margin: 0 !important;
+
+  input {
+    margin-top: 0.15rem;
+    flex-shrink: 0;
+    cursor: pointer;
+    width: auto;
+  }
+
+  span {
+    flex: 1;
+    min-width: 0;
+    word-break: break-word;
+  }
+
+  small {
+    color: #98a2b3;
+  }
+}
+
+.dropdown-grupos-vazio {
+  margin: 0.35rem 0;
+  font-size: 0.8rem;
+  color: #667085;
+  text-align: center;
+}
+
+.dropdown-grupos-rodape {
+  border-top: 1px solid #eaecf0;
+  padding: 0.4rem 0.5rem;
+}
+
+.dropdown-grupos-link {
+  border: 0;
+  background: none;
+  color: var(--color-brand-500, #7c3aed);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
 .actions {
   margin-top: 0.8rem;
   display: flex;
@@ -689,5 +923,9 @@
     max-height: min(90dvh, 92vh);
     overflow: auto;
     box-sizing: border-box;
+  }
+
+  .dialog-pessoa {
+    overflow: hidden;
   }
 }

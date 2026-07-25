@@ -309,9 +309,12 @@
   *ngIf="dialogAberto || dialogDuplicadosAberto"
   (click)="dialogAberto ? fecharDialog() : fecharDialogDuplicados()"
 ></div>
-<section class="dialog" *ngIf="dialogAberto" (click)="$event.stopPropagation()">
-  <h3>{{ editandoId ? 'Editar Pessoa' : 'Adicionar Pessoa' }}</h3>
+<section class="dialog dialog-pessoa" *ngIf="dialogAberto" (click)="$event.stopPropagation()">
+  <header class="dialog-pessoa-head">
+    <h3>{{ editandoId ? 'Editar Pessoa' : 'Adicionar Pessoa' }}</h3>
+  </header>
 
+  <div class="dialog-pessoa-body">
   <label>Nome <input [(ngModel)]="form.nome" /></label>
   <div class="grid">
     <label>Data de nascimento <input type="date" [(ngModel)]="form.data_nascimento" /></label>
@@ -354,8 +357,77 @@
     <label>UF <input [(ngModel)]="form.endereco!.uf" /></label>
   </div>
 
+  <div class="campo-grupos" *ngIf="editandoId">
+    <span class="campo-grupos-label">Grupos</span>
+    <p class="campo-grupos-hint" *ngIf="gruposParaEdicao().length">Selecione um ou mais grupos.</p>
+    <div class="dropdown-grupos-wrap" *ngIf="gruposParaEdicao().length; else semGruposCadastro">
+      <button
+        type="button"
+        class="dropdown-grupos-trigger"
+        [class.ativo]="dropdownGruposAberto || (form.id_grupos?.length ?? 0) > 0"
+        [attr.aria-expanded]="dropdownGruposAberto"
+        [attr.aria-haspopup]="true"
+        [disabled]="salvando"
+        (click)="alternarDropdownGrupos($event)"
+      >
+        <span class="dropdown-grupos-resumo">{{ resumoGruposSelecionados() }}</span>
+        <span class="dropdown-grupos-caret" aria-hidden="true"></span>
+      </button>
+      <div
+        *ngIf="dropdownGruposAberto"
+        class="dropdown-grupos-panel"
+        (click)="$event.stopPropagation()"
+        role="listbox"
+        aria-label="Selecionar grupos"
+      >
+        <div class="dropdown-grupos-busca-wrap">
+          <span class="dropdown-grupos-busca-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" focusable="false">
+              <circle cx="11" cy="11" r="7"></circle>
+              <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+            </svg>
+          </span>
+          <input
+            type="search"
+            class="dropdown-grupos-busca-input"
+            placeholder="Pesquisar grupos…"
+            [(ngModel)]="buscaGrupo"
+            (click)="$event.stopPropagation()"
+            autocomplete="off"
+            spellcheck="false"
+            aria-label="Pesquisar grupos"
+          />
+        </div>
+        <p class="dropdown-grupos-hint">Marque um ou mais grupos.</p>
+        <div class="dropdown-grupos-scroll">
+          <label *ngFor="let g of gruposFiltrados()" class="dropdown-grupos-opcao">
+            <input
+              type="checkbox"
+              [checked]="grupoSelecionado(g.id)"
+              (change)="alternarGrupo(g.id, $any($event.target).checked)"
+            />
+            <span>{{ g.nome }}<small *ngIf="g.status !== 'ativo'"> (encerrado)</small></span>
+          </label>
+          <p *ngIf="gruposFiltrados().length === 0" class="dropdown-grupos-vazio">
+            Nenhum grupo corresponde à busca.
+          </p>
+        </div>
+        <div class="dropdown-grupos-rodape">
+          <button type="button" class="dropdown-grupos-link" (click)="limparGrupos($event)">
+            Limpar seleção
+          </button>
+        </div>
+      </div>
+    </div>
+    <ng-template #semGruposCadastro>
+      <p class="campo-grupos-vazio">Nenhum grupo cadastrado ainda. Crie grupos em Menu → Grupos.</p>
+    </ng-template>
+  </div>
+
   <p class="erro" *ngIf="erroDialog">{{ erroDialog }}</p>
-  <div class="actions">
+  </div>
+
+  <div class="dialog-pessoa-actions actions">
     <button type="button" class="ghost" (click)="fecharDialog()">Cancelar</button>
     <button type="button" [disabled]="salvando" (click)="salvar()">{{ salvando ? 'Salvando...' : 'Salvar' }}</button>
   </div>

@@ -270,6 +270,9 @@
       <p class="campo-ajuda" *ngIf="campanhaEventoAtiva">
         Modo evento: inscritos com WhatsApp do evento <strong>{{ eventoNomeAlvo || 'selecionado' }}</strong> já vêm marcados.
       </p>
+      <p class="campo-ajuda" *ngIf="campanhaGrupoAtiva">
+        Modo grupo: membros com WhatsApp do grupo <strong>{{ grupoNomeAlvo || 'selecionado' }}</strong> já vêm marcados.
+      </p>
       <div class="filtros">
         <input [(ngModel)]="filtroNome" placeholder="Filtrar por nome" />
         <select [(ngModel)]="filtroBairro">

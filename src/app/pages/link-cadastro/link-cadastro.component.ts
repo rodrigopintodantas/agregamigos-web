@@ -43,6 +43,15 @@ export class LinkCadastroComponent implements OnInit {
   avisoCoordenadorUrl = '';
   tokenEvento = '';
   nomeEvento = '';
+  tokenGrupo = '';
+  nomeGrupo = '';
+  /** Nome do candidato (sempre, inclusive em links de grupo). */
+  nomeCandidato = '';
+
+  /** Link de grupo: formulário reduzido (nome, WhatsApp, bairro, LGPD). */
+  get formularioGrupoSimplificado(): boolean {
+    return Boolean(this.tokenGrupo) && !this.tokenEvento;
+  }
 
   ngOnInit(): void {
     combineLatest([
@@ -69,6 +78,9 @@ export class LinkCadastroComponent implements OnInit {
         this.linkDeCoordenador = false;
         this.tokenEvento = '';
         this.nomeEvento = '';
+        this.tokenGrupo = '';
+        this.nomeGrupo = '';
+        this.nomeCandidato = '';
         this.candidatoSlug = slug;
 
         if (!slug) {
@@ -107,14 +119,18 @@ export class LinkCadastroComponent implements OnInit {
     this.pessoaService.contextoLinkCadastro(slug, queryObj).subscribe({
       next: (ctx) => {
         this.candidatoTitulo = (ctx.candidato?.nome ?? '').trim() || slug;
+        this.nomeCandidato = this.candidatoTitulo;
         this.coordenadores = Array.isArray(ctx.coordenadores) ? ctx.coordenadores : [];
         this.idCoordenadorSelecionado = null;
         this.tokenEvento = ctx.evento?.token_cadastro ?? queryObj['evento']?.trim() ?? '';
         this.nomeEvento = ctx.evento?.nome?.trim() ?? '';
+        this.tokenGrupo = ctx.grupo?.token_cadastro ?? queryObj['grupo']?.trim() ?? '';
+        this.nomeGrupo = ctx.grupo?.nome?.trim() ?? '';
         if (this.nomeEvento) {
           this.candidatoTitulo = this.nomeEvento;
         }
-        this.atualizarMetaCompartilhamento(ctx.candidato?.nome ?? slug, ctx.candidato?.imagem_og ?? null);
+        // Links de grupo mantêm o nome do candidato no título.
+        this.atualizarMetaCompartilhamento(this.nomeCandidato || slug, ctx.candidato?.imagem_og ?? null);
         this.linkDeCoordenador = this.isLinkDeCoordenador(queryObj);
         this.carregandoContexto = false;
         const pre = ctx.preselected_coordenador_id;
@@ -161,7 +177,7 @@ export class LinkCadastroComponent implements OnInit {
   }
 
   private temChaveDivulgacaoNaQuery(queryObj: Record<string, string>): boolean {
-    const reservados = new Set(['coordenador', 'evento']);
+    const reservados = new Set(['coordenador', 'evento', 'grupo']);
     for (const k of Object.keys(queryObj)) {
       if (!k || reservados.has(k)) continue;
       if (String(queryObj[k] ?? '').trim() !== '') continue;
@@ -312,20 +328,44 @@ export class LinkCadastroComponent implements OnInit {
       return;
     }
     this.salvando = true;
-    const payload: PessoaPayload = {
-      ...this.form,
-      id_coordenador: this.idCoordenadorSelecionado ?? null,
-      token_evento: this.tokenEvento || null,
-      whatsapp: this.form.whatsapp ? this.form.whatsapp.replace(/\D/g, '') : null,
-      endereco: {
-        ...this.form.endereco,
-        cep: this.form.endereco?.cep ? this.form.endereco.cep.replace(/\D/g, '') : null,
-      },
-      consentimento: {
-        aceito: true,
-        termo_versao: this.termoConsentimentoVersao,
-      },
-    };
+    const payload: PessoaPayload = this.formularioGrupoSimplificado
+      ? {
+          nome: this.form.nome,
+          data_nascimento: null,
+          email: null,
+          whatsapp: this.form.whatsapp ? this.form.whatsapp.replace(/\D/g, '') : null,
+          instagram: null,
+          id_coordenador: this.idCoordenadorSelecionado ?? null,
+          token_evento: null,
+          token_grupo: this.tokenGrupo || null,
+          endereco: {
+            cep: null,
+            logradouro: null,
+            bairro: this.form.endereco?.bairro ?? null,
+            cidade: null,
+            uf: null,
+            ibge: null,
+          },
+          consentimento: {
+            aceito: true,
+            termo_versao: this.termoConsentimentoVersao,
+          },
+        }
+      : {
+          ...this.form,
+          id_coordenador: this.idCoordenadorSelecionado ?? null,
+          token_evento: this.tokenEvento || null,
+          token_grupo: this.tokenGrupo || null,
+          whatsapp: this.form.whatsapp ? this.form.whatsapp.replace(/\D/g, '') : null,
+          endereco: {
+            ...this.form.endereco,
+            cep: this.form.endereco?.cep ? this.form.endereco.cep.replace(/\D/g, '') : null,
+          },
+          consentimento: {
+            aceito: true,
+            termo_versao: this.termoConsentimentoVersao,
+          },
+        };
 
     this.pessoaService.criarPorLink(this.candidatoSlug, payload).subscribe({
       next: () => {

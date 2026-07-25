@@ -11,6 +11,7 @@ import {
 } from '../../service/pessoa.service';
 import { AutenticacaoService } from '../../service/autenticacao.service';
 import { BAIRROS_DISTRITO_FEDERAL } from '../../data/bairros-distrito-federal';
+import { GrupoItem, GrupoService } from '../../service/grupo.service';
 import {
   lerArquivoTextoCsv,
   normalizarCabecalhoCsv,
@@ -53,6 +54,7 @@ type ViaCepResponse = {
 })
 export class PessoaComponent implements OnInit, OnDestroy {
   private pessoaService = inject(PessoaService);
+  private grupoService = inject(GrupoService);
   auth = inject(AutenticacaoService);
 
   /** Painel de filtro ancorado na viewport (fora do overflow da tabela). */
@@ -105,6 +107,7 @@ export class PessoaComponent implements OnInit, OnDestroy {
     whatsapp: null,
     instagram: null,
     indicacao: null,
+    id_grupos: [],
     endereco: {
       cep: null,
       logradouro: null,
@@ -117,9 +120,14 @@ export class PessoaComponent implements OnInit, OnDestroy {
     },
   };
 
+  gruposDisponiveis: GrupoItem[] = [];
+  dropdownGruposAberto = false;
+  buscaGrupo = '';
+
   ngOnInit(): void {
     this.carregarUltimaImportacaoCsv();
     this.carregarPessoas();
+    this.carregarGruposDisponiveis();
     window.addEventListener('scroll', this.reposicionarPainel, true);
     window.addEventListener('resize', this.reposicionarPainel);
   }
@@ -206,6 +214,17 @@ export class PessoaComponent implements OnInit, OnDestroy {
     });
   }
 
+  carregarGruposDisponiveis(): void {
+    this.grupoService.listar().subscribe({
+      next: (lista) => {
+        this.gruposDisponiveis = lista.filter((g) => g.status === 'ativo');
+      },
+      error: () => {
+        this.gruposDisponiveis = [];
+      },
+    });
+  }
+
   abrirDialog(): void {
     this.dialogAberto = true;
     this.erroDialog = '';
@@ -218,6 +237,7 @@ export class PessoaComponent implements OnInit, OnDestroy {
       whatsapp: null,
       instagram: null,
       indicacao: null,
+      id_grupos: [],
       endereco: {
         cep: null,
         logradouro: null,
@@ -472,7 +492,11 @@ export class PessoaComponent implements OnInit, OnDestroy {
     this.dialogAberto = true;
     this.erroDialog = '';
     this.editandoId = pessoa.id;
+    this.dropdownGruposAberto = false;
+    this.buscaGrupo = '';
+    this.carregarGruposDisponiveis();
     const bairro = this.mapearBairroCepParaLista(pessoa.endereco?.bairro ?? null);
+    const idsGrupos = (pessoa.grupos ?? []).map((g) => g.id);
     this.form = {
       nome: pessoa.nome ?? '',
       data_nascimento: pessoa.data_nascimento ?? null,
@@ -481,6 +505,7 @@ export class PessoaComponent implements OnInit, OnDestroy {
       instagram: pessoa.instagram ?? null,
       indicacao: pessoa.indicacao ?? null,
       engajamento_whatsapp: this.engajamentoKey(pessoa),
+      id_grupos: idsGrupos,
       endereco: {
         cep: pessoa.endereco?.cep ?? null,
         logradouro: pessoa.endereco?.logradouro ?? null,
@@ -494,10 +519,82 @@ export class PessoaComponent implements OnInit, OnDestroy {
     };
   }
 
+  grupoSelecionado(id: number): boolean {
+    return (this.form.id_grupos ?? []).includes(id);
+  }
+
+  alternarGrupo(id: number, selecionado: boolean): void {
+    const atuais = this.form.id_grupos ?? [];
+    if (selecionado) {
+      if (!atuais.includes(id)) {
+        this.form.id_grupos = [...atuais, id];
+      }
+      return;
+    }
+    this.form.id_grupos = atuais.filter((x) => x !== id);
+  }
+
+  alternarDropdownGrupos(event: MouseEvent): void {
+    event.stopPropagation();
+    this.dropdownGruposAberto = !this.dropdownGruposAberto;
+    if (this.dropdownGruposAberto) {
+      this.buscaGrupo = '';
+    }
+  }
+
+  limparGrupos(event: MouseEvent): void {
+    event.stopPropagation();
+    this.form.id_grupos = [];
+  }
+
+  gruposFiltrados(): GrupoItem[] {
+    const termo = this.buscaGrupo.trim().toLowerCase();
+    const lista = this.gruposParaEdicao();
+    if (!termo) return lista;
+    return lista.filter((g) => g.nome.toLowerCase().includes(termo));
+  }
+
+  resumoGruposSelecionados(): string {
+    const ids = this.form.id_grupos ?? [];
+    if (!ids.length) return 'Selecione um ou mais grupos';
+    const nomes = ids
+      .map((id) => this.gruposParaEdicao().find((g) => g.id === id)?.nome)
+      .filter((n): n is string => Boolean(n));
+    if (!nomes.length) return `${ids.length} grupo(s) selecionado(s)`;
+    if (nomes.length === 1) return nomes[0];
+    if (nomes.length === 2) return `${nomes[0]}, ${nomes[1]}`;
+    return `${nomes.length} grupos selecionados`;
+  }
+
+  gruposParaEdicao(): GrupoItem[] {
+    const ativos = this.gruposDisponiveis;
+    const extras = (this.form.id_grupos ?? [])
+      .filter((id) => !ativos.some((g) => g.id === id))
+      .map((id) => {
+        const daPessoa = this.pessoas
+          .find((p) => p.id === this.editandoId)
+          ?.grupos?.find((g) => g.id === id);
+        return {
+          id,
+          nome: daPessoa?.nome ?? `Grupo #${id}`,
+          descricao: null,
+          status: 'encerrado',
+          total_inscritos: 0,
+          token_cadastro: '',
+          coordenadores: [],
+          createdAt: '',
+          updatedAt: '',
+        } as GrupoItem;
+      });
+    return [...ativos, ...extras];
+  }
+
   fecharDialog(): void {
     this.dialogAberto = false;
     this.editandoId = null;
     this.bairroDetectadoCep = null;
+    this.dropdownGruposAberto = false;
+    this.buscaGrupo = '';
   }
 
   fecharDialogDuplicados(): void {
@@ -713,8 +810,10 @@ export class PessoaComponent implements OnInit, OnDestroy {
     };
     if (this.editandoId != null) {
       payload.engajamento_whatsapp = this.form.engajamento_whatsapp ?? 'sem_resposta';
+      payload.id_grupos = [...(this.form.id_grupos ?? [])];
     } else {
       delete payload.engajamento_whatsapp;
+      delete payload.id_grupos;
     }
 
     const request =
@@ -1044,6 +1143,9 @@ export class PessoaComponent implements OnInit, OnDestroy {
     }
     if (!alvo?.closest?.('.pessoas-acoes-menu-wrap')) {
       this.menuAcoesAberto = false;
+    }
+    if (!alvo?.closest?.('.dropdown-grupos-wrap')) {
+      this.dropdownGruposAberto = false;
     }
   }
 

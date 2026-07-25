@@ -27,6 +27,10 @@ export interface PessoaPayload {
   id_coordenador?: number | null;
   /** Token do evento quando o cadastro vem de link de evento. */
   token_evento?: string | null;
+  /** Token do grupo quando o cadastro vem de link de grupo. */
+  token_grupo?: string | null;
+  /** IDs dos grupos associados à pessoa (edição). */
+  id_grupos?: number[];
   endereco?: EnderecoPayload;
   consentimento?: {
     aceito: boolean;
@@ -48,6 +52,7 @@ export interface PessoaItem {
   indicacao?: string | null;
   candidato_nome?: string | null;
   candidato_slug?: string | null;
+  grupos?: { id: number; nome: string }[];
   endereco?: EnderecoPayload | null;
 }
 
@@ -55,6 +60,8 @@ export interface ImportarCsvPayload {
   registros: Record<string, string>[];
   /** Quando informado, vincula os contatos importados (e duplicados já existentes) ao evento. */
   evento_id?: number;
+  /** Quando informado, vincula os contatos importados (e duplicados já existentes) ao grupo. */
+  grupo_id?: number;
 }
 
 export type MotivoRegistroNaoImportado = 'nome_duplicado' | 'whatsapp_duplicado';
@@ -106,6 +113,7 @@ export interface LinkCadastroContexto {
   /** Quando a URL pública envia a chave opaca de divulgação, o backend devolve o id do coordenador já validado. */
   preselected_coordenador_id?: number | null;
   evento?: { id: number; nome: string; token_cadastro: string } | null;
+  grupo?: { id: number; nome: string; token_cadastro: string } | null;
 }
 
 @Injectable({ providedIn: 'root' })

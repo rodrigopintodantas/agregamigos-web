@@ -18,6 +18,7 @@ import { WhatsappComponent } from './pages/whatsapp/whatsapp.component';
 import { PainelCampanhasComponent } from './pages/painel-campanhas/painel-campanhas.component';
 import { MultiplicadoresComponent } from './pages/multiplicadores/multiplicadores.component';
 import { EventoComponent } from './pages/evento/evento.component';
+import { GrupoComponent } from './pages/grupo/grupo.component';
 
 export const routes: Routes = [
   {
@@ -61,6 +62,10 @@ export const routes: Routes = [
       {
         path: 'eventos',
         component: EventoComponent,
+      },
+      {
+        path: 'grupos',
+        component: GrupoComponent,
       },
       {
         path: 'pessoas',
@@ -129,6 +134,10 @@ export const routes: Routes = [
       {
         path: 'eventos',
         component: EventoComponent,
+      },
+      {
+        path: 'grupos',
+        component: GrupoComponent,
       },
     ],
   },
