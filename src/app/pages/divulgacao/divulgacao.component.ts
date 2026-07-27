@@ -465,9 +465,18 @@ export class DivulgacaoComponent implements OnInit {
         whatsapp_canal_id: this.whatsappCanalIdSelecionado,
       })
       .subscribe({
-        next: () => {
+        next: (resp) => {
           this.salvandoCampanha = false;
+          const partes = resp.total_campanhas ?? resp.campanhas?.length ?? 1;
+          let msg = resp.message ?? 'Campanha criada com sucesso.';
+          if (partes > 1 && resp.campanhas?.length) {
+            const resumo = resp.campanhas
+              .map((c) => `"${c.nome}" (${c.total_destinatarios})`)
+              .join(', ');
+            msg = `${msg} ${resumo}.`;
+          }
           this.cancelarCriacao();
+          this.sucesso = msg;
           this.carregarCampanhas();
         },
         error: (err) => {
@@ -518,7 +527,7 @@ export class DivulgacaoComponent implements OnInit {
 
   campanhaEhAniversariantes(c: CampanhaDivulgacaoItem): boolean {
     const nome = String(c.nome ?? '').trim();
-    return /^aniversariantes do dia\s+\d{2}\/\d{2}$/i.test(nome);
+    return /^aniversariantes do dia\s+\d{2}\/\d{2}(?:\s+\d{2}\/\d{2}_Parte_\d+)?$/i.test(nome);
   }
 
   podeCancelarCampanha(c: CampanhaDivulgacaoItem): boolean {

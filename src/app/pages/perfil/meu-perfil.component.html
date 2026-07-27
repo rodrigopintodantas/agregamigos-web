@@ -55,6 +55,41 @@
       </div>
     </section>
 
+    <section
+      class="ad-card"
+      *ngIf="!carregando && auth.isLoginAdminSistema()"
+      aria-labelledby="perfil-reinicio-senha-heading"
+    >
+      <h2 id="perfil-reinicio-senha-heading" class="ad-card-title">Alterar senha de Usuário</h2>
+      <div class="ad-card-body">
+        <p class="perfil-reinicio-hint">
+          Selecione um usuário deste candidato para reiniciar a senha para <strong>123456</strong>.
+        </p>
+        <p class="perfil-reinicio-msg" *ngIf="carregandoUsuariosReinicio">Carregando usuários…</p>
+        <label class="perfil-reinicio-label" *ngIf="!carregandoUsuariosReinicio">
+          Usuário
+          <select [(ngModel)]="usuarioReinicioId" [disabled]="reiniciandoSenha || !usuariosReinicio.length">
+            <option [ngValue]="null">Selecione um usuário</option>
+            <option *ngFor="let u of usuariosReinicio" [ngValue]="u.id">
+              {{ u.nome }} ({{ u.login }}) — {{ u.papel.nome }}
+            </option>
+          </select>
+        </label>
+        <p class="perfil-dialog-erro" *ngIf="erroReinicio">{{ erroReinicio }}</p>
+        <p class="perfil-dialog-ok" *ngIf="sucessoReinicio">{{ sucessoReinicio }}</p>
+        <div class="perfil-reinicio-actions">
+          <button
+            type="button"
+            class="perfil-btn-senha perfil-btn-reinicio"
+            [disabled]="reiniciandoSenha || usuarioReinicioId == null || carregandoUsuariosReinicio"
+            (click)="confirmarReiniciarSenhaUsuario()"
+          >
+            {{ reiniciandoSenha ? 'Reiniciando…' : 'Reiniciar senha' }}
+          </button>
+        </div>
+      </div>
+    </section>
+
     <div class="perfil-acoes" *ngIf="!carregando">
       <button type="button" class="perfil-btn-senha" (click)="abrirDialogSenha()">Alterar Senha</button>
     </div>

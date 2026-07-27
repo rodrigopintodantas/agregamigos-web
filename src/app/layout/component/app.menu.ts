@@ -67,10 +67,12 @@ import { LayoutUiService } from '../service/layout-ui.service';
         >
           <span class="menu-icon" aria-hidden="true">
             <svg viewBox="0 0 24 24">
-              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
-              <circle cx="9" cy="7" r="4"></circle>
-              <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
-              <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+              <circle cx="12" cy="7" r="3"></circle>
+              <circle cx="5.5" cy="9" r="2.5"></circle>
+              <circle cx="18.5" cy="9" r="2.5"></circle>
+              <path d="M12 12c-2.8 0-6 1.4-6 3.5V19h12v-3.5C18 13.4 14.8 12 12 12z"></path>
+              <path d="M5.5 13.2c-1.9.3-3.5 1.4-3.5 2.8V19h2.2"></path>
+              <path d="M18.5 13.2c1.9.3 3.5 1.4 3.5 2.8V19h-2.2"></path>
             </svg>
           </span>
           <span class="menu-label">Grupos</span>

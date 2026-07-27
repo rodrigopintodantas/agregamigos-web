@@ -57,6 +57,56 @@
   justify-content: center;
 }
 
+.perfil-reinicio-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.88rem;
+  color: #667085;
+  line-height: 1.45;
+}
+
+.perfil-reinicio-msg {
+  margin: 0 0 0.65rem;
+  font-size: 0.88rem;
+  color: #667085;
+}
+
+.perfil-reinicio-label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.perfil-reinicio-label select {
+  padding: 0.52rem 0.6rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  background: #fff;
+  color: #101828;
+}
+
+.perfil-reinicio-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.perfil-btn-reinicio {
+  border-color: #528bff;
+  background: #1769ff;
+  color: #fff;
+}
+
+.perfil-btn-reinicio:hover:not(:disabled) {
+  border-color: #175cd3;
+  background: #175cd3;
+  color: #fff;
+}
+
 .perfil-btn-senha {
   border: 1px solid #d0d5dd;
   background: #fff;
@@ -68,9 +118,14 @@
   cursor: pointer;
 }
 
-.perfil-btn-senha:hover {
+.perfil-btn-senha:hover:not(:disabled) {
   border-color: #1769ff;
   color: #175cd3;
+}
+
+.perfil-btn-senha:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .perfil-dialog-backdrop {

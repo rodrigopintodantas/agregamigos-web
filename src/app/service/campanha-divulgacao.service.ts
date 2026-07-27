@@ -43,6 +43,13 @@ export interface CriarCampanhaResponse {
   status: CampanhaStatus;
   mensagens_por_turno: number;
   total_destinatarios: number;
+  total_campanhas?: number;
+  campanhas?: {
+    id: number;
+    nome: string;
+    status: CampanhaStatus;
+    total_destinatarios: number;
+  }[];
 }
 
 export interface ExcluirCampanhaResponse {

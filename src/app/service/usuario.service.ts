@@ -77,4 +77,11 @@ export class UsuarioService {
   criar(payload: CriarUsuarioPayload): Observable<CriarUsuarioResponse> {
     return this.http.post<CriarUsuarioResponse>(this.apiURL, payload);
   }
+
+  reiniciarSenha(usuarioId: number): Observable<{ message: string; usuario: { id: number; nome: string; login: string } }> {
+    return this.http.post<{ message: string; usuario: { id: number; nome: string; login: string } }>(
+      `${this.apiURL}/${usuarioId}/reiniciar-senha`,
+      {},
+    );
+  }
 }
