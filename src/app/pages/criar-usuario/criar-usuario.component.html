@@ -48,6 +48,7 @@
   <p class="msg" *ngIf="carregandoUsuarios">Carregando usuários…</p>
   <p class="msg erro" *ngIf="!carregandoUsuarios && erroLista">{{ erroLista }}</p>
   <p class="msg erro" *ngIf="!carregandoBairros && erroBairros">{{ erroBairros }}</p>
+  <p class="msg erro" *ngIf="!carregandoGrupos && erroGrupos">{{ erroGrupos }}</p>
 
   <div class="table-wrap" *ngIf="!carregandoUsuarios && !erroLista">
     <table *ngIf="usuarios.length">
@@ -57,6 +58,7 @@
           <th>Login</th>
           <th>Perfil</th>
           <th>Vincular Bairro</th>
+          <th>Vincular Grupo</th>
         </tr>
       </thead>
       <tbody>
@@ -67,7 +69,7 @@
             <span class="badge-perfil">{{ usuario.papel.nome }}</span>
           </td>
           <td class="td-bairro">
-            <ng-container *ngIf="ehCoordenador(usuario); else semVinculoBairro">
+            <ng-container *ngIf="podeVincularBairroOuGrupo(usuario); else semVinculoBairro">
               <div class="bairro-col-wrap">
                 <button
                   type="button"
@@ -91,6 +93,34 @@
               </div>
             </ng-container>
             <ng-template #semVinculoBairro>
+              <span class="bairro-na">—</span>
+            </ng-template>
+          </td>
+          <td class="td-bairro">
+            <ng-container *ngIf="podeVincularBairroOuGrupo(usuario); else semVinculoGrupo">
+              <div class="bairro-col-wrap">
+                <button
+                  type="button"
+                  class="filtro-dropdown-trigger"
+                  [class.ativo]="painelGrupoAbertoPara(usuario) || (usuario.grupos?.length ?? 0) > 0"
+                  [disabled]="carregandoGrupos || salvandoGruposUsuarioId === usuario.id"
+                  [attr.aria-expanded]="painelGrupoAbertoPara(usuario)"
+                  [attr.aria-haspopup]="true"
+                  (click)="alternarPainelGrupo(usuario, $event)"
+                >
+                  <span class="filtro-resumo">
+                    {{
+                      salvandoGruposUsuarioId === usuario.id ? 'Salvando…' : resumoGrupos(usuario)
+                    }}
+                  </span>
+                  <span class="filtro-caret" aria-hidden="true"></span>
+                </button>
+                <p class="erro-bairro-linha" *ngIf="erroGruposPorUsuario[usuario.id]">
+                  {{ erroGruposPorUsuario[usuario.id] }}
+                </p>
+              </div>
+            </ng-container>
+            <ng-template #semVinculoGrupo>
               <span class="bairro-na">—</span>
             </ng-template>
           </td>
@@ -150,6 +180,66 @@
           type="button"
           class="filtro-link"
           (click)="usuarioPainelBairro && limparBairrosUsuario(usuarioPainelBairro, $event)"
+        >
+          Limpar seleção
+        </button>
+      </div>
+    </div>
+  </ng-container>
+
+  <ng-container *ngIf="grupoPainelUsuarioId != null">
+    <div
+      *ngIf="grupoPainelEstilo"
+      class="filtro-dropdown-panel filtro-dropdown-panel--portal cu-grupo-panel"
+      [ngStyle]="grupoPainelEstilo"
+      (click)="$event.stopPropagation()"
+      role="listbox"
+      aria-label="Vincular grupos ao coordenador"
+    >
+      <div class="filtro-dropdown-busca-wrap">
+        <span class="filtro-dropdown-busca-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <circle cx="11" cy="11" r="7"></circle>
+            <line x1="16.65" y1="16.65" x2="21" y2="21"></line>
+          </svg>
+        </span>
+        <input
+          type="search"
+          class="filtro-dropdown-busca-input"
+          placeholder="Pesquisar grupos…"
+          [(ngModel)]="termoBuscaGrupo"
+          (click)="$event.stopPropagation()"
+          autocomplete="off"
+          spellcheck="false"
+          aria-label="Pesquisar grupos"
+        />
+      </div>
+      <p class="filtro-dropdown-hint">Marque os grupos dos quais este usuário será coordenador.</p>
+      <div class="filtro-dropdown-scroll">
+        <label *ngFor="let item of opcoesGrupoFiltradas()" class="filtro-opcao">
+          <input
+            type="checkbox"
+            [checked]="usuarioPainelGrupo && grupoMarcado(usuarioPainelGrupo, item.id)"
+            (change)="usuarioPainelGrupo && alternarGrupoUsuario(usuarioPainelGrupo, item)"
+          />
+          <span>
+            {{ item.nome }}
+            <small *ngIf="item.status && item.status !== 'ativo'"> ({{ item.status }})</small>
+          </span>
+        </label>
+        <p *ngIf="opcoesGrupoFiltradas().length === 0" class="filtro-dropdown-vazio">
+          {{
+            termoBuscaGrupo.trim()
+              ? 'Nenhum grupo corresponde à busca.'
+              : 'Nenhum grupo cadastrado para este candidato.'
+          }}
+        </p>
+      </div>
+      <div class="filtro-dropdown-rodape">
+        <button
+          type="button"
+          class="filtro-link"
+          (click)="usuarioPainelGrupo && limparGruposUsuario(usuarioPainelGrupo, $event)"
         >
           Limpar seleção
         </button>

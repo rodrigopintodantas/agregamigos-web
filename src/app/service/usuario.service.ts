@@ -22,6 +22,12 @@ export interface CriarUsuarioPayload {
   papel_id: number;
 }
 
+export interface UsuarioGrupoResumo {
+  id: number;
+  nome: string;
+  status?: string;
+}
+
 export interface UsuarioListagemItem {
   id: number;
   nome: string;
@@ -31,6 +37,7 @@ export interface UsuarioListagemItem {
     nome: string;
   };
   bairros?: string[];
+  grupos?: UsuarioGrupoResumo[];
 }
 
 export interface CriarUsuarioResponse {
@@ -53,6 +60,11 @@ export interface SalvarBairrosUsuarioResponse {
   bairros: string[];
 }
 
+export interface SalvarGruposUsuarioResponse {
+  message: string;
+  grupos: UsuarioGrupoResumo[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class UsuarioService {
   private http = inject(HttpClient);
@@ -66,12 +78,22 @@ export class UsuarioService {
     return this.http.get<BairroComPessoasItem[]>(`${this.apiURL}/bairros-com-pessoas`);
   }
 
+  listarGruposDisponiveis(): Observable<UsuarioGrupoResumo[]> {
+    return this.http.get<UsuarioGrupoResumo[]>(`${this.apiURL}/grupos-disponiveis`);
+  }
+
   listarPapeis(): Observable<PapelItem[]> {
     return this.http.get<PapelItem[]>(`${this.apiURL}/papeis`);
   }
 
   salvarBairrosUsuario(usuarioId: number, bairros: string[]): Observable<SalvarBairrosUsuarioResponse> {
     return this.http.patch<SalvarBairrosUsuarioResponse>(`${this.apiURL}/${usuarioId}/bairros`, { bairros });
+  }
+
+  salvarGruposUsuario(usuarioId: number, grupoIds: number[]): Observable<SalvarGruposUsuarioResponse> {
+    return this.http.patch<SalvarGruposUsuarioResponse>(`${this.apiURL}/${usuarioId}/grupos`, {
+      grupo_ids: grupoIds,
+    });
   }
 
   criar(payload: CriarUsuarioPayload): Observable<CriarUsuarioResponse> {

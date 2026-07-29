@@ -48,9 +48,15 @@ export class LinkCadastroComponent implements OnInit {
   /** Nome do candidato (sempre, inclusive em links de grupo). */
   nomeCandidato = '';
 
-  /** Link de grupo: formulário reduzido (nome, WhatsApp, bairro, LGPD). */
-  get formularioGrupoSimplificado(): boolean {
-    return Boolean(this.tokenGrupo) && !this.tokenEvento;
+  /** Candidatos cujos links sempre usam formulário simplificado. */
+  private readonly candidatosFormularioSimplificado = ['michello bueno'];
+
+  /** Link de grupo ou candidato específico: formulário reduzido (nome, WhatsApp, bairro, LGPD). */
+  get formularioSimplificado(): boolean {
+    if (Boolean(this.tokenGrupo) && !this.tokenEvento) return true;
+    return this.candidatosFormularioSimplificado.includes(
+      (this.nomeCandidato ?? '').trim().toLowerCase(),
+    );
   }
 
   ngOnInit(): void {
@@ -328,7 +334,7 @@ export class LinkCadastroComponent implements OnInit {
       return;
     }
     this.salvando = true;
-    const payload: PessoaPayload = this.formularioGrupoSimplificado
+    const payload: PessoaPayload = this.formularioSimplificado
       ? {
           nome: this.form.nome,
           data_nascimento: null,

@@ -7,18 +7,18 @@
   <p class="msg erro" *ngIf="erroContexto && !carregandoContexto">{{ erroContexto }}</p>
 
   <ng-container *ngIf="!carregandoContexto && !erroContexto">
-  <p class="msg aviso" *ngIf="avisoCoordenadorUrl && !formularioGrupoSimplificado">{{ avisoCoordenadorUrl }}</p>
+  <p class="msg aviso" *ngIf="avisoCoordenadorUrl && !formularioSimplificado">{{ avisoCoordenadorUrl }}</p>
 
   <div
     class="campo-coordenador-fixo"
-    *ngIf="!formularioGrupoSimplificado && linkDeCoordenador && coordenadorTravado"
+    *ngIf="!formularioSimplificado && linkDeCoordenador && coordenadorTravado"
   >
     <span class="campo-coordenador-label">Coordenador</span>
     <p class="campo-coordenador-valor">{{ nomeCoordenadorTravado }}</p>
   </div>
 
   <!-- Formulário reduzido: apenas links de grupo -->
-  <ng-container *ngIf="formularioGrupoSimplificado; else formularioCompleto">
+  <ng-container *ngIf="formularioSimplificado; else formularioCompleto">
     <label>Nome completo <input [(ngModel)]="form.nome" /></label>
     <label>WhatsApp <input [(ngModel)]="form.whatsapp" (ngModelChange)="aplicarMascaraWhatsapp()" /></label>
     <label>
