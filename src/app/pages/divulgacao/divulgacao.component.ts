@@ -80,6 +80,7 @@ export class DivulgacaoComponent implements OnInit {
   excluindoCampanhaId: number | null = null;
   cancelandoCampanhaId: number | null = null;
   processandoCampanhaId: number | null = null;
+  salvandoCanalCampanhaId: number | null = null;
   dialogMensagemAberto = false;
   dialogMensagemTitulo = '';
   dialogMensagemDestinatario = '';
@@ -126,6 +127,18 @@ export class DivulgacaoComponent implements OnInit {
       }
     });
     this.carregarCampanhas();
+    this.carregarCanaisWhatsapp();
+  }
+
+  carregarCanaisWhatsapp(): void {
+    this.whatsappService.listarCanais().subscribe({
+      next: (lista) => {
+        this.canaisWhatsapp = Array.isArray(lista) ? lista : [];
+      },
+      error: () => {
+        // Mantém lista atual; criação e edição de celular tratam ausência de canais.
+      },
+    });
   }
 
   carregarCampanhas(): void {
@@ -274,6 +287,60 @@ export class DivulgacaoComponent implements OnInit {
     return `${canal.nome}${num}`;
   }
 
+  idCanalCampanha(c: CampanhaDivulgacaoItem): number | null {
+    const id = Number(c.whatsapp_canal_id ?? c.whatsapp_canal?.id ?? 0);
+    return Number.isInteger(id) && id > 0 ? id : null;
+  }
+
+  podeAlterarCanalCampanha(c: CampanhaDivulgacaoItem): boolean {
+    return c.status === 'montada';
+  }
+
+  canalOcupadoPorOutraCampanha(c: CampanhaDivulgacaoItem): boolean {
+    const canalId = this.idCanalCampanha(c);
+    if (!canalId) return false;
+    return this.campanhas.some((outra) => {
+      if (outra.id === c.id || outra.status !== 'em_andamento') return false;
+      return this.idCanalCampanha(outra) === canalId;
+    });
+  }
+
+  tituloBloqueioIniciarPorCanal(c: CampanhaDivulgacaoItem): string {
+    if (!this.canalOcupadoPorOutraCampanha(c)) return '';
+    const canalId = this.idCanalCampanha(c);
+    const conflito = this.campanhas.find(
+      (outra) =>
+        outra.id !== c.id &&
+        outra.status === 'em_andamento' &&
+        this.idCanalCampanha(outra) === canalId,
+    );
+    const nome = conflito?.nome ? `"${conflito.nome}"` : 'outra campanha';
+    return `Já existe ${nome} em andamento neste celular. Use outro celular ou aguarde a finalização.`;
+  }
+
+  alterarCanalCampanha(c: CampanhaDivulgacaoItem, canalIdRaw: number | string): void {
+    if (!this.podeAlterarCanalCampanha(c)) return;
+    const canalId = Number(canalIdRaw);
+    if (!Number.isInteger(canalId) || canalId <= 0) return;
+    if (this.idCanalCampanha(c) === canalId) return;
+
+    this.erro = '';
+    this.sucesso = '';
+    this.salvandoCanalCampanhaId = c.id;
+    this.campanhaService.alterarWhatsappCanal(c.id, canalId).subscribe({
+      next: (ret) => {
+        this.salvandoCanalCampanhaId = null;
+        c.whatsapp_canal_id = ret.whatsapp_canal_id;
+        c.whatsapp_canal = ret.whatsapp_canal;
+        this.sucesso = ret.message ?? 'Celular da campanha atualizado.';
+      },
+      error: (err) => {
+        this.salvandoCanalCampanhaId = null;
+        this.erro = err?.error?.message ?? 'Não foi possível alterar o celular da campanha.';
+      },
+    });
+  }
+
   get pessoasFiltradas(): PessoaItem[] {
     const nome = this.filtroNome.trim().toLowerCase();
     const bairro = this.filtroBairro.trim().toLowerCase();
@@ -298,10 +365,6 @@ export class DivulgacaoComponent implements OnInit {
     return [...new Set(this.pessoas.map((p) => String(p.endereco?.bairro ?? '').trim()).filter(Boolean))].sort(
       (a, b) => a.localeCompare(b, 'pt-BR'),
     );
-  }
-
-  get criarCampanhaDesabilitadoPorEmAndamento(): boolean {
-    return this.campanhas.some((c) => c.status === 'em_andamento');
   }
 
   engajamentoKey(p: PessoaItem): EngajamentoWhatsapp {
@@ -518,11 +581,16 @@ export class DivulgacaoComponent implements OnInit {
   }
 
   podeAcaoEnvioCampanha(c: CampanhaDivulgacaoItem): boolean {
+    if (this.canalOcupadoPorOutraCampanha(c)) return false;
     return this.podeIniciarCampanha(c) || this.podeReiniciarCampanha(c);
   }
 
   labelAcaoEnvioCampanha(c: CampanhaDivulgacaoItem): string {
     return this.campanhaEhReinicio(c) ? 'Reiniciar envio' : 'Iniciar envio';
+  }
+
+  titleAcaoEnvioCampanha(c: CampanhaDivulgacaoItem): string {
+    return this.tituloBloqueioIniciarPorCanal(c) || this.labelAcaoEnvioCampanha(c);
   }
 
   campanhaEhAniversariantes(c: CampanhaDivulgacaoItem): boolean {
@@ -603,9 +671,12 @@ export class DivulgacaoComponent implements OnInit {
       return;
     }
     if (!this.podeAcaoEnvioCampanha(c)) {
-      this.erro = reinicio
-        ? 'Não há destinatários cancelados ou com erro para reiniciar nesta campanha.'
-        : 'A campanha só pode ser iniciada quando estiver montada ou em andamento.';
+      const bloqueioCanal = this.tituloBloqueioIniciarPorCanal(c);
+      this.erro = bloqueioCanal
+        ? bloqueioCanal
+        : reinicio
+          ? 'Não há destinatários cancelados ou com erro para reiniciar nesta campanha.'
+          : 'A campanha só pode ser iniciada quando estiver montada ou em andamento.';
       return;
     }
 

@@ -265,6 +265,34 @@ th {
   flex-wrap: wrap;
 }
 
+.cel-edit,
+.cel-edit-detalhe {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-width: 11rem;
+}
+
+.cel-edit-detalhe {
+  margin: 0 0 0.55rem;
+}
+
+.select-canal-campanha {
+  width: 100%;
+  max-width: 18rem;
+  border: 1px solid #d0d5dd;
+  border-radius: 8px;
+  padding: 0.35rem 0.5rem;
+  font-size: 0.82rem;
+  background: #fff;
+  color: #344054;
+}
+
+.select-canal-campanha:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
 .btn-acao {
   border: 0;
   width: 2rem;

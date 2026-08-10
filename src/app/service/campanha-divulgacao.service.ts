@@ -62,6 +62,14 @@ export interface AcaoCampanhaResponse {
   message: string;
 }
 
+export interface AlterarCanalCampanhaResponse {
+  id: number;
+  status: CampanhaStatus;
+  whatsapp_canal_id: number;
+  whatsapp_canal: WhatsappCanalResumo;
+  message: string;
+}
+
 export type RespostaSentimento = 'positivo' | 'negativo' | 'neutro' | 'desconhecido';
 
 export type EngajamentoPainel = 'sem_resposta' | 'positivo' | 'negativo' | 'neutro';
@@ -267,6 +275,12 @@ export class CampanhaDivulgacaoService {
 
   excluir(id: number): Observable<ExcluirCampanhaResponse> {
     return this.http.delete<ExcluirCampanhaResponse>(`${this.base}/${id}`);
+  }
+
+  alterarWhatsappCanal(id: number, whatsapp_canal_id: number): Observable<AlterarCanalCampanhaResponse> {
+    return this.http.patch<AlterarCanalCampanhaResponse>(`${this.base}/${id}/whatsapp-canal`, {
+      whatsapp_canal_id,
+    });
   }
 
   iniciar(

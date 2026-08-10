@@ -9,8 +9,6 @@
       type="button"
       class="btn-montar"
       *ngIf="!exibindoCriacao"
-      [disabled]="criarCampanhaDesabilitadoPorEmAndamento"
-      [title]="criarCampanhaDesabilitadoPorEmAndamento ? 'Finalize a campanha em andamento antes de criar outra.' : ''"
       (click)="abrirCriacao()"
     >
       Criar Campanha
@@ -48,7 +46,23 @@
                   <span class="drop-icon">{{ campanhaAbertaId === c.id ? '▾' : '▸' }}</span>
                 </button>
               </td>
-              <td>{{ resumoCanalCampanha(c) }}</td>
+              <td>
+                <div class="cel-edit" *ngIf="podeAlterarCanalCampanha(c)">
+                  <select
+                    class="select-canal-campanha"
+                    [ngModel]="idCanalCampanha(c)"
+                    (ngModelChange)="alterarCanalCampanha(c, $event)"
+                    [disabled]="salvandoCanalCampanhaId === c.id || !canaisWhatsapp.length"
+                    [title]="salvandoCanalCampanhaId === c.id ? 'Salvando...' : 'Alterar celular da campanha'"
+                  >
+                    <option *ngIf="!idCanalCampanha(c)" [ngValue]="null" disabled>Selecione</option>
+                    <option *ngFor="let canal of canaisWhatsapp" [ngValue]="canal.id">
+                      {{ labelCanalWhatsapp(canal) }}
+                    </option>
+                  </select>
+                </div>
+                <span *ngIf="!podeAlterarCanalCampanha(c)">{{ resumoCanalCampanha(c) }}</span>
+              </td>
               <td>
                 <span class="status-badge status-{{ c.status }}">{{ labelStatus(c.status) }}</span>
               </td>
@@ -63,7 +77,7 @@
                     *ngIf="podeExibirIniciarEnvioCampanha(c)"
                     type="button"
                     class="btn-acao iniciar"
-                    [title]="labelAcaoEnvioCampanha(c)"
+                    [title]="titleAcaoEnvioCampanha(c)"
                     [disabled]="!podeAcaoEnvioCampanha(c) || processandoCampanhaId === c.id"
                     (click)="iniciarCampanha(c)"
                   >
@@ -118,9 +132,23 @@
             <tr class="campanha-dropdown-row" *ngIf="campanhaAbertaId === c.id">
               <td colspan="9">
                 <div class="campanha-dropdown">
-                  <p class="contador" *ngIf="c.whatsapp_canal">
+                  <p class="contador" *ngIf="c.whatsapp_canal && !podeAlterarCanalCampanha(c)">
                     Celular da campanha: <strong>{{ resumoCanalCampanha(c) }}</strong>
                   </p>
+                  <div class="cel-edit-detalhe" *ngIf="podeAlterarCanalCampanha(c)">
+                    <span class="contador">Celular da campanha:</span>
+                    <select
+                      class="select-canal-campanha"
+                      [ngModel]="idCanalCampanha(c)"
+                      (ngModelChange)="alterarCanalCampanha(c, $event)"
+                      [disabled]="salvandoCanalCampanhaId === c.id || !canaisWhatsapp.length"
+                    >
+                      <option *ngIf="!idCanalCampanha(c)" [ngValue]="null" disabled>Selecione</option>
+                      <option *ngFor="let canal of canaisWhatsapp" [ngValue]="canal.id">
+                        {{ labelCanalWhatsapp(canal) }}
+                      </option>
+                    </select>
+                  </div>
                   <p class="contador" *ngIf="carregandoDetalhe[c.id]">Carregando destinatários...</p>
                   <div class="table-wrap" *ngIf="!carregandoDetalhe[c.id]">
                     <table *ngIf="detalhesCampanha[c.id]?.length">
