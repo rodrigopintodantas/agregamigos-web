@@ -51,6 +51,7 @@
                   <select
                     class="select-canal-campanha"
                     [ngModel]="idCanalCampanha(c)"
+                    [ngModelOptions]="{ standalone: true }"
                     (ngModelChange)="alterarCanalCampanha(c, $event)"
                     [disabled]="salvandoCanalCampanhaId === c.id || !canaisWhatsapp.length"
                     [title]="salvandoCanalCampanhaId === c.id ? 'Salvando...' : 'Alterar celular da campanha'"
@@ -66,7 +67,27 @@
               <td>
                 <span class="status-badge status-{{ c.status }}">{{ labelStatus(c.status) }}</span>
               </td>
-              <td>{{ c.mensagens_por_turno }}</td>
+              <td>
+                <input
+                  *ngIf="podeAlterarMensagensPorTurno(c)"
+                  #inputTurno
+                  class="input-msgs-turno"
+                  type="number"
+                  min="1"
+                  [max]="maxMensagensPorTurno"
+                  step="1"
+                  [ngModel]="c.mensagens_por_turno"
+                  [ngModelOptions]="{ standalone: true }"
+                  (change)="alterarMensagensPorTurno(c, inputTurno.value, inputTurno)"
+                  [disabled]="salvandoTurnoCampanhaId === c.id"
+                  [title]="
+                    salvandoTurnoCampanhaId === c.id
+                      ? 'Salvando...'
+                      : 'Mensagens por turno (aplicado ao iniciar o envio)'
+                  "
+                />
+                <span *ngIf="!podeAlterarMensagensPorTurno(c)">{{ c.mensagens_por_turno }}</span>
+              </td>
               <td>{{ c.total_destinatarios }}</td>
               <td>{{ c.total_enviados }}</td>
               <td>{{ c.total_pendentes }}</td>
@@ -140,6 +161,7 @@
                     <select
                       class="select-canal-campanha"
                       [ngModel]="idCanalCampanha(c)"
+                      [ngModelOptions]="{ standalone: true }"
                       (ngModelChange)="alterarCanalCampanha(c, $event)"
                       [disabled]="salvandoCanalCampanhaId === c.id || !canaisWhatsapp.length"
                     >

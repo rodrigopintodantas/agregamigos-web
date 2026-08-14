@@ -81,6 +81,8 @@ export class DivulgacaoComponent implements OnInit {
   cancelandoCampanhaId: number | null = null;
   processandoCampanhaId: number | null = null;
   salvandoCanalCampanhaId: number | null = null;
+  salvandoTurnoCampanhaId: number | null = null;
+  readonly maxMensagensPorTurno = 50;
   dialogMensagemAberto = false;
   dialogMensagemTitulo = '';
   dialogMensagemDestinatario = '';
@@ -337,6 +339,47 @@ export class DivulgacaoComponent implements OnInit {
       error: (err) => {
         this.salvandoCanalCampanhaId = null;
         this.erro = err?.error?.message ?? 'Não foi possível alterar o celular da campanha.';
+      },
+    });
+  }
+
+  /** O agendamento é gerado ao iniciar/reiniciar, então o ritmo só muda antes disso. */
+  podeAlterarMensagensPorTurno(c: CampanhaDivulgacaoItem): boolean {
+    return c.status === 'montada' || c.status === 'cancelada';
+  }
+
+  alterarMensagensPorTurno(
+    c: CampanhaDivulgacaoItem,
+    valorBruto: number | string,
+    campo?: HTMLInputElement,
+  ): void {
+    if (!this.podeAlterarMensagensPorTurno(c)) return;
+
+    const reverterCampo = () => {
+      if (campo) campo.value = String(c.mensagens_por_turno);
+    };
+
+    const valor = Math.trunc(Number(valorBruto));
+    if (!Number.isInteger(valor) || valor < 1 || valor > this.maxMensagensPorTurno) {
+      this.erro = `Informe mensagens por turno entre 1 e ${this.maxMensagensPorTurno}.`;
+      reverterCampo();
+      return;
+    }
+    if (c.mensagens_por_turno === valor) return;
+
+    this.erro = '';
+    this.sucesso = '';
+    this.salvandoTurnoCampanhaId = c.id;
+    this.campanhaService.alterarMensagensPorTurno(c.id, valor).subscribe({
+      next: (ret) => {
+        this.salvandoTurnoCampanhaId = null;
+        c.mensagens_por_turno = ret.mensagens_por_turno;
+        this.sucesso = ret.message ?? 'Mensagens por turno atualizadas.';
+      },
+      error: (err) => {
+        this.salvandoTurnoCampanhaId = null;
+        this.erro = err?.error?.message ?? 'Não foi possível alterar as mensagens por turno.';
+        reverterCampo();
       },
     });
   }

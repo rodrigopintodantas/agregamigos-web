@@ -70,6 +70,13 @@ export interface AlterarCanalCampanhaResponse {
   message: string;
 }
 
+export interface AlterarMensagensPorTurnoResponse {
+  id: number;
+  status: CampanhaStatus;
+  mensagens_por_turno: number;
+  message: string;
+}
+
 export type RespostaSentimento = 'positivo' | 'negativo' | 'neutro' | 'desconhecido';
 
 export type EngajamentoPainel = 'sem_resposta' | 'positivo' | 'negativo' | 'neutro';
@@ -281,6 +288,16 @@ export class CampanhaDivulgacaoService {
     return this.http.patch<AlterarCanalCampanhaResponse>(`${this.base}/${id}/whatsapp-canal`, {
       whatsapp_canal_id,
     });
+  }
+
+  alterarMensagensPorTurno(
+    id: number,
+    mensagens_por_turno: number,
+  ): Observable<AlterarMensagensPorTurnoResponse> {
+    return this.http.patch<AlterarMensagensPorTurnoResponse>(
+      `${this.base}/${id}/mensagens-por-turno`,
+      { mensagens_por_turno },
+    );
   }
 
   iniciar(
