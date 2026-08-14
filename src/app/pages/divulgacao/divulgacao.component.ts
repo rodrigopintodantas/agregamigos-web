@@ -294,8 +294,16 @@ export class DivulgacaoComponent implements OnInit {
     return Number.isInteger(id) && id > 0 ? id : null;
   }
 
+  /**
+   * `montada` aguarda o primeiro envio e `cancelada` aguarda o reinício: nos dois
+   * casos o agendamento ainda será gerado, então celular e ritmo podem mudar.
+   */
+  private editavelAntesDoEnvio(c: CampanhaDivulgacaoItem): boolean {
+    return c.status === 'montada' || c.status === 'cancelada';
+  }
+
   podeAlterarCanalCampanha(c: CampanhaDivulgacaoItem): boolean {
-    return c.status === 'montada';
+    return this.editavelAntesDoEnvio(c);
   }
 
   canalOcupadoPorOutraCampanha(c: CampanhaDivulgacaoItem): boolean {
@@ -343,9 +351,8 @@ export class DivulgacaoComponent implements OnInit {
     });
   }
 
-  /** O agendamento é gerado ao iniciar/reiniciar, então o ritmo só muda antes disso. */
   podeAlterarMensagensPorTurno(c: CampanhaDivulgacaoItem): boolean {
-    return c.status === 'montada' || c.status === 'cancelada';
+    return this.editavelAntesDoEnvio(c);
   }
 
   alterarMensagensPorTurno(
