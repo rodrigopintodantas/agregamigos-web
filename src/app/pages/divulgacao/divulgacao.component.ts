@@ -39,9 +39,9 @@ export class DivulgacaoComponent implements OnInit {
   private auth = inject(AutenticacaoService);
   private route = inject(ActivatedRoute);
 
-  /** O login `admin` sempre pode iniciar; em campanha de aniversário, qualquer Administrador pode iniciar. */
+  /** Operadores de campanha sempre podem iniciar; em campanha de aniversário, qualquer Administrador pode iniciar. */
   podeExibirIniciarEnvioCampanha(c: CampanhaDivulgacaoItem): boolean {
-    if (this.auth.isLoginAdminSistema()) return true;
+    if (this.auth.isLoginOperadorCampanhas()) return true;
     return this.auth.isAdmin() && this.campanhaEhAniversariantes(c);
   }
 
@@ -150,6 +150,9 @@ export class DivulgacaoComponent implements OnInit {
     this.campanhaService.listar().subscribe({
       next: (lista) => {
         this.campanhas = lista;
+        // É esta lista que define quais celulares estão ocupados; se o escolhido na
+        // criação entrou em envio nesse meio-tempo, a seleção é desfeita.
+        if (this.exibindoCriacao) this.descartarCanalSelecionadoSeOcupado();
         this.campanhaAbertaId = null;
         this.detalhesCampanha = {};
         this.carregandoDetalhe = {};
@@ -237,8 +240,10 @@ export class DivulgacaoComponent implements OnInit {
     this.whatsappService.listarCanais().subscribe({
       next: (lista) => {
         this.canaisWhatsapp = lista;
-        const conectado = lista.find((c) => c.conectado);
-        this.whatsappCanalIdSelecionado = conectado?.id ?? lista[0]?.id ?? null;
+        // Não pré-selecionar um celular já em envio: a opção aparece desabilitada.
+        const disponiveis = lista.filter((canal) => !this.canalIndisponivel(canal));
+        const conectado = disponiveis.find((c) => c.conectado);
+        this.whatsappCanalIdSelecionado = conectado?.id ?? disponiveis[0]?.id ?? null;
         canaisOk = true;
         finalizar();
       },
@@ -306,26 +311,54 @@ export class DivulgacaoComponent implements OnInit {
     return this.editavelAntesDoEnvio(c);
   }
 
+  /** Campanha que está ocupando o celular com um envio em andamento, se houver. */
+  private campanhaEmAndamentoNoCanal(
+    canalId: number | null,
+    excetoCampanhaId?: number,
+  ): CampanhaDivulgacaoItem | null {
+    if (!canalId) return null;
+    return (
+      this.campanhas.find(
+        (outra) =>
+          outra.id !== excetoCampanhaId &&
+          outra.status === 'em_andamento' &&
+          this.idCanalCampanha(outra) === canalId,
+      ) ?? null
+    );
+  }
+
   canalOcupadoPorOutraCampanha(c: CampanhaDivulgacaoItem): boolean {
-    const canalId = this.idCanalCampanha(c);
-    if (!canalId) return false;
-    return this.campanhas.some((outra) => {
-      if (outra.id === c.id || outra.status !== 'em_andamento') return false;
-      return this.idCanalCampanha(outra) === canalId;
-    });
+    return !!this.campanhaEmAndamentoNoCanal(this.idCanalCampanha(c), c.id);
   }
 
   tituloBloqueioIniciarPorCanal(c: CampanhaDivulgacaoItem): string {
-    if (!this.canalOcupadoPorOutraCampanha(c)) return '';
-    const canalId = this.idCanalCampanha(c);
-    const conflito = this.campanhas.find(
-      (outra) =>
-        outra.id !== c.id &&
-        outra.status === 'em_andamento' &&
-        this.idCanalCampanha(outra) === canalId,
-    );
-    const nome = conflito?.nome ? `"${conflito.nome}"` : 'outra campanha';
+    const conflito = this.campanhaEmAndamentoNoCanal(this.idCanalCampanha(c), c.id);
+    if (!conflito) return '';
+    const nome = conflito.nome ? `"${conflito.nome}"` : 'outra campanha';
     return `Já existe ${nome} em andamento neste celular. Use outro celular ou aguarde a finalização.`;
+  }
+
+  /** Um celular já em envio não pode ser escolhido: só um envio por número. */
+  canalIndisponivel(canal: WhatsappCanal, campanhaAtual?: CampanhaDivulgacaoItem): boolean {
+    return !!this.campanhaEmAndamentoNoCanal(canal.id, campanhaAtual?.id);
+  }
+
+  labelOpcaoCanal(canal: WhatsappCanal, campanhaAtual?: CampanhaDivulgacaoItem): string {
+    const conflito = this.campanhaEmAndamentoNoCanal(canal.id, campanhaAtual?.id);
+    const base = this.labelCanalWhatsapp(canal);
+    if (!conflito) return base;
+    return `${base} — em envio: ${conflito.nome}`;
+  }
+
+  get existeCanalIndisponivel(): boolean {
+    return this.canaisWhatsapp.some((canal) => this.canalIndisponivel(canal));
+  }
+
+  private descartarCanalSelecionadoSeOcupado(): void {
+    const escolhido = this.canaisWhatsapp.find((k) => k.id === this.whatsappCanalIdSelecionado);
+    if (escolhido && this.canalIndisponivel(escolhido)) {
+      this.whatsappCanalIdSelecionado = null;
+    }
   }
 
   alterarCanalCampanha(c: CampanhaDivulgacaoItem, canalIdRaw: number | string): void {

@@ -57,8 +57,12 @@
                     [title]="salvandoCanalCampanhaId === c.id ? 'Salvando...' : 'Alterar celular da campanha'"
                   >
                     <option *ngIf="!idCanalCampanha(c)" [ngValue]="null" disabled>Selecione</option>
-                    <option *ngFor="let canal of canaisWhatsapp" [ngValue]="canal.id">
-                      {{ labelCanalWhatsapp(canal) }}
+                    <option
+                      *ngFor="let canal of canaisWhatsapp"
+                      [ngValue]="canal.id"
+                      [disabled]="canalIndisponivel(canal, c)"
+                    >
+                      {{ labelOpcaoCanal(canal, c) }}
                     </option>
                   </select>
                 </div>
@@ -166,8 +170,12 @@
                       [disabled]="salvandoCanalCampanhaId === c.id || !canaisWhatsapp.length"
                     >
                       <option *ngIf="!idCanalCampanha(c)" [ngValue]="null" disabled>Selecione</option>
-                      <option *ngFor="let canal of canaisWhatsapp" [ngValue]="canal.id">
-                        {{ labelCanalWhatsapp(canal) }}
+                      <option
+                        *ngFor="let canal of canaisWhatsapp"
+                        [ngValue]="canal.id"
+                        [disabled]="canalIndisponivel(canal, c)"
+                      >
+                        {{ labelOpcaoCanal(canal, c) }}
                       </option>
                     </select>
                   </div>
@@ -289,12 +297,19 @@
       <span>Celular que enviará a campanha</span>
       <select [(ngModel)]="whatsappCanalIdSelecionado">
         <option [ngValue]="null">Selecione o celular...</option>
-        <option *ngFor="let canal of canaisWhatsapp" [ngValue]="canal.id">
-          {{ labelCanalWhatsapp(canal) }}
+        <option
+          *ngFor="let canal of canaisWhatsapp"
+          [ngValue]="canal.id"
+          [disabled]="canalIndisponivel(canal)"
+        >
+          {{ labelOpcaoCanal(canal) }}
         </option>
       </select>
       <small class="campo-ajuda" *ngIf="!canaisWhatsapp.length">
         Nenhum canal cadastrado. Cadastre em <strong>Conexão WhatsApp</strong>.
+      </small>
+      <small class="campo-ajuda" *ngIf="existeCanalIndisponivel">
+        Celulares com campanha em andamento aparecem desabilitados até o envio terminar.
       </small>
     </label>
 

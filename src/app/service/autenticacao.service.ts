@@ -271,9 +271,24 @@ export class AutenticacaoService {
     return this.temPerfil() && this.getPerfil()?.nome === 'Administrador';
   }
 
+  /** Compara sem diferenciar maiúsculas: o login gravado na sessão preserva o caso original. */
+  private loginAtualEhUmDe(logins: readonly string[]): boolean {
+    const atual = (this.getUserLogin() ?? '').trim().toLowerCase();
+    return !!atual && logins.some((login) => login.trim().toLowerCase() === atual);
+  }
+
   /** Login fixo `admin`: único permitido a criar usuários com papel Administrador. */
   isLoginAdminSistema(): boolean {
-    return (this.getUserLogin() ?? '').trim().toLowerCase() === 'admin';
+    return this.loginAtualEhUmDe(['admin']);
+  }
+
+  /**
+   * Logins que podem iniciar e reiniciar o envio de qualquer campanha. Separado de
+   * `isLoginAdminSistema` para não conceder os poderes exclusivos do `admin`
+   * (excluir campanhas, criar administradores, reiniciar senhas, desfazer importações).
+   */
+  isLoginOperadorCampanhas(): boolean {
+    return this.loginAtualEhUmDe(['admin', 'allison']);
   }
 
   isCoordenador() {
